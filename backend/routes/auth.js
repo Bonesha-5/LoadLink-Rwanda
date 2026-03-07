@@ -1,9 +1,95 @@
-const express = require('express');
+import express from 'express'
+import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
+import pool from '../config/db.js'
 const router = express.Router();
 
 // POST /auth/shipper/register  → Backend Person 2 (Esther)
 // POST /auth/shipper/login     → Backend Person 2 (Esther)
 // POST /auth/company/register  → Backend Person 3 (Samuel)
 // POST /auth/company/login     → Backend Person 4 (Annie)
+router.post("/shipper/register", async (req, res) => {
 
-module.exports = router;
+  const { name, business_name, phone, email, password } = req.body;
+
+  try {
+
+    const hashedPassword = await bcrypt.hash(password, 12);
+
+
+    const result = await pool.query(
+      `INSERT INTO users 
+      (name, business_name, phone, email, password, role)
+      VALUES ($1,$2,$3,$4,$5,'SHIPPER')
+      RETURNING id, name, email, role`,
+      [name, business_name, phone, email, hashedPassword]
+    );
+
+    const user = result.rows[0];
+
+    const token = jwt.sign(
+      { id: user.id, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: "24hrs" }
+    );
+
+    res.status(201).json({
+      token,
+      user
+    });
+
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+
+});
+
+router.post("/shipper/login", async (req, res) => {
+
+  const { email, password } = req.body;
+
+  try {
+
+    
+    const result = await pool.query(
+      `SELECT * FROM users WHERE email = $1 AND role = 'SHIPPER'`,
+      [email]
+    );
+
+    const user = result.rows[0];
+
+    
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+  
+    const isMatch = await bcrypt.compare(password, user.password);
+
+    if (!isMatch) {
+      return res.status(401).json({ message: "Invalid credentials" });
+    }
+
+    const token = jwt.sign(
+      { id: user.id, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" }
+    );
+
+   
+    res.json({
+      token,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role
+      }
+    });
+
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+
+});
+export default router;
