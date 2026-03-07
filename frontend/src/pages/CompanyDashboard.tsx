@@ -1,17 +1,37 @@
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { getTrucksByCompany, getAllLoads } from '../data/storage'
 
 export default function CompanyDashboard() {
   const { user } = useAuth()
+  const companyName = user?.name ?? ''
+  const [truckCount, setTruckCount] = useState(0)
+  const [openLoadsCount, setOpenLoadsCount] = useState(0)
+
+  useEffect(() => {
+    setTruckCount(getTrucksByCompany(companyName).length)
+    setOpenLoadsCount(getAllLoads().filter((l) => l.status === 'open').length)
+  }, [companyName])
 
   return (
     <div className="max-w-3xl">
       <h1 className="text-2xl font-bold text-stone-800 mb-1">
         Welcome, {user?.name}
       </h1>
-      <p className="text-stone-600 mb-8">
+      <p className="text-stone-600 mb-6">
         Rwanda&apos;s premier logistics marketplace. Get shipment requests from shippers, submit competitive offers, and grow your transport business.
       </p>
+      <div className="grid grid-cols-2 gap-4 mb-8">
+        <div className="bg-white rounded-xl border border-stone-200 p-4">
+          <p className="text-2xl font-bold text-stone-800">{truckCount}</p>
+          <p className="text-stone-600 text-sm">Trucks in fleet</p>
+        </div>
+        <div className="bg-white rounded-xl border border-stone-200 p-4">
+          <p className="text-2xl font-bold text-stone-800">{openLoadsCount}</p>
+          <p className="text-stone-600 text-sm">Open shipments</p>
+        </div>
+      </div>
       <div className="flex flex-wrap gap-4">
         <Link
           to="/company/shipments"
