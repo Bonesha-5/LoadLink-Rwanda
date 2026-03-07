@@ -15,21 +15,15 @@ export default function Home() {
           <Link to="/" className="text-xl font-bold tracking-tight text-sidebar">
             LoadLink Rwanda
           </Link>
-          <div className="flex items-center gap-6">
-            <Link to="/loads" className="text-sidebar/90 hover:text-sidebar font-medium transition-colors">
-              Find Loads
+          <div className="flex flex-wrap items-center gap-6 sm:gap-8">
+            <Link to="/login/shipper" className="text-sidebar/90 hover:text-sidebar font-medium transition-colors">
+              Shipper Login
             </Link>
-            <Link to="/trucks" className="text-sidebar/90 hover:text-sidebar font-medium transition-colors">
-              Find Trucks
+            <Link to="/login/company" className="text-sidebar/90 hover:text-sidebar font-medium transition-colors">
+              Company Login
             </Link>
-            <Link to="/login" className="text-sidebar/90 hover:text-sidebar font-medium transition-colors">
-              Login
-            </Link>
-            <Link
-              to="/register"
-              className="px-5 py-2.5 bg-accent text-white font-semibold rounded-xl hover:bg-accent-hover hover:shadow-lg hover:shadow-accent/25 transition-all"
-            >
-              Register
+            <Link to="/login/admin" className="text-sidebar/90 hover:text-sidebar font-medium transition-colors">
+              Admin
             </Link>
           </div>
         </nav>
@@ -38,23 +32,32 @@ export default function Home() {
       <main className="flex-1 flex flex-col items-center justify-center px-6 py-24 relative">
         <div className="max-w-3xl text-center">
           <h1 className="text-4xl md:text-6xl font-bold text-white tracking-tight leading-tight drop-shadow-lg">
-            Connect shippers and truck owners
+            Connect Shippers with Verified Transport Companies
           </h1>
           <p className="text-xl text-white/90 mt-6 leading-relaxed max-w-2xl mx-auto drop-shadow-md">
-            Reduce empty trips. Lower costs. Build a smarter logistics network across Rwanda.
+            Rwanda&apos;s premier logistics marketplace. Post shipments, get competitive offers from verified truck companies, and enjoy secure escrow payment protection.
           </p>
           <div className="flex flex-wrap gap-4 justify-center mt-12">
             <Link
-              to="/register"
-              className="px-8 py-4 bg-accent text-white font-semibold rounded-xl hover:bg-accent-hover transition-all shadow-xl hover:shadow-2xl hover:shadow-accent/30 hover:-translate-y-1"
+              to="/register/shipper"
+              className="inline-flex items-center gap-2 px-8 py-4 bg-accent text-white font-semibold rounded-xl hover:bg-accent-hover transition-all shadow-xl hover:shadow-2xl hover:shadow-accent/30 hover:-translate-y-1"
             >
-              Get Started
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+              </svg>
+              Post a Shipment
             </Link>
             <Link
-              to="/loads"
-              className="px-8 py-4 bg-white/15 backdrop-blur-sm text-white font-semibold rounded-xl border-2 border-white/30 hover:bg-white/25 hover:border-white/50 transition-all"
+              to="/register/company"
+              className="inline-flex items-center gap-2 px-8 py-4 bg-white text-stone-800 font-semibold rounded-xl border-2 border-stone-200 hover:bg-stone-50 hover:border-stone-300 transition-all"
             >
-              Browse Loads
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <rect x="1" y="3" width="15" height="13" />
+                <polygon points="16 8 20 8 23 11 23 16 16 16 16 8" />
+                <circle cx="5.5" cy="18.5" r="2.5" />
+                <circle cx="18.5" cy="18.5" r="2.5" />
+              </svg>
+              Join as Transport Company
             </Link>
           </div>
         </div>

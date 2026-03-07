@@ -1,23 +1,44 @@
 import { useState, useEffect } from 'react'
-import { Link, useNavigate, useLocation } from 'react-router-dom'
+import { Link, useNavigate, useLocation, useParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import type { Role } from '../context/AuthContext'
+
+const ROLES: Role[] = ['shipper', 'company', 'admin']
+
+const ROLE_LABELS: Record<Role, string> = {
+  shipper: 'Shipper',
+  company: 'Company',
+  admin: 'Admin',
+}
+
+const ROLE_DASHBOARDS: Record<Role, string> = {
+  shipper: '/profile',
+  company: '/company/dashboard',
+  admin: '/admin/dashboard',
+}
 
 export default function Login() {
+  const { role: urlRole } = useParams<{ role: string }>()
+  const role = (ROLES.includes(urlRole as Role) ? urlRole : 'shipper') as Role
   const [phone, setPhone] = useState('')
   const [password, setPassword] = useState('')
   const navigate = useNavigate()
   const location = useLocation()
-  const { login, isShipper } = useAuth()
-  const from = (location.state as { from?: { pathname: string } })?.from?.pathname ?? '/profile'
+  const { login, isShipper, isCompany, isAdmin } = useAuth()
+  const from =
+    (location.state as { from?: { pathname: string } })?.from?.pathname ??
+    ROLE_DASHBOARDS[role]
+
+  const isLoggedIn = isShipper || isCompany || isAdmin
 
   useEffect(() => {
-    if (isShipper) navigate(from, { replace: true })
-  }, [isShipper, navigate, from])
+    if (isLoggedIn) navigate(from, { replace: true })
+  }, [isLoggedIn, navigate, from])
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!phone.trim()) return
-    login(phone.trim(), 'shipper')
+    login(phone.trim(), role)
     navigate(from, { replace: true })
   }
 
@@ -40,7 +61,7 @@ export default function Login() {
       <div className="w-full max-w-md px-6 relative z-10">
         <div className="bg-white/90 backdrop-blur-md rounded-3xl shadow-2xl shadow-stone-400/20 border border-white/60 p-8 sm:p-10">
           <h1 className="text-2xl font-bold text-stone-800 tracking-tight">
-            Shipper login
+            {ROLE_LABELS[role]} login
           </h1>
           <p className="text-stone-500 mt-1.5">
             Sign in to your dashboard
@@ -81,8 +102,11 @@ export default function Login() {
           </form>
           <p className="mt-6 text-center text-stone-500 text-sm">
             Don&apos;t have an account?{' '}
-            <Link to="/register" className="text-sidebar font-semibold hover:underline">
-              Register as shipper
+            <Link
+              to={`/register/${role}`}
+              className="text-sidebar font-semibold hover:underline"
+            >
+              Register as {role}
             </Link>
           </p>
         </div>

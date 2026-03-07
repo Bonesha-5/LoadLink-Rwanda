@@ -1,25 +1,37 @@
 /* eslint-disable react-refresh/only-export-components -- AuthProvider and useAuth are intentionally in the same file */
 import { createContext, useContext, useState, type ReactNode } from 'react'
 
-type User = { role: 'shipper'; name: string } | null
+export type Role = 'shipper' | 'company' | 'admin'
+
+export type User = { role: Role; name: string } | null
 
 type AuthContextType = {
   user: User
-  login: (name: string, role: 'shipper') => void
+  login: (name: string, role: Role) => void
   logout: () => void
   isShipper: boolean
+  isCompany: boolean
+  isAdmin: boolean
 }
 
 const AuthContext = createContext<AuthContextType | null>(null)
 
+const STORAGE_KEYS: Record<Role, string> = {
+  shipper: 'loadlink_shipper',
+  company: 'loadlink_company',
+  admin: 'loadlink_admin',
+}
+
 function readStoredUser(): User {
-  try {
-    const stored = localStorage.getItem('loadlink_shipper')
-    if (!stored) return null
-    const data = JSON.parse(stored)
-    if (data.role === 'shipper' && data.name) return { role: 'shipper', name: data.name }
-  } catch {
-    localStorage.removeItem('loadlink_shipper')
+  for (const role of ['shipper', 'company', 'admin'] as const) {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEYS[role])
+      if (!stored) continue
+      const data = JSON.parse(stored)
+      if (data.role === role && data.name) return { role, name: data.name }
+    } catch {
+      localStorage.removeItem(STORAGE_KEYS[role])
+    }
   }
   return null
 }
@@ -27,19 +39,29 @@ function readStoredUser(): User {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User>(readStoredUser)
 
-  const login = (name: string, role: 'shipper') => {
+  const login = (name: string, role: Role) => {
+    Object.values(STORAGE_KEYS).forEach((key) => localStorage.removeItem(key))
     const u = { role, name }
     setUser(u)
-    localStorage.setItem('loadlink_shipper', JSON.stringify(u))
+    localStorage.setItem(STORAGE_KEYS[role], JSON.stringify(u))
   }
 
   const logout = () => {
+    if (user) localStorage.removeItem(STORAGE_KEYS[user.role])
     setUser(null)
-    localStorage.removeItem('loadlink_shipper')
   }
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, isShipper: user?.role === 'shipper' }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        login,
+        logout,
+        isShipper: user?.role === 'shipper',
+        isCompany: user?.role === 'company',
+        isAdmin: user?.role === 'admin',
+      }}
+    >
       {children}
     </AuthContext.Provider>
   )
