@@ -10,19 +10,17 @@ const router = express.Router();
 // POST /auth/company/login     → Backend Person 4 (Annie)
 router.post("/shipper/register", async (req, res) => {
 
-  const { name, business_name, phone, email, password } = req.body;
+  const { name, phone, email, password } = req.body;
 
   try {
 
     const hashedPassword = await bcrypt.hash(password, 12);
 
-
     const result = await pool.query(
-      `INSERT INTO users 
-      (name, business_name, phone, email, password, role)
-      VALUES ($1,$2,$3,$4,$5,'SHIPPER')
-      RETURNING id, name, email, role`,
-      [name, business_name, phone, email, hashedPassword]
+      `INSERT INTO users (name, phone, email, password_hash, role)
+       VALUES ($1, $2, $3, $4, 'SHIPPER')
+       RETURNING id, name, email, role`,
+      [name, phone, email, hashedPassword]
     );
 
     const user = result.rows[0];
@@ -30,7 +28,7 @@ router.post("/shipper/register", async (req, res) => {
     const token = jwt.sign(
       { id: user.id, role: user.role },
       process.env.JWT_SECRET,
-      { expiresIn: "24hrs" }
+      { expiresIn: "24h" }
     );
 
     res.status(201).json({
@@ -43,7 +41,6 @@ router.post("/shipper/register", async (req, res) => {
   }
 
 });
-
 router.post("/shipper/login", async (req, res) => {
 
   const { email, password } = req.body;
@@ -64,7 +61,7 @@ router.post("/shipper/login", async (req, res) => {
     }
 
   
-    const isMatch = await bcrypt.compare(password, user.password);
+    const isMatch = await bcrypt.compare(password, user.password_hash);
 
     if (!isMatch) {
       return res.status(401).json({ message: "Invalid credentials" });
@@ -73,7 +70,7 @@ router.post("/shipper/login", async (req, res) => {
     const token = jwt.sign(
       { id: user.id, role: user.role },
       process.env.JWT_SECRET,
-      { expiresIn: "7d" }
+      { expiresIn: "24hrs" }
     );
 
    
