@@ -2,7 +2,6 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import Home from './pages/Home'
 import ShipperLayout from './components/ShipperLayout'
 import CompanyLayout from './components/CompanyLayout'
-import AdminLayout from './components/AdminLayout'
 import Layout from './components/Layout'
 import Loads from './pages/Loads'
 import Trucks from './pages/Trucks'
@@ -15,9 +14,6 @@ import USSDHelp from './pages/USSDHelp'
 import CompanyDashboard from './pages/CompanyDashboard'
 import CompanyTrucks from './pages/CompanyTrucks'
 import CompanyShipments from './pages/CompanyShipments'
-import AdminDashboard from './pages/AdminDashboard'
-import AdminUsers from './pages/AdminUsers'
-import AdminShipments from './pages/AdminShipments'
 import ProtectedRoute from './components/ProtectedRoute'
 
 export default function App() {
@@ -37,11 +33,6 @@ export default function App() {
         <Route path="company/dashboard" element={<CompanyDashboard />} />
         <Route path="company/trucks" element={<CompanyTrucks />} />
         <Route path="company/shipments" element={<CompanyShipments />} />
-      </Route>
-      <Route element={<ProtectedRoute role="admin"><AdminLayout /></ProtectedRoute>}>
-        <Route path="admin/dashboard" element={<AdminDashboard />} />
-        <Route path="admin/users" element={<AdminUsers />} />
-        <Route path="admin/shipments" element={<AdminShipments />} />
       </Route>
       <Route element={<Layout />}>
         <Route path="trucks" element={<Trucks />} />
