@@ -1,4 +1,4 @@
-const express = require('express');
+import express from "express";
 const router = express.Router();
 
 // POST /auth/shipper/register  → Backend Person 2 (Esther)
@@ -6,4 +6,4 @@ const router = express.Router();
 // POST /auth/company/register  → Backend Person 3 (Samuel)
 // POST /auth/company/login     → Backend Person 4 (Annie)
 
-module.exports = router;
+export default router;
