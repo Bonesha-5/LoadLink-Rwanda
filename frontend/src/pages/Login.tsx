@@ -23,6 +23,12 @@ const SHIPPER_BENEFITS = [
   'Track shipments in one place',
 ]
 
+const COMPANY_BENEFITS = [
+  'Get shipment requests from shippers',
+  'Submit competitive offers and win loads',
+  'Manage your fleet in one place',
+]
+
 export default function Login() {
   const { role: urlRole } = useParams<{ role: string }>()
   const role = (ROLES.includes(urlRole as Role) ? urlRole : 'shipper') as Role
@@ -37,6 +43,7 @@ export default function Login() {
 
   const isLoggedIn = isShipper || isCompany || isAdmin
   const isShipperPage = role === 'shipper'
+  const isCompanyPage = role === 'company'
 
   useEffect(() => {
     if (isLoggedIn) navigate(from, { replace: true })
@@ -154,6 +161,61 @@ export default function Login() {
           </div>
           <p className="relative z-10 text-sm text-white/70">
             After sign in you&apos;ll go to your shipper dashboard.
+          </p>
+        </div>
+        <div className="flex-1 flex flex-col items-center justify-center p-6 sm:p-10 bg-sand min-h-screen">
+          <Link
+            to="/"
+            className="lg:hidden absolute top-6 left-6 text-sidebar font-bold text-xl tracking-tight z-20 hover:opacity-80"
+          >
+            LoadLink Rwanda
+          </Link>
+          {formCard}
+        </div>
+      </div>
+    )
+  }
+
+  if (isCompanyPage) {
+    return (
+      <div className="min-h-screen flex">
+        <div
+          className="hidden lg:flex lg:w-[48%] flex-col justify-between p-10 xl:p-14 bg-sidebar text-white relative overflow-hidden"
+          style={{
+            backgroundImage: 'url(/cargo.jpg)',
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+          }}
+        >
+          <div className="absolute inset-0 bg-sidebar/92" />
+          <Link
+            to="/"
+            className="relative z-10 text-xl font-bold tracking-tight text-white hover:text-white/90 transition-opacity"
+          >
+            LoadLink Rwanda
+          </Link>
+          <div className="relative z-10 space-y-8">
+            <h2 className="text-3xl xl:text-4xl font-bold tracking-tight leading-tight">
+              Win loads. Grow your transport business.
+            </h2>
+            <p className="text-white/90 text-lg max-w-sm">
+              Sign in to your company portal to view shipment requests, submit offers, and manage your trucks.
+            </p>
+            <ul className="space-y-3">
+              {COMPANY_BENEFITS.map((benefit) => (
+                <li key={benefit} className="flex items-center gap-3 text-white/95">
+                  <span className="w-5 h-5 rounded-full bg-accent flex items-center justify-center flex-shrink-0">
+                    <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                    </svg>
+                  </span>
+                  {benefit}
+                </li>
+              ))}
+            </ul>
+          </div>
+          <p className="relative z-10 text-sm text-white/70">
+            After sign in you&apos;ll go to your company dashboard.
           </p>
         </div>
         <div className="flex-1 flex flex-col items-center justify-center p-6 sm:p-10 bg-sand min-h-screen">
