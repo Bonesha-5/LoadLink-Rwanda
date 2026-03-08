@@ -1,9 +1,9 @@
-const express=require("express");
-const router=express.Router();
-const {CompanyLogin}=require('../controllers/companyLogin');
+import express from "express";
+import { CompanyLogin } from "../controllers/companyLogin.js";
 
-//POST /api/auth/company/login
+const router = express.Router();
 
-router.post('/login', CompanyLogin);
+// POST /api/auth/company/login
+router.post("/login", CompanyLogin);
 
-module.exports=router;
+export default router;

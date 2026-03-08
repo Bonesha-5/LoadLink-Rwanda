@@ -2,10 +2,16 @@ import express from "express";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import pool from "../config/db.js";
+import * as authController from "../controllers/companyAuth.js";
 const router = express.Router();
 
 router.post("/shipper/register", async (req, res) => {
   const { name, phone, email, password } = req.body;
+  const router = express.Router();
+
+  router.post("/company/register", authController.registerCompany);
+
+  router.post("/company/login", authController.loginCompany);
 
   try {
     const hashedPassword = await bcrypt.hash(password, 12);

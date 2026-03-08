@@ -14,7 +14,7 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use("/auth", authRoutes);
 
-const companyRoute = require("./routes/companyLogin");
+import companyRoute from "./routes/companyLogin.js";
 app.use("/api/auth/company", companyRoute);
 
 const PORT = process.env.PORT || 3000;

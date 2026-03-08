@@ -10,4 +10,4 @@ const pool = new Pool({
   ssl: { rejectUnauthorized: true },
 });
 
-module.exports = pool;
+export default pool;
