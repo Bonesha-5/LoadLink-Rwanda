@@ -1,10 +1,11 @@
 import jwt from "jsonwebtoken";
 import * as companyService from "../service/company.js";
+import { catchAsync } from "../utils/catchAsync.js";
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
 // Register a new company
-export const registerCompany = async (req, res) => {
+export const registerCompany = catchAsync(async (req, res) => {
   const {
     email,
     password,
@@ -13,72 +14,60 @@ export const registerCompany = async (req, res) => {
     contact_person,
     phone,
     base_district,
+    business_cert_url,
+    insurance_doc_url,
   } = req.body;
 
-  try {
-    // Check if user already exists
-    const existingUser = await companyService.findUserByEmail(email);
-    if (existingUser) {
-      return res.status(400).json({ error: "Email already registered" });
-    }
-
-    // Check if RDB number already exists
-    const existingRDB = await companyService.findCompanyByRDB(rdb_number);
-    if (existingRDB) {
-      return res.status(400).json({ error: "RDB number already registered" });
-    }
-
-    // Hash password
-    const bcrypt = await import("bcrypt");
-    const password_hash = await bcrypt.default.hash(password, 10);
-
-    // Create user and company records
-    const { user_id, company_id } = await companyService.createCompanyWithUser({
-      email,
-      password_hash,
-      name,
-      rdb_number,
-      contact_person,
-      phone,
-      base_district,
+  // Check if user already exists
+  const existingUser = await companyService.findUserByEmail(email);
+  if (existingUser) {
+    return res.status(400).json({
+      success: false,
+      message: "Email already registered",
     });
-
-    // Generate JWT token
-    const token = jwt.sign(
-      {
-        user_id,
-        company_id,
-        role: "COMPANY",
-        email,
-      },
-      JWT_SECRET,
-      { expiresIn: "24h" },
-    );
-
-    res.status(201).json({
-      message: "Company registered successfully",
-      token,
-      user: {
-        id: user_id,
-        email,
-        role: "COMPANY",
-        company_id,
-        company_name: name,
-        status: "PENDING_VERIFICATION",
-      },
-    });
-  } catch (error) {
-    console.error("Registration error:", error);
-    res.status(500).json({ error: "Internal server error" });
   }
-};
+
+  // Check if RDB number already exists
+  const existingRDB = await companyService.findCompanyByRDB(rdb_number);
+  if (existingRDB) {
+    return res.status(400).json({
+      success: false,
+      message: "RDB number already registered",
+    });
+  }
+
+  // Hash password
+  const bcrypt = await import("bcrypt");
+  const password_hash = await bcrypt.default.hash(password, 10);
+
+  // Create user and company records
+  await companyService.createCompanyWithUser({
+    email,
+    password_hash,
+    name,
+    rdb_number,
+    contact_person,
+    phone,
+    base_district,
+    business_cert_url,
+    insurance_doc_url,
+  });
+
+  res.status(201).json({
+    success: true,
+    message: `${name} successfully registered`,
+  });
+});
 
 // Handle company login
-export const CompanyLogin = async (req, res) => {
+export const CompanyLogin = catchAsync(async (req, res) => {
   const { email, password } = req.body;
 
   if (!email || !password) {
-    return res.status(400).json({ message: "Email and password are required" });
+    return res.status(400).json({
+      success: false,
+      message: "Email and password are required",
+    });
   }
 
   try {
@@ -91,6 +80,7 @@ export const CompanyLogin = async (req, res) => {
     );
 
     return res.status(200).json({
+      success: true,
       message: "Login successful",
       token,
       user: {
@@ -103,20 +93,16 @@ export const CompanyLogin = async (req, res) => {
         status: user.company_status,
       },
     });
-  } catch (err) {
-    if (err.message === "Invalid email or password") {
-      return res.status(401).json({ message: err.message });
-    }
-    if (
-      err.message === "Account has been suspended" ||
-      err.message === "Account pending admin verification" ||
-      err.message === "Account rejected"
+  } catch (error) {
+    if (error.message === "Invalid email or password") {
+      error.statusCode = 401;
+    } else if (
+      error.message === "Account has been suspended" ||
+      error.message === "Account pending admin verification" ||
+      error.message === "Account rejected"
     ) {
-      return res.status(403).json({ message: err.message });
+      error.statusCode = 403;
     }
-    console.error("Company login error:", err.message);
-    return res
-      .status(500)
-      .json({ message: "Server error", detail: err.message });
+    throw error;
   }
-};
+});

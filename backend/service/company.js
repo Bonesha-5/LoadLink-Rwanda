@@ -28,6 +28,8 @@ export const createCompanyWithUser = async (userData) => {
     contact_person,
     phone,
     base_district,
+    business_cert_url,
+    insurance_doc_url,
   } = userData;
 
   await pool.query("BEGIN");
@@ -44,9 +46,18 @@ export const createCompanyWithUser = async (userData) => {
 
     // Create company record
     const companyResult = await pool.query(
-      `INSERT INTO companies (user_id, name, rdb_number, contact_person, base_district) 
-       VALUES ($1, $2, $3, $4, $5) RETURNING id`,
-      [user_id, name, rdb_number, contact_person, base_district],
+      `INSERT INTO companies (user_id, name, rdb_number, contact_person, phone, base_district, business_cert_url, insurance_doc_url, status) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'PENDING_VERIFICATION') RETURNING id`,
+      [
+        user_id,
+        name,
+        rdb_number,
+        contact_person,
+        phone,
+        base_district,
+        business_cert_url,
+        insurance_doc_url,
+      ],
     );
 
     const company_id = companyResult.rows[0].id;
