@@ -1,4 +1,5 @@
 import pool from "../config/db.js";
+import bcrypt from "bcrypt";
 
 // Check if user exists by email
 export const findUserByEmail = async (email) => {
@@ -62,12 +63,41 @@ export const createCompanyWithUser = async (userData) => {
 // Find company user with all details for login
 export const findCompanyUserByEmail = async (email) => {
   const result = await pool.query(
-    `SELECT u.id, u.email, u.password_hash, u.role, u.is_suspended,
-            c.id as company_id, c.name as company_name, c.status
-     FROM users u
-     LEFT JOIN companies c ON u.id = c.user_id
+    `SELECT u.id AS user_id, u.email, u.password_hash, u.role, u.is_suspended, 
+            c.id AS company_id, c.name AS company_name, c.status AS company_status, 
+            c.base_district, c.contact_person 
+     FROM users u 
+     JOIN companies c ON c.user_id = u.id 
      WHERE u.email = $1 AND u.role = 'COMPANY'`,
     [email],
   );
   return result.rows[0];
+};
+
+// Handle company login logic
+export const loginCompany = async (email, password) => {
+  const user = await findCompanyUserByEmail(email);
+
+  if (!user) {
+    throw new Error("Invalid email or password");
+  }
+
+  if (user.is_suspended) {
+    throw new Error("Account has been suspended");
+  }
+
+  if (user.company_status === "PENDING_VERIFICATION") {
+    throw new Error("Account pending admin verification");
+  }
+
+  if (user.company_status === "REJECTED") {
+    throw new Error("Account rejected");
+  }
+
+  const match = await bcrypt.compare(password, user.password_hash);
+  if (!match) {
+    throw new Error("Invalid email or password");
+  }
+
+  return user;
 };

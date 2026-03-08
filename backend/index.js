@@ -2,7 +2,8 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 
-import authRoutes from "./routes/auth.js";
+import companyRoutes from "./routes/company.js";
+import shipperRoutes from "./routes/shipper.js";
 
 dotenv.config();
 
@@ -12,10 +13,8 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-app.use("/auth", authRoutes);
-
-import companyRoute from "./routes/companyLogin.js";
-app.use("/api/auth/company", companyRoute);
+app.use("/api/company", companyRoutes);
+app.use("/api/shipper", shipperRoutes);
 
 const PORT = process.env.PORT || 3000;
 
