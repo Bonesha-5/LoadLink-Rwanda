@@ -20,8 +20,7 @@ A digital freight marketplace and escrow payment platform that connects shippers
 - [Database Schema](#database-schema)
 - [User Roles](#user-roles)
 - [Shipment Lifecycle](#shipment-lifecycle)
-- [Branching Strategy](#branching-strategy)
-- [Team](#team)
+
 
 ---
 
