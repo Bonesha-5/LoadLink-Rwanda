@@ -43,7 +43,9 @@ export default function CompanyTrucks() {
       <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
         <div>
           <h1 className="text-2xl font-bold text-stone-800">My Trucks</h1>
-          <p className="text-stone-600 mt-1">Manage your fleet. Add trucks to submit offers on shipments.</p>
+          <p className="text-stone-600 mt-1">
+            Manage your fleet. Add trucks that you want to use when bidding on shipments.
+          </p>
         </div>
         <button
           type="button"
@@ -115,7 +117,9 @@ export default function CompanyTrucks() {
 
       {trucks.length === 0 && !showForm ? (
         <div className="bg-white rounded-2xl border border-stone-200 p-10 text-center">
-          <p className="text-stone-600 mb-4">You haven&apos;t added any trucks yet.</p>
+          <p className="text-stone-600 mb-4">
+            You haven&apos;t added any trucks yet. Add at least one truck to start bidding on loads.
+          </p>
           <button
             type="button"
             onClick={() => setShowForm(true)}
