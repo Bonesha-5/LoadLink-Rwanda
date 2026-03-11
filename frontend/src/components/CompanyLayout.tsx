@@ -2,9 +2,9 @@ import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 
 const navItems = [
-  { path: '/company/dashboard', label: 'Dashboard', icon: DashboardIcon },
+  { path: '/company/dashboard', label: 'Available Shipments', icon: DashboardIcon },
   { path: '/company/trucks', label: 'My Trucks', icon: TruckIcon },
-  { path: '/company/shipments', label: 'Shipments', icon: ListIcon },
+  { path: '/company/shipments', label: 'Active Shipments', icon: ListIcon },
 ]
 
 function DashboardIcon() {
@@ -55,7 +55,7 @@ function LogoutIcon() {
 export default function CompanyLayout() {
   const location = useLocation()
   const navigate = useNavigate()
-  const { logout } = useAuth()
+  const { logout, user } = useAuth()
 
   const handleLogout = () => {
     logout()
@@ -110,7 +110,23 @@ export default function CompanyLayout() {
           <div className="absolute top-0 right-0 w-96 h-96 rounded-full bg-accent/5 blur-3xl" />
           <div className="absolute bottom-20 left-0 w-72 h-72 rounded-full bg-sidebar/5 blur-2xl" />
         </div>
-        <div className="relative z-10">
+        <div className="relative z-10 space-y-6">
+          <header className="flex flex-wrap items-center justify-between gap-3 mb-2">
+            <div>
+              <h2 className="text-lg font-semibold text-stone-900">
+                {user?.name || 'Company'}
+              </h2>
+              <p className="text-sm text-stone-500">
+                Company dashboard
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 text-emerald-700 px-3 py-1 text-xs font-semibold border border-emerald-100">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                Verified
+              </span>
+            </div>
+          </header>
           <Outlet />
         </div>
       </main>
