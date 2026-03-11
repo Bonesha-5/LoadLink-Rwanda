@@ -45,8 +45,10 @@ export default function CompanyShipments() {
   return (
     <div className="max-w-4xl">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-stone-800">Available shipments</h1>
-        <p className="text-stone-600 mt-1">Browse loads posted by shippers and submit your offer.</p>
+        <h1 className="text-2xl font-bold text-stone-800">Available Shipments</h1>
+        <p className="text-stone-600 mt-1">
+          Browse loads posted by shippers that you can bid on as a transport company.
+        </p>
       </div>
 
       {loads.length === 0 ? (
@@ -62,14 +64,27 @@ export default function CompanyShipments() {
             >
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
-                  <p className="font-bold text-stone-800 text-lg">{load.origin} → {load.destination}</p>
-                  <p className="text-stone-600 text-sm mt-1">Date: {load.date} · {load.weight}</p>
+                  <p className="font-bold text-stone-800 text-lg">
+                    {load.origin} → {load.destination}
+                  </p>
+                  <p className="text-stone-600 text-sm mt-1">
+                    Pickup date: <span className="font-medium">{load.date}</span>
+                  </p>
+                  <p className="text-stone-600 text-sm">
+                    Weight: <span className="font-medium">{load.weight}</span>
+                  </p>
                   {load.description && (
-                    <p className="text-stone-500 text-sm mt-2">{load.description}</p>
+                    <p className="text-stone-500 text-sm mt-2">
+                      Cargo: {load.description}
+                    </p>
                   )}
-                  <p className="text-stone-500 text-sm mt-1">Posted by {load.createdBy}</p>
+                  <p className="text-stone-500 text-sm mt-1">
+                    Posted by {load.createdBy}
+                  </p>
                   {load.offers && load.offers.length > 0 && (
-                    <p className="text-stone-500 text-sm mt-1">{load.offers.length} offer(s) received</p>
+                    <p className="text-stone-500 text-sm mt-1">
+                      {load.offers.length} offer{load.offers.length === 1 ? '' : 's'} received
+                    </p>
                   )}
                 </div>
                 <button
