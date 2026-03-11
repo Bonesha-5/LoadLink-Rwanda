@@ -26,13 +26,38 @@ export default function CompanyDashboard() {
         Rwanda&apos;s premier logistics marketplace. Get shipment requests from shippers, submit competitive offers, and grow your transport business.
       </p>
       <div className="grid grid-cols-2 gap-4 mb-8">
-        <div className="bg-white rounded-xl border border-stone-200 p-4">
-          <p className="text-2xl font-bold text-stone-800">{truckCount}</p>
-          <p className="text-stone-600 text-sm">Trucks in fleet</p>
+        <div className="bg-white rounded-2xl border border-stone-200 p-4 shadow-sm flex items-center gap-4">
+          <div className="w-10 h-10 rounded-xl bg-sidebar/5 flex items-center justify-center text-sidebar">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <rect x="1" y="3" width="15" height="13" />
+              <polygon points="16 8 20 8 23 11 23 16 16 16 16 8" />
+              <circle cx="5.5" cy="18.5" r="2.5" />
+              <circle cx="18.5" cy="18.5" r="2.5" />
+            </svg>
+          </div>
+          <div>
+            <p className="text-xs font-medium uppercase tracking-wide text-stone-500">
+              Trucks in fleet
+            </p>
+            <p className="text-2xl font-bold text-stone-900">
+              {truckCount}
+            </p>
+          </div>
         </div>
-        <div className="bg-white rounded-xl border border-stone-200 p-4">
-          <p className="text-2xl font-bold text-stone-800">{openLoadsCount}</p>
-          <p className="text-stone-600 text-sm">Open shipments</p>
+        <div className="bg-white rounded-2xl border border-stone-200 p-4 shadow-sm flex items-center gap-4">
+          <div className="w-10 h-10 rounded-xl bg-accent/5 flex items-center justify-center text-accent">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7h18M5 7v10a2 2 0 002 2h10a2 2 0 002-2V7M9 11h6" />
+            </svg>
+          </div>
+          <div>
+            <p className="text-xs font-medium uppercase tracking-wide text-stone-500">
+              Open shipments
+            </p>
+            <p className="text-2xl font-bold text-stone-900">
+              {openLoadsCount}
+            </p>
+          </div>
         </div>
       </div>
       <div className="flex flex-wrap gap-4">
