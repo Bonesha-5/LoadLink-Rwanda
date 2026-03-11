@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import type { Role } from '../context/AuthContext'
 
@@ -42,15 +42,17 @@ export default function Register() {
   const [phone, setPhone] = useState('')
   const [password, setPassword] = useState('')
   const navigate = useNavigate()
-  const { login, isShipper, isCompany, isAdmin } = useAuth()
+  const location = useLocation()
+  const { login, user } = useAuth()
   const dashboard = ROLE_DASHBOARDS[role]
-  const isLoggedIn = isShipper || isCompany || isAdmin
+  const isLoggedInForThisRole = user?.role === role
   const isShipperPage = role === 'shipper'
   const isCompanyPage = role === 'company'
 
   useEffect(() => {
-    if (isLoggedIn) navigate(dashboard, { replace: true })
-  }, [isLoggedIn, navigate, dashboard])
+    if (!isLoggedInForThisRole) return
+    if (location.pathname !== dashboard) navigate(dashboard, { replace: true })
+  }, [isLoggedInForThisRole, navigate, dashboard, location.pathname])
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()

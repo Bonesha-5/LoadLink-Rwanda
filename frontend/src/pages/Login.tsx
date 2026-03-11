@@ -36,18 +36,20 @@ export default function Login() {
   const [password, setPassword] = useState('')
   const navigate = useNavigate()
   const location = useLocation()
-  const { login, isShipper, isCompany, isAdmin } = useAuth()
+  const { login, user } = useAuth()
   const from =
     (location.state as { from?: { pathname: string } })?.from?.pathname ??
     ROLE_DASHBOARDS[role]
 
-  const isLoggedIn = isShipper || isCompany || isAdmin
+  const isLoggedInForThisRole = user?.role === role
   const isShipperPage = role === 'shipper'
   const isCompanyPage = role === 'company'
 
   useEffect(() => {
-    if (isLoggedIn) navigate(from, { replace: true })
-  }, [isLoggedIn, navigate, from])
+    if (!isLoggedInForThisRole) return
+    // Prevent redirect loops (same-path navigation can trigger throttling / max-depth errors).
+    if (location.pathname !== from) navigate(from, { replace: true })
+  }, [isLoggedInForThisRole, navigate, from, location.pathname])
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()

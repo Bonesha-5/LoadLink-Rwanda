@@ -1,126 +1,13 @@
 /**
- * Frontend-only storage for loads (shipments) and company trucks.
- * Uses localStorage so data persists across sessions.
+ * Frontend-only storage (localStorage).
+ *
+ * Important: avoid side-effects at import time. Some environments block
+ * localStorage access, which can crash rendering if we eagerly write/read.
  */
 
-const LOADS_KEY = 'loadlink_loads'
-const TRUCKS_KEY = 'loadlink_company_trucks'
+// ── Types ──────────────────────────────────────────────────────────────────
 
-// --- Loads (shipments posted by shippers) ---
-
-export type LoadOffer = {
-  id: string
-  companyName: string
-  amount: string
-  message?: string
-}
-
-export type Load = {
-  id: string
-  origin: string
-  destination: string
-  date: string
-  weight: string
-  description?: string
-  price?: string
-  status: string
-  createdBy: string
-  offers: LoadOffer[]
-}
-
-function nextId(prefix: string): string {
-  return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`
-}
-
-function getLoads(): Load[] {
-  try {
-    const raw = localStorage.getItem(LOADS_KEY)
-    if (!raw) return getSeedLoads()
-    const parsed = JSON.parse(raw) as Load[]
-    return Array.isArray(parsed) ? parsed : getSeedLoads()
-  } catch {
-    return getSeedLoads()
-  }
-}
-
-function getSeedLoads(): Load[] {
-  const seed: Load[] = [
-    {
-      id: nextId('load'),
-      origin: 'Kigali',
-      destination: 'Gisenyi',
-      date: '2025-03-15',
-      weight: '5 tons',
-      description: 'General cargo, palletized.',
-      status: 'open',
-      createdBy: 'Demo Shipper',
-      offers: [],
-    },
-    {
-      id: nextId('load'),
-      origin: 'Kigali',
-      destination: 'Butare',
-      date: '2025-03-18',
-      weight: '12 tons',
-      description: 'Construction materials.',
-      status: 'open',
-      createdBy: 'Demo Shipper',
-      offers: [],
-    },
-    {
-      id: nextId('load'),
-      origin: 'Musanze',
-      destination: 'Kigali',
-      date: '2025-03-20',
-      weight: '8 tons',
-      status: 'open',
-      createdBy: 'Demo Shipper',
-      offers: [],
-    },
-  ]
-  localStorage.setItem(LOADS_KEY, JSON.stringify(seed))
-  return seed
-}
-
-export function getAllLoads(): Load[] {
-  return getLoads()
-}
-
-export function getLoadById(id: string): Load | undefined {
-  return getLoads().find((l) => l.id === id)
-}
-
-export function addOfferToLoad(loadId: string, companyName: string, amount: string, message?: string): void {
-  const loads = getLoads()
-  const load = loads.find((l) => l.id === loadId)
-  if (!load) return
-  const offer: LoadOffer = {
-    id: nextId('offer'),
-    companyName,
-    amount,
-    message,
-  }
-  load.offers = load.offers || []
-  load.offers.push(offer)
-  const updated = loads.map((l) => (l.id === loadId ? load : l))
-  localStorage.setItem(LOADS_KEY, JSON.stringify(updated))
-}
-
-export function addLoad(load: Omit<Load, 'id' | 'offers'>): Load {
-  const loads = getLoads()
-  const newLoad: Load = {
-    ...load,
-    id: nextId('load'),
-    offers: [],
-  }
-  loads.push(newLoad)
-  localStorage.setItem(LOADS_KEY, JSON.stringify(loads))
-  return newLoad
-}
-
-// --- Company trucks ---
-
-export type Truck = {
+export interface Truck {
   id: string
   companyName: string
   capacity: string
@@ -128,33 +15,157 @@ export type Truck = {
   plateNumber?: string
 }
 
-function getTrucks(): Truck[] {
+export interface Offer {
+  id: string
+  companyName: string
+  amount: string
+  message?: string
+  createdAt: string
+}
+
+export interface Load {
+  id: string
+  origin: string
+  destination: string
+  date: string
+  weight: string
+  description?: string
+  status: 'open' | 'closed'
+  createdBy: string
+  offers?: Offer[]
+}
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+
+function uid(): string {
+  return Math.random().toString(36).slice(2) + Date.now().toString(36)
+}
+
+function safeParseJson<T>(raw: string | null, fallback: T): T {
+  if (!raw) return fallback
   try {
-    const raw = localStorage.getItem(TRUCKS_KEY)
-    if (!raw) return []
-    const parsed = JSON.parse(raw) as Truck[]
-    return Array.isArray(parsed) ? parsed : []
+    return JSON.parse(raw) as T
+  } catch {
+    return fallback
+  }
+}
+
+function safeSetItem(key: string, value: unknown): void {
+  try {
+    localStorage.setItem(key, JSON.stringify(value))
+  } catch {
+    // ignore (storage blocked/disabled/quota exceeded)
+  }
+}
+
+// ── Trucks ─────────────────────────────────────────────────────────────────
+
+const TRUCKS_KEY = 'll_trucks'
+
+function getAllTrucks(): Truck[] {
+  try {
+    return safeParseJson<Truck[]>(localStorage.getItem(TRUCKS_KEY), [])
   } catch {
     return []
   }
 }
 
-export function getTrucksByCompany(companyName: string): Truck[] {
-  return getTrucks().filter((t) => t.companyName === companyName)
+function saveTrucks(trucks: Truck[]): void {
+  safeSetItem(TRUCKS_KEY, trucks)
 }
 
-export function addTruck(truck: Omit<Truck, 'id'>): Truck {
-  const trucks = getTrucks()
-  const newTruck: Truck = {
-    ...truck,
-    id: nextId('truck'),
-  }
-  trucks.push(newTruck)
-  localStorage.setItem(TRUCKS_KEY, JSON.stringify(trucks))
-  return newTruck
+export function getTrucksByCompany(companyName: string): Truck[] {
+  return getAllTrucks().filter((t) => t.companyName === companyName)
+}
+
+export function addTruck(data: Omit<Truck, 'id'>): Truck {
+  const truck: Truck = { id: uid(), ...data }
+  saveTrucks([...getAllTrucks(), truck])
+  return truck
 }
 
 export function deleteTruck(id: string): void {
-  const trucks = getTrucks().filter((t) => t.id !== id)
-  localStorage.setItem(TRUCKS_KEY, JSON.stringify(trucks))
+  saveTrucks(getAllTrucks().filter((t) => t.id !== id))
+}
+
+// ── Loads ──────────────────────────────────────────────────────────────────
+
+const LOADS_KEY = 'll_loads'
+
+export function getAllLoads(): Load[] {
+  try {
+    return safeParseJson<Load[]>(localStorage.getItem(LOADS_KEY), [])
+  } catch {
+    return []
+  }
+}
+
+function saveLoads(loads: Load[]): void {
+  safeSetItem(LOADS_KEY, loads)
+}
+
+export function addLoad(data: Omit<Load, 'id' | 'status' | 'offers'>): Load {
+  const load: Load = { id: uid(), status: 'open', offers: [], ...data }
+  saveLoads([...getAllLoads(), load])
+  return load
+}
+
+export function addOfferToLoad(
+  loadId: string,
+  companyName: string,
+  amount: string,
+  message?: string,
+): void {
+  const loads = getAllLoads()
+  const idx = loads.findIndex((l) => l.id === loadId)
+  if (idx === -1) return
+  const offer: Offer = {
+    id: uid(),
+    companyName,
+    amount,
+    message,
+    createdAt: new Date().toISOString(),
+  }
+  loads[idx] = { ...loads[idx], offers: [...(loads[idx].offers ?? []), offer] }
+  saveLoads(loads)
+}
+
+export function ensureSeedLoads(): void {
+  const existing = getAllLoads()
+  if (existing.length > 0) return
+  const seed: Load[] = [
+    {
+      id: uid(),
+      origin: 'Kigali',
+      destination: 'Gisenyi',
+      date: '2026-03-15',
+      weight: '5 tons',
+      description: 'General cargo, palletized.',
+      status: 'open',
+      createdBy: 'Demo Shipper',
+      offers: [],
+    },
+    {
+      id: uid(),
+      origin: 'Kigali',
+      destination: 'Butare',
+      date: '2026-03-18',
+      weight: '12 tons',
+      description: 'Construction materials.',
+      status: 'open',
+      createdBy: 'Demo Shipper',
+      offers: [],
+    },
+    {
+      id: uid(),
+      origin: 'Musanze',
+      destination: 'Kigali',
+      date: '2026-03-20',
+      weight: '8 tons',
+      status: 'open',
+      createdBy: 'Demo Shipper',
+      offers: [],
+    },
+  ]
+  saveLoads(seed)
 }
