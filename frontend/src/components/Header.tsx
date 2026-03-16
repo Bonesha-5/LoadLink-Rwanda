@@ -11,6 +11,7 @@ export default function Header() {
         <Link to="/trucks" className="text-white/90 hover:text-white transition-colors">Trucks</Link>
         <Link to="/login/shipper" className="text-white/90 hover:text-white transition-colors">Shipper Login</Link>
         <Link to="/login/company" className="text-white/90 hover:text-white transition-colors">Company Login</Link>
+        <Link to="/login/admin" className="text-white/90 hover:text-white transition-colors">Admin</Link>
         <Link to="/ussd-help" className="text-white/90 hover:text-white transition-colors">USSD Help</Link>
       </nav>
     </header>

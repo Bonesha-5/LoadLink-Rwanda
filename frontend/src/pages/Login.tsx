@@ -14,7 +14,7 @@ const ROLE_LABELS: Record<Role, string> = {
 const ROLE_DASHBOARDS: Record<Role, string> = {
   shipper: '/profile',
   company: '/company/dashboard',
-  admin: '/admin/dashboard',
+  admin: '/admin/companies',
 }
 
 const SHIPPER_BENEFITS = [
@@ -236,7 +236,7 @@ export default function Login() {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center relative overflow-hidden bg-sand py-12 px-6">
       <div
-        className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-[0.06]"
+        className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-[0.06] pointer-events-none"
         style={{ backgroundImage: 'url(/cargo.jpg)' }}
       />
       <Link
@@ -245,7 +245,9 @@ export default function Login() {
       >
         LoadLink Rwanda
       </Link>
-      {formCard}
+      <div className="w-full max-w-md relative z-10">
+        {formCard}
+      </div>
     </div>
   )
 }

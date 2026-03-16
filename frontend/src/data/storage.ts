@@ -30,6 +30,8 @@ export interface Load {
   date: string
   weight: string
   description?: string
+  // Fixed price set by the shipper (e.g. "150,000 RWF")
+  price?: string
   status: 'open' | 'closed'
   createdBy: string
   offers?: Offer[]
@@ -141,6 +143,7 @@ export function ensureSeedLoads(): void {
       date: '2026-03-15',
       weight: '5 tons',
       description: 'General cargo, palletized.',
+      price: '150,000 RWF',
       status: 'open',
       createdBy: 'Demo Shipper',
       offers: [],
@@ -152,6 +155,7 @@ export function ensureSeedLoads(): void {
       date: '2026-03-18',
       weight: '12 tons',
       description: 'Construction materials.',
+      price: '320,000 RWF',
       status: 'open',
       createdBy: 'Demo Shipper',
       offers: [],
@@ -162,6 +166,7 @@ export function ensureSeedLoads(): void {
       destination: 'Kigali',
       date: '2026-03-20',
       weight: '8 tons',
+      price: '240,000 RWF',
       status: 'open',
       createdBy: 'Demo Shipper',
       offers: [],

@@ -16,6 +16,11 @@ import CompanyTrucks from './pages/CompanyTrucks'
 import CompanyShipments from './pages/CompanyShipments'
 import CompanyActiveShipments from './pages/CompanyActiveShipments'
 import ProtectedRoute from './components/ProtectedRoute'
+import AdminLayout from './components/AdminLayout'
+import AdminCompanyVerification from './pages/AdminCompanyVerification'
+import AdminShipmentMonitoring from './pages/AdminShipmentMonitoring'
+import AdminDisputes from './pages/AdminDisputes'
+import AdminAuditLog from './pages/AdminAuditLog'
 
 export default function App() {
   return (
@@ -35,6 +40,12 @@ export default function App() {
         <Route path="company/trucks" element={<CompanyTrucks />} />
         <Route path="company/shipments" element={<CompanyShipments />} />
         <Route path="company/active-shipments" element={<CompanyActiveShipments />} />
+      </Route>
+      <Route element={<ProtectedRoute role="admin"><AdminLayout /></ProtectedRoute>}>
+        <Route path="admin/companies" element={<AdminCompanyVerification />} />
+        <Route path="admin/shipments" element={<AdminShipmentMonitoring />} />
+        <Route path="admin/disputes" element={<AdminDisputes />} />
+        <Route path="admin/audit-log" element={<AdminAuditLog />} />
       </Route>
       <Route element={<Layout />}>
         <Route path="trucks" element={<Trucks />} />

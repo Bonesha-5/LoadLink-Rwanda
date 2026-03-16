@@ -14,7 +14,7 @@ const ROLE_LABELS: Record<Role, string> = {
 const ROLE_DASHBOARDS: Record<Role, string> = {
   shipper: '/profile',
   company: '/company/dashboard',
-  admin: '/admin/dashboard',
+  admin: '/admin/companies',
 }
 
 const ROLE_REGISTER_DESCRIPTIONS: Record<Role, string> = {

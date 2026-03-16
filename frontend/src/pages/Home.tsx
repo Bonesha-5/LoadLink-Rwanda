@@ -22,6 +22,9 @@ export default function Home() {
             <Link to="/login/company" className="text-sidebar/90 hover:text-sidebar font-medium transition-colors">
               Company Login
             </Link>
+            <Link to="/login/admin" className="text-sidebar/90 hover:text-sidebar font-medium transition-colors">
+              Admin
+            </Link>
           </div>
         </nav>
       </header>
