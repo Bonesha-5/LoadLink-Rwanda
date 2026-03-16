@@ -4,6 +4,7 @@ import {
   getAllLoads,
   addOfferToLoad,
   ensureSeedLoads,
+  getTrucksByCompany,
 } from '../data/storage'
 
 export default function CompanyShipments() {
@@ -17,8 +18,34 @@ export default function CompanyShipments() {
   const loads = useMemo(() => {
     void refresh
     ensureSeedLoads()
-    return getAllLoads().filter((l) => l.status === 'open')
-  }, [refresh])
+    const allOpen = getAllLoads().filter((l) => l.status === 'open')
+    const trucks = getTrucksByCompany(companyName)
+
+    // If company has no trucks yet, show nothing but the hint in the UI.
+    if (!trucks.length) return [] as typeof allOpen
+
+    const parseTons = (value: string | undefined): number | null => {
+      if (!value) return null
+      // Expect strings like "5 tons", "12 t", or "8"
+      const match = value.match(/(\d+(\.\d+)?)/)
+      if (!match) return null
+      return Number(match[1])
+    }
+
+    const capacities = trucks
+      .map((t) => parseTons(t.capacity))
+      .filter((v): v is number => typeof v === 'number')
+
+    if (!capacities.length) return [] as typeof allOpen
+
+    const maxCapacity = Math.max(...capacities)
+
+    return allOpen.filter((load) => {
+      const weightTons = parseTons(load.weight)
+      if (weightTons == null) return true
+      return weightTons <= maxCapacity
+    })
+  }, [refresh, companyName])
 
   function openOfferModal(loadId: string) {
     setOfferLoadId(loadId)
