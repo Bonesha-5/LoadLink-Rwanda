@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext'
 const navItems = [
   { path: '/company/dashboard', label: 'Available Shipments', icon: DashboardIcon },
   { path: '/company/trucks', label: 'My Trucks', icon: TruckIcon },
-  { path: '/company/shipments', label: 'Active Shipments', icon: ListIcon },
+  { path: '/company/active-shipments', label: 'Active Shipments', icon: ListIcon },
 ]
 
 function DashboardIcon() {

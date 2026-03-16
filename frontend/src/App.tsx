@@ -14,6 +14,7 @@ import USSDHelp from './pages/USSDHelp'
 import CompanyDashboard from './pages/CompanyDashboard'
 import CompanyTrucks from './pages/CompanyTrucks'
 import CompanyShipments from './pages/CompanyShipments'
+import CompanyActiveShipments from './pages/CompanyActiveShipments'
 import ProtectedRoute from './components/ProtectedRoute'
 
 export default function App() {
@@ -33,6 +34,7 @@ export default function App() {
         <Route path="company/dashboard" element={<CompanyDashboard />} />
         <Route path="company/trucks" element={<CompanyTrucks />} />
         <Route path="company/shipments" element={<CompanyShipments />} />
+        <Route path="company/active-shipments" element={<CompanyActiveShipments />} />
       </Route>
       <Route element={<Layout />}>
         <Route path="trucks" element={<Trucks />} />
