@@ -12,7 +12,6 @@ export default function CompanyShipments() {
   const companyName = user?.name ?? ''
   const [refresh, setRefresh] = useState(0)
   const [offerLoadId, setOfferLoadId] = useState<string | null>(null)
-  const [offerAmount, setOfferAmount] = useState('')
   const [offerMessage, setOfferMessage] = useState('')
 
   const loads = useMemo(() => {
@@ -49,20 +48,20 @@ export default function CompanyShipments() {
 
   function openOfferModal(loadId: string) {
     setOfferLoadId(loadId)
-    setOfferAmount('')
     setOfferMessage('')
   }
 
   function closeOfferModal() {
     setOfferLoadId(null)
-    setOfferAmount('')
     setOfferMessage('')
   }
 
   function handleSubmitOffer(e: React.FormEvent) {
     e.preventDefault()
-    if (!offerLoadId || !offerAmount.trim()) return
-    addOfferToLoad(offerLoadId, companyName, offerAmount.trim(), offerMessage.trim() || undefined)
+    if (!offerLoadId || !offerLoad) return
+    // For fixed-price marketplace: we accept the shipment at the listed price.
+    const amount = offerLoad.price ?? 'ACCEPTED'
+    addOfferToLoad(offerLoadId, companyName, amount, offerMessage.trim() || undefined)
     closeOfferModal()
     setRefresh((v) => v + 1)
   }
@@ -100,6 +99,14 @@ export default function CompanyShipments() {
                   <p className="text-stone-600 text-sm">
                     Weight: <span className="font-medium">{load.weight}</span>
                   </p>
+                  {load.price && (
+                    <p className="text-stone-600 text-sm">
+                      Price:{' '}
+                      <span className="font-semibold text-stone-900">
+                        {load.price}
+                      </span>
+                    </p>
+                  )}
                   {load.description && (
                     <p className="text-stone-500 text-sm mt-2">
                       Cargo: {load.description}
@@ -119,7 +126,7 @@ export default function CompanyShipments() {
                   onClick={() => openOfferModal(load.id)}
                   className="px-5 py-2.5 bg-accent text-white font-semibold rounded-xl hover:bg-accent-hover transition-colors shrink-0"
                 >
-                  Submit offer
+                  Accept shipment
                 </button>
               </div>
             </li>
@@ -140,23 +147,21 @@ export default function CompanyShipments() {
             onClick={(e) => e.stopPropagation()}
           >
             <h2 id="offer-modal-title" className="text-lg font-bold text-stone-800 mb-2">
-              Submit offer — {offerLoad.origin} → {offerLoad.destination}
+              Accept shipment — {offerLoad.origin} → {offerLoad.destination}
             </h2>
-            <p className="text-stone-600 text-sm mb-4">{offerLoad.weight} · {offerLoad.date}</p>
+            <p className="text-stone-600 text-sm mb-1">
+              {offerLoad.weight} · {offerLoad.date}
+            </p>
+            {offerLoad.price && (
+              <p className="text-stone-800 text-sm font-semibold mb-4">
+                Fixed price: {offerLoad.price}
+              </p>
+            )}
             <form onSubmit={handleSubmitOffer} className="space-y-4">
               <div>
-                <label htmlFor="offer-amount" className="block text-sm font-semibold text-stone-700 mb-2">Your price (RWF)</label>
-                <input
-                  id="offer-amount"
-                  type="text"
-                  placeholder="e.g. 150000"
-                  value={offerAmount}
-                  onChange={(e) => setOfferAmount(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl bg-stone-50 border border-stone-200 text-stone-800 placeholder:text-stone-400 focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
-                />
-              </div>
-              <div>
-                <label htmlFor="offer-message" className="block text-sm font-semibold text-stone-700 mb-2">Message (optional)</label>
+                <label htmlFor="offer-message" className="block text-sm font-semibold text-stone-700 mb-2">
+                  Message to shipper (optional)
+                </label>
                 <textarea
                   id="offer-message"
                   rows={2}
@@ -171,7 +176,7 @@ export default function CompanyShipments() {
                   type="submit"
                   className="px-5 py-2.5 bg-accent text-white font-semibold rounded-xl hover:bg-accent-hover"
                 >
-                  Submit offer
+                  Confirm acceptance
                 </button>
                 <button
                   type="button"
