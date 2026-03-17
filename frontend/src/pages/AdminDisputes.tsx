@@ -138,10 +138,26 @@ export default function AdminDisputes() {
         <button
           type="button"
           onClick={loadDisputes}
-          className="text-sm font-semibold text-stone-600 hover:text-stone-900 hover:underline"
+          className="inline-flex items-center gap-1.5 text-sm font-semibold text-stone-600 hover:text-stone-900 hover:underline"
         >
+          <span className="inline-block h-1.5 w-1.5 rounded-full bg-accent" />
           Refresh
         </button>
+      </div>
+
+      <div className="mb-4 flex flex-wrap items-center gap-3 text-xs text-stone-600">
+        <span className="inline-flex items-center gap-2 rounded-full bg-cream px-3 py-1 border border-stone-200">
+          <span className="inline-block h-2 w-2 rounded-full bg-red-500" />
+          <span className="font-semibold text-stone-800">
+            {disputes.length}
+          </span>
+          <span className="text-stone-600">
+            active dispute{disputes.length === 1 ? '' : 's'}
+          </span>
+        </span>
+        <span className="hidden sm:inline text-stone-500">
+          Aim to release escrow fairly while keeping both sides informed.
+        </span>
       </div>
 
       {state === 'loading' && (

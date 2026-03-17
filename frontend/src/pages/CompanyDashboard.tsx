@@ -2,11 +2,19 @@ import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { getTrucksByCompany, getAllLoads, ensureSeedLoads } from '../data/storage'
+import CompanyFleetMap from '../components/CompanyFleetMap'
 
 export default function CompanyDashboard() {
   const { user } = useAuth()
   const companyName = user?.name ?? ''
   const [refresh, setRefresh] = useState(0)
+  const [showFleetMap, setShowFleetMap] = useState(false)
+
+  const demoFleet = [
+    { id: 'T1', position: [-1.95, 30.06] },  // Kigali
+    { id: 'T2', position: [-1.7, 29.26] },   // Gisenyi
+    { id: 'T3', position: [-2.6, 29.73] },   // Butare-ish
+  ]
 
   const { truckCount, openLoadsCount } = useMemo(() => {
     void refresh
@@ -94,6 +102,62 @@ export default function CompanyDashboard() {
           Refresh stats
         </button>
       </div>
+      <section className="mt-8">
+        <div className="bg-white rounded-2xl border border-stone-200 p-5 shadow-sm flex items-center justify-between gap-4">
+          <div>
+            <h2 className="text-lg font-semibold text-stone-800">Track fleet movement</h2>
+            <p className="text-sm text-stone-600">
+              Open a live map view showing where your trucks are operating across Rwanda.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowFleetMap(true)}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-accent text-white text-sm font-semibold shadow-sm hover:bg-accent-hover transition-all"
+          >
+            <span aria-hidden>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M3 7l6-3 6 3 6-3v13l-6 3-6-3-6 3V7z"
+                />
+              </svg>
+            </span>
+            View fleet map
+          </button>
+        </div>
+      </section>
+      {showFleetMap && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="relative w-full max-w-4xl mx-4">
+            <div className="bg-white rounded-2xl shadow-2xl border border-stone-200 overflow-hidden">
+              <div className="flex items-center justify-between px-5 py-3 border-b border-stone-100">
+                <div>
+                  <h3 className="text-sm font-semibold text-stone-900">Fleet movement (demo)</h3>
+                  <p className="text-xs text-stone-500">
+                    Simulated truck positions for your company across Rwanda.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowFleetMap(false)}
+                  className="inline-flex items-center justify-center w-8 h-8 rounded-full hover:bg-stone-100 text-stone-500 hover:text-stone-800"
+                  aria-label="Close fleet map"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              <div className="h-80">
+                <CompanyFleetMap trucks={demoFleet} />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

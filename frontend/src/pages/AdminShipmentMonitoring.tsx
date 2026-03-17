@@ -36,10 +36,10 @@ const STATUS_LABELS: Record<ShipmentStatus, string> = {
 
 const STATUS_CLASSES: Record<ShipmentStatus, string> = {
   PENDING: 'bg-stone-100 text-stone-700',
-  ESCROW_FUNDED: 'bg-emerald-50 text-emerald-700',
-  IN_TRANSIT: 'bg-blue-50 text-blue-700',
+  ESCROW_FUNDED: 'bg-cream text-sidebar',
+  IN_TRANSIT: 'bg-accent/10 text-accent',
   AWAITING_CONFIRMATION: 'bg-amber-50 text-amber-800',
-  COMPLETED: 'bg-emerald-100 text-emerald-800',
+  COMPLETED: 'bg-emerald-50 text-emerald-800',
   CANCELLED: 'bg-stone-200 text-stone-700',
   DISPUTED: 'bg-red-50 text-red-700',
 }
@@ -155,11 +155,27 @@ export default function AdminShipmentMonitoring() {
           <button
             type="button"
             onClick={() => void loadShipments(filter)}
-            className="text-sm font-semibold text-stone-600 hover:text-stone-900 hover:underline"
+            className="inline-flex items-center gap-1.5 text-sm font-semibold text-stone-600 hover:text-stone-900 hover:underline"
           >
+            <span className="inline-block h-1.5 w-1.5 rounded-full bg-accent" />
             Refresh
           </button>
         </div>
+      </div>
+
+      <div className="mb-4 flex flex-wrap items-center gap-3 text-xs text-stone-600">
+        <span className="inline-flex items-center gap-2 rounded-full bg-cream px-3 py-1 border border-stone-200">
+          <span className="inline-block h-2 w-2 rounded-full bg-accent" />
+          <span className="font-semibold text-stone-800">
+            {filteredShipments.length}
+          </span>
+          <span className="text-stone-600">
+            shipment{filteredShipments.length === 1 ? '' : 's'} in this view
+          </span>
+        </span>
+        <span className="hidden sm:inline text-stone-500">
+          Filter by status to focus on specific parts of the lifecycle.
+        </span>
       </div>
 
       {state === 'loading' && (

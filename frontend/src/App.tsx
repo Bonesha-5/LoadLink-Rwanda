@@ -21,6 +21,7 @@ import AdminCompanyVerification from './pages/AdminCompanyVerification'
 import AdminShipmentMonitoring from './pages/AdminShipmentMonitoring'
 import AdminDisputes from './pages/AdminDisputes'
 import AdminAuditLog from './pages/AdminAuditLog'
+import AdminAnalytics from './pages/AdminAnalytics'
 
 export default function App() {
   return (
@@ -42,6 +43,7 @@ export default function App() {
         <Route path="company/active-shipments" element={<CompanyActiveShipments />} />
       </Route>
       <Route element={<ProtectedRoute role="admin"><AdminLayout /></ProtectedRoute>}>
+        <Route path="admin/overview" element={<AdminAnalytics />} />
         <Route path="admin/companies" element={<AdminCompanyVerification />} />
         <Route path="admin/shipments" element={<AdminShipmentMonitoring />} />
         <Route path="admin/disputes" element={<AdminDisputes />} />

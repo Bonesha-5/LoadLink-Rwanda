@@ -65,6 +65,39 @@ export default function AdminAuditLog() {
     void loadAuditLog()
   }, [])
 
+  const totalEntries = entries.length
+  const today = new Date().toDateString()
+  const todayCount = entries.filter((e) => new Date(e.timestamp).toDateString() === today).length
+
+  function formatAction(action: string) {
+    switch (action) {
+      case 'APPROVE_COMPANY':
+        return 'Approved company'
+      case 'RESOLVE_DISPUTE':
+        return 'Resolved dispute'
+      case 'UPDATE_STATUS':
+        return 'Updated shipment status'
+      default:
+        return action
+          .replace(/_/g, ' ')
+          .toLowerCase()
+          .replace(/^\w/, (c) => c.toUpperCase())
+    }
+  }
+
+  function actionBadgeClass(action: string) {
+    switch (action) {
+      case 'APPROVE_COMPANY':
+        return 'bg-emerald-50 text-emerald-700 border border-emerald-100'
+      case 'RESOLVE_DISPUTE':
+        return 'bg-amber-50 text-amber-800 border border-amber-100'
+      case 'UPDATE_STATUS':
+        return 'bg-accent/10 text-accent border border-accent/20'
+      default:
+        return 'bg-stone-100 text-stone-700 border border-stone-200'
+    }
+  }
+
   return (
     <div className="max-w-5xl">
       <div className="flex items-center justify-between mb-6">
@@ -77,10 +110,31 @@ export default function AdminAuditLog() {
         <button
           type="button"
           onClick={loadAuditLog}
-          className="text-sm font-semibold text-stone-600 hover:text-stone-900 hover:underline"
+          className="inline-flex items-center gap-1.5 text-sm font-semibold text-stone-600 hover:text-stone-900 hover:underline"
         >
+          <span className="inline-block h-1.5 w-1.5 rounded-full bg-accent" />
           Refresh
         </button>
+      </div>
+
+      <div className="mb-4 flex flex-wrap items-center gap-3 text-xs text-stone-600">
+        <span className="inline-flex items-center gap-2 rounded-full bg-cream px-3 py-1 border border-stone-200">
+          <span className="inline-block h-2 w-2 rounded-full bg-sidebar" />
+          <span className="font-semibold text-stone-800">
+            {totalEntries}
+          </span>
+          <span className="text-stone-600">total action{totalEntries === 1 ? '' : 's'}</span>
+        </span>
+        <span className="inline-flex items-center gap-2 rounded-full bg-sand px-3 py-1 border border-stone-200">
+          <span className="inline-block h-2 w-2 rounded-full bg-accent" />
+          <span className="font-semibold text-stone-800">
+            {todayCount}
+          </span>
+          <span className="text-stone-600">recorded today</span>
+        </span>
+        <span className="hidden lg:inline text-stone-500">
+          Use this log to trace important decisions and platform changes.
+        </span>
       </div>
 
       {state === 'loading' && (
@@ -122,7 +176,15 @@ export default function AdminAuditLog() {
                     {new Date(e.timestamp).toLocaleString()}
                   </td>
                   <td className="px-4 py-3 text-stone-800">{e.adminName}</td>
-                  <td className="px-4 py-3 text-stone-700">{e.action}</td>
+                  <td className="px-4 py-3">
+                    <span
+                      className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${actionBadgeClass(
+                        e.action,
+                      )}`}
+                    >
+                      {formatAction(e.action)}
+                    </span>
+                  </td>
                   <td className="px-4 py-3 text-stone-700">{e.targetType}</td>
                   <td className="px-4 py-3 text-stone-800">{e.targetId}</td>
                 </tr>

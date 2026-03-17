@@ -2,6 +2,7 @@ import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 
 const navItems = [
+  { path: '/admin/overview', label: 'Overview', icon: DashboardIcon },
   { path: '/admin/companies', label: 'Company Verification', icon: BuildingIcon },
   { path: '/admin/shipments', label: 'Shipment Monitoring', icon: ShipmentIcon },
   { path: '/admin/disputes', label: 'Dispute Resolution', icon: DisputeIcon },
@@ -51,6 +52,25 @@ function ListIcon() {
       <line x1="3" y1="6" x2="3.01" y2="6" />
       <line x1="3" y1="12" x2="3.01" y2="12" />
       <line x1="3" y1="18" x2="3.01" y2="18" />
+    </svg>
+  )
+}
+
+function DashboardIcon() {
+  return (
+    <svg
+      className="w-5 h-5 shrink-0"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M3 13h8V3H3z" />
+      <path d="M13 21h8V11h-8z" />
+      <path d="M13 3v4h8V3z" />
+      <path d="M3 17v4h8v-4z" />
     </svg>
   )
 }
@@ -127,14 +147,11 @@ export default function AdminLayout() {
           <div className="absolute bottom-20 left-0 w-72 h-72 rounded-full bg-sidebar/5 blur-2xl" />
         </div>
         <div className="relative z-10 space-y-6">
-          <header className="flex flex-wrap items-center justify-between gap-3 mb-2">
+          <header className="flex flex-wrap items-center justify-between gap-3 mb-4">
             <div>
               <h2 className="text-lg font-semibold text-stone-900">
-                Admin Panel
+                Admin workspace
               </h2>
-              <p className="text-sm text-stone-500">
-                Oversight for companies, shipments, disputes, and audit logs.
-              </p>
             </div>
           </header>
           <Outlet />

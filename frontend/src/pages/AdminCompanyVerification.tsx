@@ -114,10 +114,26 @@ export default function AdminCompanyVerification() {
         <button
           type="button"
           onClick={loadCompanies}
-          className="text-sm font-semibold text-stone-600 hover:text-stone-900 hover:underline"
+          className="inline-flex items-center gap-1.5 text-sm font-semibold text-stone-600 hover:text-stone-900 hover:underline"
         >
+          <span className="inline-block h-1.5 w-1.5 rounded-full bg-accent" />
           Refresh
         </button>
+      </div>
+
+      <div className="mb-4 flex items-center gap-3 text-xs text-stone-600">
+        <span className="inline-flex items-center gap-2 rounded-full bg-cream px-3 py-1 border border-stone-200">
+          <span className="inline-block h-2 w-2 rounded-full bg-amber-400" />
+          <span className="font-semibold text-stone-800">
+            {companies.length}
+          </span>
+          <span className="text-stone-600">
+            company{companies.length === 1 ? '' : 'ies'} awaiting verification
+          </span>
+        </span>
+        <span className="hidden sm:inline text-stone-500">
+          Check business registration and insurance before approving.
+        </span>
       </div>
 
       {state === 'loading' && (
@@ -182,7 +198,7 @@ export default function AdminCompanyVerification() {
                       <button
                         type="button"
                         onClick={() => approve(company.id)}
-                        className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-emerald-600 text-white hover:bg-emerald-700"
+                        className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-accent text-white hover:bg-accent-hover shadow-sm"
                       >
                         Approve
                       </button>
