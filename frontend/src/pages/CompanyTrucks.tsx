@@ -1,28 +1,24 @@
-import { useState, useEffect } from 'react'
+import { useMemo, useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 import {
   getTrucksByCompany,
   addTruck as addTruckStorage,
   deleteTruck as deleteTruckStorage,
-  type Truck,
 } from '../data/storage'
 
 export default function CompanyTrucks() {
   const { user } = useAuth()
   const companyName = user?.name ?? ''
-  const [trucks, setTrucks] = useState<Truck[]>([])
+  const [refresh, setRefresh] = useState(0)
   const [showForm, setShowForm] = useState(false)
   const [capacity, setCapacity] = useState('')
   const [location, setLocation] = useState('')
   const [plateNumber, setPlateNumber] = useState('')
 
-  function loadTrucks() {
-    setTrucks(getTrucksByCompany(companyName))
-  }
-
-  useEffect(() => {
-    loadTrucks()
-  }, [companyName])
+  const trucks = useMemo(() => {
+    void refresh
+    return getTrucksByCompany(companyName)
+  }, [companyName, refresh])
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -32,13 +28,13 @@ export default function CompanyTrucks() {
     setLocation('')
     setPlateNumber('')
     setShowForm(false)
-    loadTrucks()
+    setRefresh((v) => v + 1)
   }
 
   function handleDelete(id: string) {
     if (window.confirm('Remove this truck from your fleet?')) {
       deleteTruckStorage(id)
-      loadTrucks()
+      setRefresh((v) => v + 1)
     }
   }
 
@@ -99,10 +95,7 @@ export default function CompanyTrucks() {
               />
             </div>
             <div className="flex gap-3 pt-2">
-              <button
-                type="submit"
-                className="px-5 py-2.5 bg-accent text-white font-semibold rounded-xl hover:bg-accent-hover"
-              >
+              <button type="submit" className="px-5 py-2.5 bg-accent text-white font-semibold rounded-xl hover:bg-accent-hover">
                 Save truck
               </button>
               <button
@@ -120,21 +113,14 @@ export default function CompanyTrucks() {
       {trucks.length === 0 && !showForm ? (
         <div className="bg-white rounded-2xl border border-stone-200 p-10 text-center">
           <p className="text-stone-600 mb-4">You haven&apos;t added any trucks yet.</p>
-          <button
-            type="button"
-            onClick={() => setShowForm(true)}
-            className="text-accent font-semibold hover:underline"
-          >
+          <button type="button" onClick={() => setShowForm(true)} className="text-accent font-semibold hover:underline">
             Add your first truck
           </button>
         </div>
       ) : (
         <ul className="grid gap-4 sm:grid-cols-2">
           {trucks.map((truck) => (
-            <li
-              key={truck.id}
-              className="bg-white rounded-2xl border border-stone-200 shadow-sm p-5 hover:shadow-md transition-shadow"
-            >
+            <li key={truck.id} className="bg-white rounded-2xl border border-stone-200 shadow-sm p-5 hover:shadow-md transition-shadow">
               <div className="flex justify-between items-start gap-2">
                 <div>
                   <p className="font-semibold text-stone-800">{truck.capacity} tons</p>
