@@ -2,22 +2,10 @@ import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 
 const navItems = [
-  { path: '/profile', label: 'Dashboard', icon: DashboardIcon },
-  { path: '/post-shipment', label: 'Post Shipment', icon: TruckIcon },
   { path: '/loads', label: 'My Shipments', icon: ListIcon },
-  { path: '/profile', label: 'Profile', icon: ProfileIcon },
+  { path: '/post-shipment', label: 'Post Shipment', icon: TruckIcon },
+  { path: '/payments', label: 'Payments', icon: PaymentIcon },
 ]
-
-function DashboardIcon() {
-  return (
-    <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="3" y="3" width="7" height="9" rx="1" />
-      <rect x="14" y="3" width="7" height="5" rx="1" />
-      <rect x="14" y="12" width="7" height="9" rx="1" />
-      <rect x="3" y="16" width="7" height="5" rx="1" />
-    </svg>
-  )
-}
 
 function TruckIcon() {
   return (
@@ -43,11 +31,11 @@ function ListIcon() {
   )
 }
 
-function ProfileIcon() {
+function PaymentIcon() {
   return (
     <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-      <circle cx="12" cy="7" r="4" />
+      <rect x="1" y="4" width="22" height="16" rx="2" ry="2" />
+      <line x1="1" y1="10" x2="23" y2="10" />
     </svg>
   )
 }
@@ -65,7 +53,7 @@ function LogoutIcon() {
 export default function ShipperLayout() {
   const location = useLocation()
   const navigate = useNavigate()
-  const { logout } = useAuth()
+  const { logout, user } = useAuth()
 
   const handleLogout = () => {
     logout()
@@ -115,15 +103,27 @@ export default function ShipperLayout() {
         </nav>
       </aside>
 
-      <main className="flex-1 overflow-y-auto bg-sand p-8 relative">
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-0 right-0 w-96 h-96 rounded-full bg-accent/5 blur-3xl" />
-          <div className="absolute bottom-20 left-0 w-72 h-72 rounded-full bg-sidebar/5 blur-2xl" />
-        </div>
-        <div className="relative z-10">
-          <Outlet />
-        </div>
-      </main>
+      <div className="flex-1 flex flex-col">
+        {/* Top bar */}
+        <header className="h-14 bg-white border-b border-stone-200 flex items-center justify-end px-8 shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-accent/10 flex items-center justify-center">
+              <span className="text-accent font-bold text-sm">{user?.name?.[0]?.toUpperCase()}</span>
+            </div>
+            <span className="text-stone-700 font-medium text-sm">{user?.name}</span>
+          </div>
+        </header>
+
+        <main className="flex-1 overflow-y-auto bg-sand p-8 relative">
+          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            <div className="absolute top-0 right-0 w-96 h-96 rounded-full bg-accent/5 blur-3xl" />
+            <div className="absolute bottom-20 left-0 w-72 h-72 rounded-full bg-sidebar/5 blur-2xl" />
+          </div>
+          <div className="relative z-10">
+            <Outlet />
+          </div>
+        </main>
+      </div>
     </div>
   )
 }
