@@ -46,6 +46,11 @@ export default function CompanyShipments() {
     })
   }, [refresh, companyName])
 
+  const fleetCount = useMemo(() => {
+    void refresh
+    return getTrucksByCompany(companyName).length
+  }, [companyName, refresh])
+
   function openOfferModal(loadId: string) {
     setOfferLoadId(loadId)
     setOfferMessage('')
@@ -69,17 +74,48 @@ export default function CompanyShipments() {
   const offerLoad = offerLoadId ? loads.find((l) => l.id === offerLoadId) : null
 
   return (
-    <div className="max-w-4xl">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-stone-800">Available Shipments</h1>
-        <p className="text-stone-600 mt-1">
-          Browse loads posted by shippers that you can bid on as a transport company.
-        </p>
+    <div className="max-w-5xl">
+      <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-stone-800">Available shipments</h1>
+          <p className="text-sm text-stone-600 mt-1">
+            Fixed price — accept loads that match your capacity.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setRefresh((v) => v + 1)}
+          className="inline-flex items-center gap-1.5 text-sm font-semibold text-stone-600 hover:text-stone-900 hover:underline"
+        >
+          <span className="inline-block h-1.5 w-1.5 rounded-full bg-accent" />
+          Refresh
+        </button>
+      </div>
+
+      <div className="mb-4 flex flex-wrap items-center gap-3 text-xs text-stone-600">
+        <span className="inline-flex items-center gap-2 rounded-full bg-cream px-3 py-1 border border-stone-200">
+          <span className="inline-block h-2 w-2 rounded-full bg-accent" />
+          <span className="font-semibold text-stone-900">{loads.length}</span>
+          <span>load{loads.length === 1 ? '' : 's'} available</span>
+        </span>
+        <span className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1 border border-stone-200">
+          <span className="inline-block h-2 w-2 rounded-full bg-sidebar" />
+          <span className="font-semibold text-stone-900">{fleetCount}</span>
+          <span>truck{fleetCount === 1 ? '' : 's'} in fleet</span>
+        </span>
+        <span className="hidden sm:inline text-stone-500">
+          Loads are filtered using your max truck capacity.
+        </span>
       </div>
 
       {loads.length === 0 ? (
         <div className="bg-white rounded-2xl border border-stone-200 p-10 text-center">
-          <p className="text-stone-600">No open shipments at the moment. Check back later.</p>
+          <p className="text-stone-800 font-semibold">No shipments available</p>
+          <p className="text-stone-600 text-sm mt-1">
+            {fleetCount === 0
+              ? 'Add a truck to your fleet to start seeing loads that match your capacity.'
+              : 'Check back soon for new loads.'}
+          </p>
         </div>
       ) : (
         <ul className="space-y-4">
@@ -89,35 +125,32 @@ export default function CompanyShipments() {
               className="bg-white rounded-2xl border border-stone-200 shadow-sm p-6 hover:shadow-md transition-shadow"
             >
               <div className="flex flex-wrap items-start justify-between gap-4">
-                <div>
-                  <p className="font-bold text-stone-800 text-lg">
-                    {load.origin} → {load.destination}
-                  </p>
-                  <p className="text-stone-600 text-sm mt-1">
-                    Pickup date: <span className="font-medium">{load.date}</span>
-                  </p>
-                  <p className="text-stone-600 text-sm">
-                    Weight: <span className="font-medium">{load.weight}</span>
-                  </p>
-                  {load.price && (
-                    <p className="text-stone-600 text-sm">
-                      Price:{' '}
-                      <span className="font-semibold text-stone-900">
-                        {load.price}
-                      </span>
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="font-bold text-stone-800 text-lg">
+                      {load.origin} → {load.destination}
                     </p>
-                  )}
+                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-accent/10 text-accent border border-accent/20">
+                      {load.price ?? 'Fixed price'}
+                    </span>
+                  </div>
+                  <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-stone-600">
+                    <span>
+                      Date <span className="font-semibold text-stone-800">{new Date(load.date).toLocaleDateString()}</span>
+                    </span>
+                    <span>
+                      Weight <span className="font-semibold text-stone-800">{load.weight}</span>
+                    </span>
+                    <span className="text-stone-500">
+                      Shipper <span className="font-semibold text-stone-700">{load.createdBy}</span>
+                    </span>
+                    <span className="text-stone-500">
+                      Offers <span className="font-semibold text-stone-700">{load.offers?.length ?? 0}</span>
+                    </span>
+                  </div>
                   {load.description && (
-                    <p className="text-stone-500 text-sm mt-2">
-                      Cargo: {load.description}
-                    </p>
-                  )}
-                  <p className="text-stone-500 text-sm mt-1">
-                    Posted by {load.createdBy}
-                  </p>
-                  {load.offers && load.offers.length > 0 && (
-                    <p className="text-stone-500 text-sm mt-1">
-                      {load.offers.length} offer{load.offers.length === 1 ? '' : 's'} received
+                    <p className="text-stone-500 text-sm mt-3 line-clamp-2">
+                      <span className="font-semibold text-stone-700">Cargo:</span> {load.description}
                     </p>
                   )}
                 </div>
@@ -136,7 +169,7 @@ export default function CompanyShipments() {
 
       {offerLoad && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/50"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/50 backdrop-blur-sm"
           onClick={closeOfferModal}
           role="dialog"
           aria-modal="true"
@@ -146,17 +179,26 @@ export default function CompanyShipments() {
             className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6"
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 id="offer-modal-title" className="text-lg font-bold text-stone-800 mb-2">
-              Accept shipment — {offerLoad.origin} → {offerLoad.destination}
+            <h2 id="offer-modal-title" className="text-lg font-bold text-stone-800">
+              Accept shipment
             </h2>
-            <p className="text-stone-600 text-sm mb-1">
-              {offerLoad.weight} · {offerLoad.date}
+            <p className="text-sm text-stone-600 mt-1">
+              {offerLoad.origin} → {offerLoad.destination} · {offerLoad.weight}
             </p>
-            {offerLoad.price && (
-              <p className="text-stone-800 text-sm font-semibold mb-4">
-                Fixed price: {offerLoad.price}
-              </p>
-            )}
+            <div className="mt-4 rounded-2xl border border-stone-200 bg-sand p-4">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-xs text-stone-500">Fixed price</p>
+                <p className="text-sm font-semibold text-accent">
+                  {offerLoad.price ?? 'Fixed price'}
+                </p>
+              </div>
+              <div className="mt-2 flex items-center justify-between gap-3">
+                <p className="text-xs text-stone-500">Pickup date</p>
+                <p className="text-xs font-semibold text-stone-800">
+                  {new Date(offerLoad.date).toLocaleDateString()}
+                </p>
+              </div>
+            </div>
             <form onSubmit={handleSubmitOffer} className="space-y-4">
               <div>
                 <label htmlFor="offer-message" className="block text-sm font-semibold text-stone-700 mb-2">

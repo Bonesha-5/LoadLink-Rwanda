@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { ensureSeedAdminData, getAdminShipments } from '../data/storage'
 
 type ShipmentStatus =
   | 'PENDING'
@@ -62,59 +63,31 @@ export default function AdminShipmentMonitoring() {
   const [filter, setFilter] = useState<ShipmentStatus | 'ALL'>('ALL')
 
   async function loadShipments(selectedStatus: ShipmentStatus | 'ALL' = filter) {
+    setState('loading')
+    setError(null)
     try {
-      setState('loading')
-      setError(null)
-      const statusParam = selectedStatus === 'ALL' ? '' : `?status=${selectedStatus}`
-      const res = await fetch(`/api/admin/shipments${statusParam}`)
-      if (!res.ok) throw new Error('Failed to load shipments')
-      const data: AdminShipment[] = await res.json()
+      ensureSeedAdminData()
+      const data = getAdminShipments(selectedStatus === 'ALL' ? undefined : selectedStatus).map(
+        (s): AdminShipment => ({
+          id: s.id,
+          shipperName: s.shipperName,
+          pickup: s.pickupDistrict,
+          dropoff: s.dropoffDistrict,
+          weight: `${s.weightTons} tons`,
+          price: `${s.offeredPriceRwf.toLocaleString()} RWF`,
+          status: s.status as ShipmentStatus,
+          truckPlate: s.truckPlate,
+          companyName: s.companyName,
+          createdAt: s.createdAt,
+        }),
+      )
       setShipments(data)
       setState('success')
     } catch (err) {
       console.error(err)
-      // Fallback demo data so the UI looks complete even without backend.
-      const demo: AdminShipment[] = [
-        {
-          id: 'SH-001',
-          shipperName: 'ACME Manufacturing',
-          pickup: 'Kigali',
-          dropoff: 'Gisenyi',
-          weight: '5 tons',
-          price: '150,000 RWF',
-          status: 'ESCROW_FUNDED',
-          truckPlate: 'RAB 123 A',
-          companyName: 'Kigali Freight Ltd',
-          createdAt: new Date().toISOString(),
-        },
-        {
-          id: 'SH-002',
-          shipperName: 'Green Farms',
-          pickup: 'Kigali',
-          dropoff: 'Butare',
-          weight: '12 tons',
-          price: '320,000 RWF',
-          status: 'IN_TRANSIT',
-          truckPlate: 'RAC 456 B',
-          companyName: 'Rwanda Cargo Co',
-          createdAt: new Date().toISOString(),
-        },
-        {
-          id: 'SH-003',
-          shipperName: 'Tech Supplies',
-          pickup: 'Musanze',
-          dropoff: 'Kigali',
-          weight: '8 tons',
-          price: '240,000 RWF',
-          status: 'AWAITING_CONFIRMATION',
-          truckPlate: 'RAD 789 C',
-          companyName: 'Northern Transport',
-          createdAt: new Date().toISOString(),
-        },
-      ]
-      setShipments(demo)
-      setError('Showing demo shipments because the API is not reachable yet.')
-      setState('success')
+      setShipments([])
+      setError('Could not load shipments from local demo data.')
+      setState('error')
     }
   }
 

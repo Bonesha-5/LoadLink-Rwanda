@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { ensureSeedAdminData, getAuditLogs } from '../data/storage'
 
 type AuditEntry = {
   id: string
@@ -17,47 +18,27 @@ export default function AdminAuditLog() {
   const [error, setError] = useState<string | null>(null)
 
   async function loadAuditLog() {
+    setState('loading')
+    setError(null)
     try {
-      setState('loading')
-      setError(null)
-      const res = await fetch('/api/admin/audit')
-      if (!res.ok) throw new Error('Failed to load audit log')
-      const data: AuditEntry[] = await res.json()
+      ensureSeedAdminData()
+      const data = getAuditLogs().map(
+        (e): AuditEntry => ({
+          id: e.id,
+          timestamp: e.createdAt,
+          adminName: e.adminName,
+          action: e.action,
+          targetType: e.targetType.toUpperCase(),
+          targetId: e.targetId,
+        }),
+      )
       setEntries(data)
       setState('success')
     } catch (err) {
       console.error(err)
-      // Fallback demo entries so UI looks complete even without backend.
-      const now = new Date()
-      const demo: AuditEntry[] = [
-        {
-          id: 'AUD-001',
-          timestamp: now.toISOString(),
-          adminName: 'Admin A',
-          action: 'APPROVE_COMPANY',
-          targetType: 'COMPANY',
-          targetId: 'Kigali Freight Ltd',
-        },
-        {
-          id: 'AUD-002',
-          timestamp: new Date(now.getTime() - 5 * 60 * 1000).toISOString(),
-          adminName: 'Admin B',
-          action: 'RESOLVE_DISPUTE',
-          targetType: 'SHIPMENT',
-          targetId: 'DIS-001',
-        },
-        {
-          id: 'AUD-003',
-          timestamp: new Date(now.getTime() - 15 * 60 * 1000).toISOString(),
-          adminName: 'Admin A',
-          action: 'UPDATE_STATUS',
-          targetType: 'SHIPMENT',
-          targetId: 'SH-002',
-        },
-      ]
-      setEntries(demo)
-      setError('Showing demo audit entries because the API is not reachable yet.')
-      setState('success')
+      setEntries([])
+      setError('Could not load audit entries from local demo data.')
+      setState('error')
     }
   }
 

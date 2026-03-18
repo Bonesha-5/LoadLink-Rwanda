@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { approveCompany, ensureSeedAdminData, getPendingCompanies, rejectCompany } from '../data/storage'
 
 type PendingCompany = {
   id: string
@@ -19,36 +20,26 @@ export default function AdminCompanyVerification() {
   const [rejectReason, setRejectReason] = useState('')
 
   async function loadCompanies() {
+    setState('loading')
+    setError(null)
     try {
-      setState('loading')
-      setError(null)
-      const res = await fetch('/api/admin/companies?status=PENDING_VERIFICATION')
-      if (!res.ok) throw new Error('Failed to load companies')
-      const data: PendingCompany[] = await res.json()
+      ensureSeedAdminData()
+      const data = getPendingCompanies().map(
+        (c): PendingCompany => ({
+          id: c.id,
+          name: c.name,
+          rdbNumber: c.rdbNumber,
+          contactPerson: c.contactPerson,
+          createdAt: c.createdAt,
+        }),
+      )
       setCompanies(data)
       setState('success')
     } catch (err) {
       console.error(err)
-      // Fallback to demo data for now so the UI looks complete even if the API isn't ready.
-      const demo: PendingCompany[] = [
-        {
-          id: 'demo-1',
-          name: 'Kigali Freight Ltd',
-          rdbNumber: 'RDB-001234',
-          contactPerson: 'Alice N.',
-          createdAt: new Date().toISOString(),
-        },
-        {
-          id: 'demo-2',
-          name: 'Rwanda Cargo Co',
-          rdbNumber: 'RDB-005678',
-          contactPerson: 'Ben M.',
-          createdAt: new Date().toISOString(),
-        },
-      ]
-      setCompanies(demo)
-      setError('Showing demo companies because the API is not reachable yet.')
-      setState('success')
+      setCompanies([])
+      setError('Could not load companies from local demo data.')
+      setState('error')
     }
   }
 
@@ -63,10 +54,7 @@ export default function AdminCompanyVerification() {
 
   async function approve(id: string) {
     try {
-      const res = await fetch(`/api/admin/companies/${id}/approve`, {
-        method: 'PATCH',
-      })
-      if (!res.ok) throw new Error('Failed to approve company')
+      approveCompany(id, 'Admin')
       setCompanies((prev) => prev.filter((c) => c.id !== id))
     } catch (err) {
       console.error(err)
@@ -88,12 +76,7 @@ export default function AdminCompanyVerification() {
     e.preventDefault()
     if (!rejectingId) return
     try {
-      const res = await fetch(`/api/admin/companies/${rejectingId}/reject`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reason: rejectReason || undefined }),
-      })
-      if (!res.ok) throw new Error('Failed to reject company')
+      rejectCompany(rejectingId, rejectReason || undefined, 'Admin')
       setCompanies((prev) => prev.filter((c) => c.id !== rejectingId))
       closeReject()
     } catch (err) {

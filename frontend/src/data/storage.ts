@@ -174,3 +174,498 @@ export function ensureSeedLoads(): void {
   ]
   saveLoads(seed)
 }
+
+// ── Admin / “Mock DB” entities (frontend-only) ──────────────────────────────
+
+export type UserRole = 'SHIPPER' | 'COMPANY' | 'ADMIN'
+
+export type CompanyStatus = 'PENDING_VERIFICATION' | 'VERIFIED' | 'REJECTED'
+
+export type ShipmentStatus =
+  | 'POSTED'
+  | 'AWAITING_ESCROW'
+  | 'ESCROW_FUNDED'
+  | 'IN_TRANSIT'
+  | 'AWAITING_CONFIRMATION'
+  | 'COMPLETED'
+  | 'CANCELLED'
+  | 'DISPUTED'
+
+export type PaymentStatus = 'PENDING' | 'CONFIRMED' | 'RELEASED' | 'REFUNDED'
+
+export type RefundReason = 'DISPUTE_RESOLVED' | 'PAYMENT_FAILED'
+
+export type AuditTargetType = 'company' | 'user' | 'shipment'
+
+export interface Company {
+  id: string
+  userId: string
+  name: string
+  rdbNumber: string
+  contactPerson: string
+  baseDistrict: string
+  status: CompanyStatus
+  createdAt: string
+}
+
+export interface Shipment {
+  id: string
+  shipperName: string
+  pickupDistrict: string
+  dropoffDistrict: string
+  cargoDescription?: string
+  weightTons: number
+  offeredPriceRwf: number
+  pickupDate: string
+  status: ShipmentStatus
+  companyName?: string
+  truckPlate?: string
+  createdAt: string
+}
+
+export interface Payment {
+  id: string
+  shipmentId: string
+  shipperName: string
+  companyName?: string
+  amountRwf: number
+  status: PaymentStatus
+  createdAt: string
+}
+
+export interface Refund {
+  id: string
+  shipmentId: string
+  paymentId: string
+  escrowAmountRwf: number
+  platformAmountRwf: number
+  shipperAmountRwf: number
+  companyAmountRwf: number
+  reason: RefundReason
+  status: 'PENDING' | 'COMPLETED'
+  createdAt: string
+}
+
+export interface Revenue {
+  id: string
+  shipmentId: string
+  paymentId: string
+  escrowAmountRwf: number
+  amountEarnedRwf: number
+  createdAt: string
+}
+
+export interface AuditLogEntry {
+  id: string
+  adminName: string
+  action: string
+  targetType: AuditTargetType
+  targetId: string
+  createdAt: string
+}
+
+const COMPANIES_KEY = 'll_companies'
+const SHIPMENTS_KEY = 'll_shipments'
+const PAYMENTS_KEY = 'll_payments'
+const REFUNDS_KEY = 'll_refunds'
+const REVENUES_KEY = 'll_revenues'
+const AUDIT_KEY = 'll_audit_logs'
+
+function getAllCompanies(): Company[] {
+  try {
+    return safeParseJson<Company[]>(localStorage.getItem(COMPANIES_KEY), [])
+  } catch {
+    return []
+  }
+}
+
+function saveCompanies(companies: Company[]): void {
+  safeSetItem(COMPANIES_KEY, companies)
+}
+
+function getAllShipments(): Shipment[] {
+  try {
+    return safeParseJson<Shipment[]>(localStorage.getItem(SHIPMENTS_KEY), [])
+  } catch {
+    return []
+  }
+}
+
+function saveShipments(shipments: Shipment[]): void {
+  safeSetItem(SHIPMENTS_KEY, shipments)
+}
+
+function getAllPayments(): Payment[] {
+  try {
+    return safeParseJson<Payment[]>(localStorage.getItem(PAYMENTS_KEY), [])
+  } catch {
+    return []
+  }
+}
+
+function savePayments(payments: Payment[]): void {
+  safeSetItem(PAYMENTS_KEY, payments)
+}
+
+function getAllRefunds(): Refund[] {
+  try {
+    return safeParseJson<Refund[]>(localStorage.getItem(REFUNDS_KEY), [])
+  } catch {
+    return []
+  }
+}
+
+function saveRefunds(refunds: Refund[]): void {
+  safeSetItem(REFUNDS_KEY, refunds)
+}
+
+function getAllRevenues(): Revenue[] {
+  try {
+    return safeParseJson<Revenue[]>(localStorage.getItem(REVENUES_KEY), [])
+  } catch {
+    return []
+  }
+}
+
+function saveRevenues(revenues: Revenue[]): void {
+  safeSetItem(REVENUES_KEY, revenues)
+}
+
+function getAllAuditLogs(): AuditLogEntry[] {
+  try {
+    return safeParseJson<AuditLogEntry[]>(localStorage.getItem(AUDIT_KEY), [])
+  } catch {
+    return []
+  }
+}
+
+function saveAuditLogs(entries: AuditLogEntry[]): void {
+  safeSetItem(AUDIT_KEY, entries)
+}
+
+export function ensureSeedAdminData(): void {
+  const companies = getAllCompanies()
+  const shipments = getAllShipments()
+  const audit = getAllAuditLogs()
+  if (companies.length || shipments.length || audit.length) return
+
+  const now = Date.now()
+
+  const seedCompanies: Company[] = [
+    {
+      id: uid(),
+      userId: 'company-user-1',
+      name: 'Kigali Freight Ltd',
+      rdbNumber: 'RDB-001234',
+      contactPerson: 'Alice N.',
+      baseDistrict: 'Gasabo',
+      status: 'PENDING_VERIFICATION',
+      createdAt: new Date(now - 6 * 24 * 60 * 60 * 1000).toISOString(),
+    },
+    {
+      id: uid(),
+      userId: 'company-user-2',
+      name: 'Rwanda Cargo Co',
+      rdbNumber: 'RDB-005678',
+      contactPerson: 'Ben M.',
+      baseDistrict: 'Kicukiro',
+      status: 'PENDING_VERIFICATION',
+      createdAt: new Date(now - 3 * 24 * 60 * 60 * 1000).toISOString(),
+    },
+    {
+      id: uid(),
+      userId: 'company-user-3',
+      name: 'Northern Transport',
+      rdbNumber: 'RDB-009991',
+      contactPerson: 'Claudine P.',
+      baseDistrict: 'Musanze',
+      status: 'VERIFIED',
+      createdAt: new Date(now - 25 * 24 * 60 * 60 * 1000).toISOString(),
+    },
+  ]
+
+  const seedShipments: Shipment[] = [
+    {
+      id: 'SH-001',
+      shipperName: 'ACME Manufacturing',
+      pickupDistrict: 'Kigali',
+      dropoffDistrict: 'Gisenyi',
+      cargoDescription: 'General cargo, palletized.',
+      weightTons: 5,
+      offeredPriceRwf: 150_000,
+      pickupDate: '2026-03-15',
+      status: 'ESCROW_FUNDED',
+      companyName: 'Kigali Freight Ltd',
+      truckPlate: 'RAB 123 A',
+      createdAt: new Date(now - 2 * 24 * 60 * 60 * 1000).toISOString(),
+    },
+    {
+      id: 'SH-002',
+      shipperName: 'Green Farms',
+      pickupDistrict: 'Kigali',
+      dropoffDistrict: 'Butare',
+      cargoDescription: 'Construction materials.',
+      weightTons: 12,
+      offeredPriceRwf: 320_000,
+      pickupDate: '2026-03-18',
+      status: 'IN_TRANSIT',
+      companyName: 'Rwanda Cargo Co',
+      truckPlate: 'RAC 456 B',
+      createdAt: new Date(now - 4 * 24 * 60 * 60 * 1000).toISOString(),
+    },
+    {
+      id: 'SH-003',
+      shipperName: 'Tech Supplies',
+      pickupDistrict: 'Musanze',
+      dropoffDistrict: 'Kigali',
+      cargoDescription: 'Electronics (fragile).',
+      weightTons: 8,
+      offeredPriceRwf: 240_000,
+      pickupDate: '2026-03-20',
+      status: 'AWAITING_CONFIRMATION',
+      companyName: 'Northern Transport',
+      truckPlate: 'RAD 789 C',
+      createdAt: new Date(now - 1 * 24 * 60 * 60 * 1000).toISOString(),
+    },
+    {
+      id: 'DIS-001',
+      shipperName: 'ACME Manufacturing',
+      pickupDistrict: 'Kigali',
+      dropoffDistrict: 'Gisenyi',
+      cargoDescription: 'Damaged cargo claim.',
+      weightTons: 5,
+      offeredPriceRwf: 150_000,
+      pickupDate: '2026-03-12',
+      status: 'DISPUTED',
+      companyName: 'Kigali Freight Ltd',
+      truckPlate: 'RAB 123 A',
+      createdAt: new Date(now - 10 * 24 * 60 * 60 * 1000).toISOString(),
+    },
+  ]
+
+  const seedPayments: Payment[] = [
+    {
+      id: 'PAY-001',
+      shipmentId: 'SH-001',
+      shipperName: 'ACME Manufacturing',
+      companyName: 'Kigali Freight Ltd',
+      amountRwf: 150_000,
+      status: 'CONFIRMED',
+      createdAt: new Date(now - 2 * 24 * 60 * 60 * 1000).toISOString(),
+    },
+    {
+      id: 'PAY-002',
+      shipmentId: 'SH-002',
+      shipperName: 'Green Farms',
+      companyName: 'Rwanda Cargo Co',
+      amountRwf: 320_000,
+      status: 'CONFIRMED',
+      createdAt: new Date(now - 4 * 24 * 60 * 60 * 1000).toISOString(),
+    },
+    {
+      id: 'PAY-003',
+      shipmentId: 'DIS-001',
+      shipperName: 'ACME Manufacturing',
+      companyName: 'Kigali Freight Ltd',
+      amountRwf: 150_000,
+      status: 'CONFIRMED',
+      createdAt: new Date(now - 10 * 24 * 60 * 60 * 1000).toISOString(),
+    },
+  ]
+
+  saveCompanies(seedCompanies)
+  saveShipments(seedShipments)
+  savePayments(seedPayments)
+  saveRefunds([])
+  saveRevenues([])
+  saveAuditLogs([
+    {
+      id: 'AUD-001',
+      adminName: 'Admin A',
+      action: 'SEED_DATA',
+      targetType: 'shipment',
+      targetId: 'SYSTEM',
+      createdAt: new Date(now).toISOString(),
+    },
+  ])
+}
+
+export function getPendingCompanies(): Company[] {
+  ensureSeedAdminData()
+  return getAllCompanies()
+    .filter((c) => c.status === 'PENDING_VERIFICATION')
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+}
+
+export function approveCompany(companyId: string, adminName = 'Admin'): void {
+  ensureSeedAdminData()
+  const companies = getAllCompanies()
+  const idx = companies.findIndex((c) => c.id === companyId)
+  if (idx === -1) return
+  companies[idx] = { ...companies[idx], status: 'VERIFIED' }
+  saveCompanies(companies)
+  const audit = getAllAuditLogs()
+  saveAuditLogs([
+    {
+      id: uid(),
+      adminName,
+      action: 'COMPANY_APPROVED',
+      targetType: 'company',
+      targetId: companyId,
+      createdAt: new Date().toISOString(),
+    },
+    ...audit,
+  ])
+}
+
+export function rejectCompany(companyId: string, reason?: string, adminName = 'Admin'): void {
+  ensureSeedAdminData()
+  const companies = getAllCompanies()
+  const idx = companies.findIndex((c) => c.id === companyId)
+  if (idx === -1) return
+  companies[idx] = { ...companies[idx], status: 'REJECTED' }
+  saveCompanies(companies)
+  const audit = getAllAuditLogs()
+  saveAuditLogs([
+    {
+      id: uid(),
+      adminName,
+      action: reason ? `COMPANY_REJECTED:${reason}` : 'COMPANY_REJECTED',
+      targetType: 'company',
+      targetId: companyId,
+      createdAt: new Date().toISOString(),
+    },
+    ...audit,
+  ])
+}
+
+export function getAdminShipments(status?: ShipmentStatus): Shipment[] {
+  ensureSeedAdminData()
+  const all = getAllShipments().slice()
+  const filtered = status ? all.filter((s) => s.status === status) : all
+  return filtered.sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+}
+
+export function getAdminDisputes(): Shipment[] {
+  return getAdminShipments('DISPUTED')
+}
+
+export function resolveDispute(
+  disputeId: string,
+  payload:
+    | { type: 'COMPANY_FULL' }
+    | { type: 'SHIPPER_FULL' }
+    | { type: 'SPLIT'; companyAmount: number; shipperAmount: number },
+  adminName = 'Admin',
+): void {
+  ensureSeedAdminData()
+  const shipments = getAllShipments()
+  const idx = shipments.findIndex((s) => s.id === disputeId)
+  if (idx === -1) return
+  const shipment = shipments[idx]
+  if (shipment.status !== 'DISPUTED') return
+
+  const payments = getAllPayments()
+  const payment = payments.find((p) => p.shipmentId === disputeId)
+  const paymentId = payment?.id ?? `PAY-${uid()}`
+  const escrow = payment?.amountRwf ?? shipment.offeredPriceRwf
+
+  let shipperAmount = 0
+  let companyAmount = 0
+  let platformAmount = 0
+
+  if (payload.type === 'COMPANY_FULL') {
+    companyAmount = escrow
+  } else if (payload.type === 'SHIPPER_FULL') {
+    shipperAmount = escrow
+  } else {
+    companyAmount = Math.max(0, Number(payload.companyAmount))
+    shipperAmount = Math.max(0, Number(payload.shipperAmount))
+    const remainder = escrow - companyAmount - shipperAmount
+    platformAmount = Math.max(0, remainder)
+  }
+
+  // Simple policy: platform earns 5% only when company receives something on a split/release.
+  const amountEarned = payload.type === 'SHIPPER_FULL' ? 0 : Math.round(escrow * 0.05)
+
+  saveRefunds([
+    {
+      id: uid(),
+      shipmentId: disputeId,
+      paymentId,
+      escrowAmountRwf: escrow,
+      platformAmountRwf: platformAmount,
+      shipperAmountRwf: shipperAmount,
+      companyAmountRwf: companyAmount,
+      reason: 'DISPUTE_RESOLVED',
+      status: 'COMPLETED',
+      createdAt: new Date().toISOString(),
+    },
+    ...getAllRefunds(),
+  ])
+
+  saveRevenues([
+    {
+      id: uid(),
+      shipmentId: disputeId,
+      paymentId,
+      escrowAmountRwf: escrow,
+      amountEarnedRwf: amountEarned,
+      createdAt: new Date().toISOString(),
+    },
+    ...getAllRevenues(),
+  ])
+
+  shipments[idx] = { ...shipment, status: 'COMPLETED' }
+  saveShipments(shipments)
+
+  saveAuditLogs([
+    {
+      id: uid(),
+      adminName,
+      action: 'DISPUTE_RESOLVED',
+      targetType: 'shipment',
+      targetId: disputeId,
+      createdAt: new Date().toISOString(),
+    },
+    ...getAllAuditLogs(),
+  ])
+}
+
+export function getAuditLogs(): AuditLogEntry[] {
+  ensureSeedAdminData()
+  return getAllAuditLogs().slice().sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+}
+
+export function getAdminAnalytics(): {
+  revenue: { month: string; revenue: number; shipments: number }[]
+  statuses: { status: string; count: number }[]
+} {
+  ensureSeedAdminData()
+  const shipments = getAllShipments()
+  const revenues = getAllRevenues()
+
+  // status counts
+  const statusCounts = new Map<string, number>()
+  shipments.forEach((s) => {
+    statusCounts.set(s.status, (statusCounts.get(s.status) ?? 0) + 1)
+  })
+
+  const statuses = Array.from(statusCounts.entries()).map(([status, count]) => ({ status, count }))
+
+  // last 6 months (demo): combine seeded revenues + a small baseline using shipments
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun']
+  const revenueByMonth = months.map((m) => ({ month: m, revenue: 0, shipments: 0 }))
+
+  const baseline = shipments.filter((s) => s.status !== 'CANCELLED').slice(0, 6)
+  baseline.forEach((s, i) => {
+    revenueByMonth[i % revenueByMonth.length].shipments += 1
+    revenueByMonth[i % revenueByMonth.length].revenue += Math.round(s.offeredPriceRwf * 0.05)
+  })
+
+  revenues.forEach((r, i) => {
+    revenueByMonth[i % revenueByMonth.length].revenue += r.amountEarnedRwf
+  })
+
+  return { revenue: revenueByMonth, statuses }
+}

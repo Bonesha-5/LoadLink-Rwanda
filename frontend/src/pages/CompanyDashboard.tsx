@@ -16,26 +16,49 @@ export default function CompanyDashboard() {
     { id: 'T3', position: [-2.6, 29.73] },   // Butare-ish
   ]
 
-  const { truckCount, openLoadsCount } = useMemo(() => {
+  const { truckCount, openLoadsCount, recentOpenLoads, totalOpenOffers } = useMemo(() => {
     void refresh
     ensureSeedLoads()
+    const loads = getAllLoads()
+    const openLoads = loads.filter((l) => l.status === 'open')
     return {
       truckCount: getTrucksByCompany(companyName).length,
-      openLoadsCount: getAllLoads().filter((l) => l.status === 'open').length,
+      openLoadsCount: openLoads.length,
+      recentOpenLoads: openLoads.slice(0, 4),
+      totalOpenOffers: openLoads.reduce((sum, l) => sum + (l.offers?.length ?? 0), 0),
     }
   }, [companyName, refresh])
 
   return (
-    <div className="max-w-3xl">
-      <h1 className="text-2xl font-bold text-stone-800 mb-1">
-        Welcome, {user?.name}
-      </h1>
-      <p className="text-stone-600 mb-6">
-        Rwanda&apos;s premier logistics marketplace. Get shipment requests from shippers, submit competitive offers, and grow your transport business.
-      </p>
-      <div className="grid grid-cols-2 gap-4 mb-8">
-        <div className="bg-white rounded-2xl border border-stone-200 p-4 shadow-sm flex items-center gap-4">
-          <div className="w-10 h-10 rounded-xl bg-sidebar/5 flex items-center justify-center text-sidebar">
+    <div className="max-w-5xl space-y-6">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-stone-800">
+            Welcome back{user?.name ? `, ${user.name}` : ''}
+          </h1>
+          <p className="text-sm text-stone-600 mt-1">
+            Today&apos;s snapshot of your fleet and the marketplace.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setRefresh((v) => v + 1)}
+          className="inline-flex items-center gap-1.5 text-sm font-semibold text-stone-600 hover:text-stone-900 hover:underline"
+        >
+          <span className="inline-block h-1.5 w-1.5 rounded-full bg-accent" />
+          Refresh
+        </button>
+      </div>
+
+      <section className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="bg-white rounded-2xl border border-stone-200 p-5 shadow-sm flex items-center justify-between gap-4">
+          <div>
+            <p className="text-xs font-medium uppercase tracking-wide text-stone-500">
+              Trucks
+            </p>
+            <p className="text-2xl font-bold text-stone-900">{truckCount}</p>
+          </div>
+          <div className="w-11 h-11 rounded-2xl bg-sidebar/5 flex items-center justify-center text-sidebar">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <rect x="1" y="3" width="15" height="13" />
               <polygon points="16 8 20 8 23 11 23 16 16 16 16 8" />
@@ -43,71 +66,133 @@ export default function CompanyDashboard() {
               <circle cx="18.5" cy="18.5" r="2.5" />
             </svg>
           </div>
-          <div>
-            <p className="text-xs font-medium uppercase tracking-wide text-stone-500">
-              Trucks in fleet
-            </p>
-            <p className="text-2xl font-bold text-stone-900">
-              {truckCount}
-            </p>
-          </div>
         </div>
-        <div className="bg-white rounded-2xl border border-stone-200 p-4 shadow-sm flex items-center gap-4">
-          <div className="w-10 h-10 rounded-xl bg-accent/5 flex items-center justify-center text-accent">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7h18M5 7v10a2 2 0 002 2h10a2 2 0 002-2V7M9 11h6" />
-            </svg>
-          </div>
+
+        <div className="bg-white rounded-2xl border border-stone-200 p-5 shadow-sm flex items-center justify-between gap-4">
           <div>
             <p className="text-xs font-medium uppercase tracking-wide text-stone-500">
               Open shipments
             </p>
-            <p className="text-2xl font-bold text-stone-900">
-              {openLoadsCount}
-            </p>
+            <p className="text-2xl font-bold text-stone-900">{openLoadsCount}</p>
+          </div>
+          <div className="w-11 h-11 rounded-2xl bg-accent/10 flex items-center justify-center text-accent">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7h18M5 7v10a2 2 0 002 2h10a2 2 0 002-2V7M9 11h6" />
+            </svg>
           </div>
         </div>
-      </div>
-      <div className="flex flex-wrap gap-4">
-        <Link
-          to="/company/shipments"
-          className="inline-flex items-center gap-2 px-6 py-3.5 bg-accent text-white font-semibold rounded-xl hover:bg-accent-hover transition-all shadow-lg hover:shadow-accent/25"
-        >
-          <span aria-hidden>
+
+        <div className="bg-white rounded-2xl border border-stone-200 p-5 shadow-sm flex items-center justify-between gap-4">
+          <div>
+            <p className="text-xs font-medium uppercase tracking-wide text-stone-500">
+              Offers on open loads
+            </p>
+            <p className="text-2xl font-bold text-stone-900">{totalOpenOffers}</p>
+          </div>
+          <div className="w-11 h-11 rounded-2xl bg-cream flex items-center justify-center text-sidebar border border-stone-200">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h6m-7 9h14a2 2 0 002-2V7a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
-          </span>
-          View Shipments
-        </Link>
-        <Link
-          to="/company/trucks"
-          className="inline-flex items-center gap-2 px-6 py-3.5 bg-white border-2 border-stone-200 text-stone-800 font-semibold rounded-xl hover:border-stone-300 hover:bg-stone-50 transition-all"
-        >
-          <span aria-hidden>
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <rect x="1" y="3" width="15" height="13" />
-              <polygon points="16 8 20 8 23 11 23 16 16 16 16 8" />
-              <circle cx="5.5" cy="18.5" r="2.5" />
-              <circle cx="18.5" cy="18.5" r="2.5" />
-            </svg>
-          </span>
-          Manage Trucks
-        </Link>
-        <button
-          type="button"
-          onClick={() => setRefresh((v) => v + 1)}
-          className="text-stone-500 text-sm hover:text-stone-700 hover:underline"
-        >
-          Refresh stats
-        </button>
-      </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 bg-white rounded-2xl border border-stone-200 p-5 shadow-sm">
+          <div className="flex items-start justify-between gap-3 mb-4">
+            <div>
+              <h2 className="text-sm font-semibold text-stone-800">Quick actions</h2>
+              <p className="text-xs text-stone-500 mt-1">
+                Jump to the most common tasks.
+              </p>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <Link
+              to="/company/shipments"
+              className="group rounded-2xl border border-stone-200 bg-sand p-4 hover:bg-white hover:border-stone-300 transition-all"
+            >
+              <div className="w-10 h-10 rounded-2xl bg-accent/10 text-accent flex items-center justify-center mb-3 group-hover:bg-accent group-hover:text-white transition-all">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                </svg>
+              </div>
+              <p className="text-sm font-semibold text-stone-900">Browse shipments</p>
+              <p className="text-xs text-stone-500 mt-1">Accept fixed-price loads.</p>
+            </Link>
+
+            <Link
+              to="/company/trucks"
+              className="group rounded-2xl border border-stone-200 bg-sand p-4 hover:bg-white hover:border-stone-300 transition-all"
+            >
+              <div className="w-10 h-10 rounded-2xl bg-sidebar/5 text-sidebar flex items-center justify-center mb-3 group-hover:bg-sidebar group-hover:text-white transition-all">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <rect x="1" y="3" width="15" height="13" />
+                  <polygon points="16 8 20 8 23 11 23 16 16 16 16 8" />
+                  <circle cx="5.5" cy="18.5" r="2.5" />
+                  <circle cx="18.5" cy="18.5" r="2.5" />
+                </svg>
+              </div>
+              <p className="text-sm font-semibold text-stone-900">Manage fleet</p>
+              <p className="text-xs text-stone-500 mt-1">Add, edit, or remove trucks.</p>
+            </Link>
+
+            <Link
+              to="/company/active-shipments"
+              className="group rounded-2xl border border-stone-200 bg-sand p-4 hover:bg-white hover:border-stone-300 transition-all"
+            >
+              <div className="w-10 h-10 rounded-2xl bg-cream text-sidebar border border-stone-200 flex items-center justify-center mb-3 group-hover:bg-sidebar group-hover:text-white group-hover:border-sidebar transition-all">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" />
+                </svg>
+              </div>
+              <p className="text-sm font-semibold text-stone-900">Active shipments</p>
+              <p className="text-xs text-stone-500 mt-1">Track live delivery statuses.</p>
+            </Link>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-2xl border border-stone-200 p-5 shadow-sm">
+          <h2 className="text-sm font-semibold text-stone-800">Marketplace snapshot</h2>
+          <p className="text-xs text-stone-500 mt-1">
+            Latest open loads (demo).
+          </p>
+          <div className="mt-4 space-y-3">
+            {recentOpenLoads.map((l) => (
+              <div key={l.id} className="rounded-2xl border border-stone-200 bg-sand p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold text-stone-900">
+                      {l.origin} → {l.destination}
+                    </p>
+                    <p className="text-xs text-stone-500 mt-1">
+                      {new Date(l.date).toLocaleDateString()} · {l.weight}
+                    </p>
+                  </div>
+                  <span className="text-xs font-semibold text-accent">
+                    {l.price ?? 'Fixed price'}
+                  </span>
+                </div>
+                <div className="mt-3 flex items-center justify-between">
+                  <span className="text-xs text-stone-500">
+                    Posted by {l.createdBy}
+                  </span>
+                  <Link to="/company/shipments" className="text-xs font-semibold text-stone-700 hover:text-stone-900 hover:underline">
+                    View
+                  </Link>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       <section className="mt-8">
         <div className="bg-white rounded-2xl border border-stone-200 p-5 shadow-sm flex items-center justify-between gap-4">
           <div>
-            <h2 className="text-lg font-semibold text-stone-800">Track fleet movement</h2>
-            <p className="text-sm text-stone-600">
-              Open a live map view showing where your trucks are operating across Rwanda.
+            <h2 className="text-sm font-semibold text-stone-800">Track fleet movement</h2>
+            <p className="text-xs text-stone-500 mt-1">
+              Open a map view to see where your trucks are operating (demo).
             </p>
           </div>
           <button
@@ -125,7 +210,7 @@ export default function CompanyDashboard() {
                 />
               </svg>
             </span>
-            View fleet map
+            View map
           </button>
         </div>
       </section>

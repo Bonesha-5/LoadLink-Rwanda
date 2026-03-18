@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { ensureSeedAdminData, getAdminDisputes, resolveDispute as resolveDisputeInStore } from '../data/storage'
 
 type DisputeResolutionChoice = 'COMPANY' | 'SHIPPER' | 'SPLIT'
 
@@ -26,42 +27,29 @@ export default function AdminDisputes() {
   const [shipperAmount, setShipperAmount] = useState('')
 
   async function loadDisputes() {
+    setState('loading')
+    setError(null)
     try {
-      setState('loading')
-      setError(null)
-      const res = await fetch('/api/admin/disputes')
-      if (!res.ok) throw new Error('Failed to load disputes')
-      const data: DisputedShipment[] = await res.json()
+      ensureSeedAdminData()
+      const data = getAdminDisputes().map(
+        (s): DisputedShipment => ({
+          id: s.id,
+          shipperName: s.shipperName,
+          companyName: s.companyName ?? '—',
+          pickup: s.pickupDistrict,
+          dropoff: s.dropoffDistrict,
+          weight: `${s.weightTons} tons`,
+          escrowAmount: s.offeredPriceRwf,
+          currency: 'RWF',
+        }),
+      )
       setDisputes(data)
       setState('success')
     } catch (err) {
       console.error(err)
-      // Fallback demo data so UI looks complete even if API is not ready
-      const demo: DisputedShipment[] = [
-        {
-          id: 'DIS-001',
-          shipperName: 'ACME Manufacturing',
-          companyName: 'Kigali Freight Ltd',
-          pickup: 'Kigali',
-          dropoff: 'Gisenyi',
-          weight: '5 tons',
-          escrowAmount: 150000,
-          currency: 'RWF',
-        },
-        {
-          id: 'DIS-002',
-          shipperName: 'Green Farms',
-          companyName: 'Rwanda Cargo Co',
-          pickup: 'Kigali',
-          dropoff: 'Butare',
-          weight: '12 tons',
-          escrowAmount: 320000,
-          currency: 'RWF',
-        },
-      ]
-      setDisputes(demo)
-      setError('Showing demo disputes because the API is not reachable yet.')
-      setState('success')
+      setDisputes([])
+      setError('Could not load disputes from local demo data.')
+      setState('error')
     }
   }
 
@@ -110,13 +98,7 @@ export default function AdminDisputes() {
     }
 
     try {
-      const res = await fetch(`/api/admin/disputes/${currentDispute.id}/resolve`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      })
-      if (!res.ok) throw new Error('Failed to resolve dispute')
-      // Remove from list locally
+      resolveDisputeInStore(currentDispute.id, payload, 'Admin')
       setDisputes((prev) => prev.filter((d) => d.id !== currentDispute.id))
       closeModal()
       alert(`Dispute ${currentDispute.id} resolved.`)

@@ -11,6 +11,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
+import { ensureSeedAdminData, getAdminAnalytics } from '../data/storage'
 
 type RevenuePoint = {
   month: string
@@ -32,35 +33,18 @@ export default function AdminAnalytics() {
 
   useEffect(() => {
     async function loadAnalytics() {
+      setState('loading')
       try {
-        setState('loading')
-        const res = await fetch('/api/admin/analytics')
-        if (!res.ok) throw new Error('Failed to load analytics')
-        const data = (await res.json()) as { revenue: RevenuePoint[]; statuses: StatusSummary[] }
+        ensureSeedAdminData()
+        const data = getAdminAnalytics()
         setRevenueData(data.revenue)
         setStatusSummary(data.statuses)
         setState('success')
       } catch (err) {
         console.error(err)
-        // Demo data so admin dashboard looks complete even without backend.
-        const demoRevenue: RevenuePoint[] = [
-          { month: 'Jan', revenue: 3_200_000, shipments: 24 },
-          { month: 'Feb', revenue: 4_100_000, shipments: 30 },
-          { month: 'Mar', revenue: 4_800_000, shipments: 36 },
-          { month: 'Apr', revenue: 5_600_000, shipments: 39 },
-          { month: 'May', revenue: 6_200_000, shipments: 44 },
-          { month: 'Jun', revenue: 6_900_000, shipments: 48 },
-        ]
-        const demoStatuses: StatusSummary[] = [
-          { status: 'ESCROW_FUNDED', count: 18 },
-          { status: 'IN_TRANSIT', count: 21 },
-          { status: 'AWAITING_CONFIRMATION', count: 9 },
-          { status: 'COMPLETED', count: 62 },
-          { status: 'DISPUTED', count: 3 },
-        ]
-        setRevenueData(demoRevenue)
-        setStatusSummary(demoStatuses)
-        setState('success')
+        setRevenueData([])
+        setStatusSummary([])
+        setState('error')
       }
     }
 
