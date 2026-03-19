@@ -1,11 +1,11 @@
-import * as shipperService from "../service/shipper.js";
+import * as shipmentsService from "../service/shipments.js";
 import { catchAsync } from "../utils/catchAsync.js";
 
 // Handle shipper registration
 export const register = catchAsync(async (req, res) => {
   const { name, phone, email, password } = req.body;
 
-  const { user, token } = await shipperService.registerShipper(
+  const { user, token } = await shipmentsService.registerShipper(
     name,
     phone,
     email,
@@ -24,7 +24,7 @@ export const login = catchAsync(async (req, res) => {
   const { email, password } = req.body;
 
   try {
-    const { token, user } = await shipperService.loginShipper(email, password);
+    const { token, user } = await shipmentsService.loginShipper(email, password);
 
     res.json({
       success: true,
@@ -39,4 +39,23 @@ export const login = catchAsync(async (req, res) => {
     }
     throw error;
   }
+});
+
+// Fetch available shipments 
+export const getAvailableShipments = catchAsync(async (req, res) => {
+  const { company_id } = req.user;
+
+  if (!company_id) {
+    return res.status(400).json({
+      success: false,
+      message: "Company ID not found in token",
+    });
+  }
+
+  const shipments = await shipmentsService.getAvailableShipmentsForCompany(company_id);
+
+  res.status(200).json({
+    success: true,
+    data: shipments,
+  });
 });

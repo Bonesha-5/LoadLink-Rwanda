@@ -3,9 +3,8 @@ import cors from "cors";
 import dotenv from "dotenv";
 
 import companyRoutes from "./routes/company.js";
-import shipperRoutes from "./routes/shipper.js";
+import shipmentsRoutes from "./routes/shipments.js";
 import requestLogger from "./middleware/logger.js";
-import errorMiddleware from "./middleware/errorMiddleware.js";
 
 dotenv.config();
 
@@ -19,7 +18,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(requestLogger);
 
 app.use("/api/company", companyRoutes);
-app.use("/api/shipper", shipperRoutes);
+app.use("/api/shipments", shipmentsRoutes);
 
 // Global Error Handler
 app.use(errorMiddleware);

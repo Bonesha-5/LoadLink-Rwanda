@@ -57,3 +57,21 @@ export const loginShipper = async (email, password) => {
     },
   };
 };
+// Fetch available shipments for a company based on truck capacity
+export const getAvailableShipmentsForCompany = async (companyId) => {
+  const query = `
+    SELECT s.pickup_district, s.dropoff_district, s.cargo_description, 
+           s.weight, s.offered_price, s.pickup_date
+    FROM shipments s
+    WHERE s.status = 'POSTED'
+      AND EXISTS (
+        SELECT 1 FROM trucks t 
+        WHERE t.company_id = $1 
+          AND t.declared_capacity >= s.weight
+      )
+    ORDER BY s.created_at DESC;
+  `;
+
+  const result = await pool.query(query, [companyId]);
+  return result.rows;
+};
