@@ -11,4 +11,8 @@ router.post("/login", shipmentsController.login);
 // Available Shipments for Companies
 router.get("/", verifyToken, requiredRole("COMPANY"), shipmentsController.getAvailableShipments);
 
+// Status Updates
+router.patch("/:id/pickup", verifyToken, requiredRole("COMPANY"), shipmentsController.pickupShipment);
+router.patch("/:id/deliver", verifyToken, requiredRole("COMPANY"), shipmentsController.deliverShipment);
+
 export default router;

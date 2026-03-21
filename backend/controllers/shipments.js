@@ -59,3 +59,45 @@ export const getAvailableShipments = catchAsync(async (req, res) => {
     data: shipments,
   });
 });
+
+// Pickup a shipment
+export const pickupShipment = catchAsync(async (req, res) => {
+  const { id } = req.params;
+  const { truckId } = req.body;
+  const { company_id } = req.user;
+
+  if (!truckId) {
+    return res.status(400).json({
+      success: false,
+      message: "truckId is required",
+    });
+  }
+
+  await shipmentsService.pickupShipment(id, company_id, truckId);
+
+  res.status(200).json({
+    success: true,
+    message: "Shipment picked up successfully",
+  });
+});
+
+// Deliver a shipment
+export const deliverShipment = catchAsync(async (req, res) => {
+  const { id } = req.params;
+  const { truckId } = req.body;
+  const { company_id } = req.user;
+
+  if (!truckId) {
+    return res.status(400).json({
+      success: false,
+      message: "truckId is required",
+    });
+  }
+
+  await shipmentsService.deliverShipment(id, company_id, truckId);
+
+  res.status(200).json({
+    success: true,
+    message: "Shipment delivered successfully",
+  });
+});
