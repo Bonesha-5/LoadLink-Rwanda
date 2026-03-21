@@ -6,6 +6,8 @@ import companyRoutes from "./routes/company.js";
 import shipperRoutes from "./routes/shipper.js";
 import requestLogger from "./middleware/logger.js";
 import errorMiddleware from "./middleware/errorMiddleware.js";
+import paymentsRoutes from './routes/payments.js';
+import simulatedMomoRoutes from './routes/simulatedMomo.js';
 
 dotenv.config();
 
@@ -20,6 +22,8 @@ app.use(requestLogger);
 
 app.use("/api/company", companyRoutes);
 app.use("/api/shipper", shipperRoutes);
+app.use('/api/payments', paymentsRoutes);
+app.use('/api/momo-simulator', simulatedMomoRoutes);
 
 // Global Error Handler
 app.use(errorMiddleware);
