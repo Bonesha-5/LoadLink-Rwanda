@@ -4,6 +4,7 @@ import dotenv from "dotenv";
 
 import companyRoutes from "./routes/company.js";
 import shipmentsRoutes from "./routes/shipments.js";
+import interestsRoutes from "./routes/interests.js";
 import requestLogger from "./middleware/logger.js";
 import errorMiddleware from "./middleware/errorMiddleware.js";
 
@@ -20,6 +21,7 @@ app.use(requestLogger);
 
 app.use("/api/company", companyRoutes);
 app.use("/api/shipments", shipmentsRoutes);
+app.use("/api/interests", interestsRoutes);
 
 // Global Error Handler
 app.use(errorMiddleware);
