@@ -60,6 +60,51 @@ function safeSetItem(key: string, value: unknown): void {
   }
 }
 
+// ── Ratings (frontend-only) ────────────────────────────────────────────────
+
+export interface Rating {
+  id: string
+  truckId: string
+  shipmentId?: string
+  shipperName: string
+  stars: 1 | 2 | 3 | 4 | 5
+  comment?: string
+  createdAt: string
+}
+
+const RATINGS_KEY = 'll_ratings'
+
+function getAllRatings(): Rating[] {
+  try {
+    return safeParseJson<Rating[]>(localStorage.getItem(RATINGS_KEY), [])
+  } catch {
+    return []
+  }
+}
+
+function saveRatings(ratings: Rating[]): void {
+  safeSetItem(RATINGS_KEY, ratings)
+}
+
+export function addRating(data: Omit<Rating, 'id' | 'createdAt'>): Rating {
+  const rating: Rating = { id: uid(), createdAt: new Date().toISOString(), ...data }
+  saveRatings([rating, ...getAllRatings()])
+  return rating
+}
+
+export function getRatingsByTruck(truckId: string): Rating[] {
+  return getAllRatings()
+    .filter((r) => r.truckId === truckId)
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+}
+
+export function getTruckRatingAverage(truckId: string): number | null {
+  const ratings = getRatingsByTruck(truckId)
+  if (!ratings.length) return null
+  const avg = ratings.reduce((sum, r) => sum + r.stars, 0) / ratings.length
+  return Math.round(avg * 10) / 10
+}
+
 // ── Trucks ─────────────────────────────────────────────────────────────────
 
 const TRUCKS_KEY = 'll_trucks'
@@ -481,13 +526,40 @@ export function ensureSeedAdminData(): void {
   saveAuditLogs([
     {
       id: 'AUD-001',
-      adminName: 'Admin A',
+      adminName: 'System',
       action: 'SEED_DATA',
       targetType: 'shipment',
       targetId: 'SYSTEM',
-      createdAt: new Date(now).toISOString(),
+      createdAt: new Date(now - 72 * 60 * 60 * 1000).toISOString(),
+    },
+    {
+      id: 'AUD-002',
+      adminName: 'Admin A',
+      action: 'COMPANY_APPROVED',
+      targetType: 'company',
+      targetId: 'Northern Transport',
+      createdAt: new Date(now - 48 * 60 * 60 * 1000).toISOString(),
+    },
+    {
+      id: 'AUD-003',
+      adminName: 'Admin B',
+      action: 'DISPUTE_RESOLVED',
+      targetType: 'shipment',
+      targetId: 'DIS-001',
+      createdAt: new Date(now - 12 * 60 * 60 * 1000).toISOString(),
+    },
+    {
+      id: 'AUD-004',
+      adminName: 'Admin A',
+      action: 'COMPANY_REJECTED',
+      targetType: 'company',
+      targetId: 'Rwanda Cargo Co',
+      createdAt: new Date(now - 3 * 60 * 60 * 1000).toISOString(),
     },
   ])
+
+  // Optional: seed a couple ratings linked to demo plates if the user creates matching trucks.
+  // (No side effects unless trucks exist; actual rating display uses truckId.)
 }
 
 export function getPendingCompanies(): Company[] {

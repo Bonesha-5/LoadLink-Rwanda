@@ -4,6 +4,8 @@ import {
   getTrucksByCompany,
   addTruck as addTruckStorage,
   deleteTruck as deleteTruckStorage,
+  getTruckRatingAverage,
+  getRatingsByTruck,
 } from '../data/storage'
 
 export default function CompanyTrucks() {
@@ -19,6 +21,17 @@ export default function CompanyTrucks() {
     void refresh
     return getTrucksByCompany(companyName)
   }, [companyName, refresh])
+
+  const ratingsByTruck = useMemo(() => {
+    void refresh
+    const map = new Map<string, { avg: number | null; count: number }>()
+    trucks.forEach((t) => {
+      const avg = getTruckRatingAverage(t.id)
+      const count = getRatingsByTruck(t.id).length
+      map.set(t.id, { avg, count })
+    })
+    return map
+  }, [trucks, refresh])
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -142,6 +155,27 @@ export default function CompanyTrucks() {
                   {truck.plateNumber && (
                     <p className="text-stone-500 text-sm">Plate: {truck.plateNumber}</p>
                   )}
+                  <div className="mt-3">
+                    {(() => {
+                      const info = ratingsByTruck.get(truck.id)
+                      const avg = info?.avg ?? null
+                      const count = info?.count ?? 0
+                      if (!count || avg == null) {
+                        return (
+                          <span className="inline-flex items-center gap-2 rounded-full bg-stone-100 text-stone-700 px-3 py-1 text-xs font-semibold border border-stone-200">
+                            <span className="text-stone-500">★</span>
+                            No ratings yet
+                          </span>
+                        )
+                      }
+                      return (
+                        <span className="inline-flex items-center gap-2 rounded-full bg-cream text-sidebar px-3 py-1 text-xs font-semibold border border-stone-200">
+                          <span className="text-accent">★</span>
+                          {avg.toFixed(1)} <span className="text-stone-500 font-medium">({count})</span>
+                        </span>
+                      )
+                    })()}
+                  </div>
                 </div>
                 <button
                   type="button"

@@ -86,13 +86,11 @@ export default function AdminCompanyVerification() {
   }
 
   return (
-    <div className="max-w-5xl">
-      <div className="flex items-center justify-between mb-6">
+    <div className="space-y-5">
+      <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-stone-800">Company Verification</h1>
-          <p className="text-stone-600 mt-1">
-            Review and approve transport companies before they join the marketplace.
-          </p>
+          <h1 className="text-2xl font-bold text-stone-900">Company verification</h1>
+          <p className="text-sm text-stone-600 mt-1">Review and approve companies before they join.</p>
         </div>
         <button
           type="button"
@@ -104,7 +102,7 @@ export default function AdminCompanyVerification() {
         </button>
       </div>
 
-      <div className="mb-4 flex items-center gap-3 text-xs text-stone-600">
+      <div className="flex items-center gap-3 text-xs text-stone-600">
         <span className="inline-flex items-center gap-2 rounded-full bg-cream px-3 py-1 border border-stone-200">
           <span className="inline-block h-2 w-2 rounded-full bg-amber-400" />
           <span className="font-semibold text-stone-800">
@@ -132,7 +130,7 @@ export default function AdminCompanyVerification() {
       )}
 
       {state === 'success' && companies.length === 0 && (
-        <div className="bg-white border border-stone-200 rounded-2xl p-8 text-center">
+        <div className="bg-white border border-stone-200 rounded-3xl p-10 text-center shadow-sm">
           <p className="text-stone-600">
             There are no companies waiting for verification right now.
           </p>
@@ -140,7 +138,7 @@ export default function AdminCompanyVerification() {
       )}
 
       {companies.length > 0 && (
-        <div className="bg-white border border-stone-200 rounded-2xl overflow-hidden shadow-sm">
+        <div className="bg-white border border-stone-200 rounded-3xl overflow-hidden shadow-sm">
           <table className="min-w-full text-left text-sm">
             <thead className="bg-stone-50 border-b border-stone-200">
               <tr>

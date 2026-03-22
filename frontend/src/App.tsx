@@ -1,14 +1,10 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import Home from './pages/Home'
-import ShipperLayout from './components/ShipperLayout'
 import CompanyLayout from './components/CompanyLayout'
 import Layout from './components/Layout'
-import Loads from './pages/Loads'
 import Trucks from './pages/Trucks'
 import Login from './pages/Login'
 import Register from './pages/Register'
-import Profile from './pages/Profile'
-import PostShipment from './pages/PostShipment'
 import Shipment from './pages/Shipment'
 import USSDHelp from './pages/USSDHelp'
 import CompanyDashboard from './pages/CompanyDashboard'
@@ -22,6 +18,7 @@ import AdminShipmentMonitoring from './pages/AdminShipmentMonitoring'
 import AdminDisputes from './pages/AdminDisputes'
 import AdminAuditLog from './pages/AdminAuditLog'
 import AdminAnalytics from './pages/AdminAnalytics'
+import About from './pages/About'
 
 export default function App() {
   return (
@@ -31,11 +28,7 @@ export default function App() {
       <Route path="login/:role" element={<Login />} />
       <Route path="register" element={<Navigate to="/register/shipper" replace />} />
       <Route path="register/:role" element={<Register />} />
-      <Route element={<ProtectedRoute role="shipper"><ShipperLayout /></ProtectedRoute>}>
-        <Route path="profile" element={<Profile />} />
-        <Route path="post-shipment" element={<PostShipment />} />
-        <Route path="loads" element={<Loads />} />
-      </Route>
+      {/* Shipper routes — to be added by colleague */}
       <Route element={<ProtectedRoute role="company"><CompanyLayout /></ProtectedRoute>}>
         <Route path="company/dashboard" element={<CompanyDashboard />} />
         <Route path="company/trucks" element={<CompanyTrucks />} />
@@ -50,6 +43,7 @@ export default function App() {
         <Route path="admin/audit-log" element={<AdminAuditLog />} />
       </Route>
       <Route element={<Layout />}>
+        <Route path="about" element={<About />} />
         <Route path="trucks" element={<Trucks />} />
         <Route path="shipment/:id" element={<Shipment />} />
         <Route path="ussd-help" element={<USSDHelp />} />

@@ -32,7 +32,7 @@ const COMPANY_BENEFITS = [
 export default function Login() {
   const { role: urlRole } = useParams<{ role: string }>()
   const role = (ROLES.includes(urlRole as Role) ? urlRole : 'shipper') as Role
-  const [phone, setPhone] = useState('')
+  const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const navigate = useNavigate()
   const location = useLocation()
@@ -53,14 +53,14 @@ export default function Login() {
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!phone.trim()) return
-    login(phone.trim(), role)
+    if (!username.trim()) return
+    login(username.trim(), role)
     navigate(from, { replace: true })
   }
 
   const formCard = (
-    <div className="w-full max-w-md mx-auto">
-      <div className="bg-white rounded-2xl shadow-xl shadow-stone-200/50 border border-stone-100 p-8 sm:p-10">
+    <div className="w-full max-w-md mx-auto ll-animate-in">
+      <div className="bg-white rounded-3xl shadow-xl shadow-stone-200/50 border border-stone-100 p-8 sm:p-10 transition-shadow duration-200 hover:shadow-2xl">
         <div className="flex items-center gap-3 mb-6">
           <div className="w-12 h-12 rounded-xl bg-sidebar/10 flex items-center justify-center">
             <svg className="w-6 h-6 text-sidebar" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -78,15 +78,16 @@ export default function Login() {
         </div>
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <label htmlFor="phone" className="block text-sm font-semibold text-stone-700 mb-2">
-              Phone number
+            <label htmlFor="username" className="block text-sm font-semibold text-stone-700 mb-2">
+              Username
             </label>
             <input
-              id="phone"
-              type="tel"
-              placeholder="+250 788 123 456"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
+              id="username"
+              type="text"
+              autoComplete="username"
+              placeholder="e.g. alice"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
               className="w-full px-4 py-3.5 rounded-xl bg-stone-50 border border-stone-200 text-stone-800 placeholder:text-stone-400 focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 transition-all"
             />
           </div>
@@ -97,6 +98,7 @@ export default function Login() {
             <input
               id="password"
               type="password"
+              autoComplete="current-password"
               placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -165,7 +167,7 @@ export default function Login() {
             After sign in you&apos;ll go to your shipper dashboard.
           </p>
         </div>
-        <div className="flex-1 flex flex-col items-center justify-center p-6 sm:p-10 bg-sand min-h-screen">
+        <div className="flex-1 flex flex-col items-center justify-center p-6 sm:p-10 bg-[#F6F7FB] min-h-screen">
           <Link
             to="/"
             className="lg:hidden absolute top-6 left-6 text-sidebar font-bold text-xl tracking-tight z-20 hover:opacity-80"
@@ -220,7 +222,7 @@ export default function Login() {
             After sign in you&apos;ll go to your company dashboard.
           </p>
         </div>
-        <div className="flex-1 flex flex-col items-center justify-center p-6 sm:p-10 bg-sand min-h-screen">
+        <div className="flex-1 flex flex-col items-center justify-center p-6 sm:p-10 bg-[#F6F7FB] min-h-screen">
           <Link
             to="/"
             className="lg:hidden absolute top-6 left-6 text-sidebar font-bold text-xl tracking-tight z-20 hover:opacity-80"
@@ -234,7 +236,7 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center relative overflow-hidden bg-sand py-12 px-6">
+    <div className="min-h-screen flex flex-col items-center justify-center relative overflow-hidden bg-[#F6F7FB] py-12 px-6">
       <div
         className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-[0.06] pointer-events-none"
         style={{ backgroundImage: 'url(/cargo.jpg)' }}

@@ -1,182 +1,361 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { getTrucksByCompany, getAllLoads, ensureSeedLoads } from '../data/storage'
 import CompanyFleetMap from '../components/CompanyFleetMap'
+import type { LatLngExpression } from 'leaflet'
+import {
+  ResponsiveContainer,
+  CartesianGrid,
+  XAxis,
+  YAxis,
+  Tooltip,
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
+  Cell,
+  Legend,
+} from 'recharts'
 
 export default function CompanyDashboard() {
   const { user } = useAuth()
   const companyName = user?.name ?? ''
   const [refresh, setRefresh] = useState(0)
   const [showFleetMap, setShowFleetMap] = useState(false)
+  const [tick, setTick] = useState(0)
 
   const demoFleet = [
-    { id: 'T1', position: [-1.95, 30.06] },  // Kigali
-    { id: 'T2', position: [-1.7, 29.26] },   // Gisenyi
-    { id: 'T3', position: [-2.6, 29.73] },   // Butare-ish
+    { id: 'T1', position: [-1.95, 30.06] as [number, number] },
+    { id: 'T2', position: [-1.7, 29.26] as [number, number] },
+    { id: 'T3', position: [-2.6, 29.73] as [number, number] },
   ]
 
-  const { truckCount, openLoadsCount, recentOpenLoads, totalOpenOffers } = useMemo(() => {
+  const demoRoute: LatLngExpression[] = [
+    [-1.9536, 30.0605], // Kigali
+    [-1.89, 30.02],
+    [-1.82, 29.88],
+    [-1.76, 29.65],
+    [-1.70, 29.26], // Gisenyi-ish
+    [-1.74, 29.40],
+    [-1.86, 29.75],
+    [-1.99, 30.02],
+  ]
+
+  useEffect(() => {
+    const id = window.setInterval(() => setTick((v) => v + 1), 1200)
+    return () => window.clearInterval(id)
+  }, [])
+
+  const movingTruckPosition: LatLngExpression = demoRoute[tick % demoRoute.length]
+
+  const { truckCount, openLoadsCount, recentOpenLoads, pieMarketplace, pieFleet } = useMemo(() => {
     void refresh
     ensureSeedLoads()
     const loads = getAllLoads()
     const openLoads = loads.filter((l) => l.status === 'open')
+    const trucks = getTrucksByCompany(companyName)
+    const myBidLoads = loads.filter((l) => l.offers?.some((o) => o.companyName === companyName)).length
+    const openNoBid = openLoads.filter((l) => !l.offers?.some((o) => o.companyName === companyName)).length
+    const closed = loads.filter((l) => l.status === 'closed').length
+    const fleetOnRoute = Math.min(2, trucks.length)
+    const fleetIdle = Math.max(0, trucks.length - 2)
+    const fleetMaintenance = trucks.length > 3 ? 1 : 0
     return {
-      truckCount: getTrucksByCompany(companyName).length,
+      truckCount: trucks.length,
       openLoadsCount: openLoads.length,
       recentOpenLoads: openLoads.slice(0, 4),
-      totalOpenOffers: openLoads.reduce((sum, l) => sum + (l.offers?.length ?? 0), 0),
+      pieMarketplace: [
+        { name: 'My bids out', value: myBidLoads || 0, fill: '#F5C518' },
+        { name: 'Open marketplace', value: openNoBid || 0, fill: '#0B0B0F' },
+        { name: 'Closed / other', value: closed || 0, fill: '#6B7280' },
+      ].map((d) => ({ ...d, value: d.value || 1 })),
+      pieFleet:
+        trucks.length > 0
+          ? [
+              { name: 'On route', value: fleetOnRoute || 1, fill: '#F5C518' },
+              { name: 'Idle', value: fleetIdle || 1, fill: '#0B0B0F' },
+              { name: 'Maintenance', value: fleetMaintenance || 1, fill: '#C9A227' },
+            ]
+          : [{ name: 'No trucks yet', value: 1, fill: '#9CA3AF' }],
     }
   }, [companyName, refresh])
 
+  const trend = useMemo(() => {
+    // demo analytics for dashboard visuals
+    return [
+      { name: 'Mon', shipments: 8, activity: 40 },
+      { name: 'Tue', shipments: 10, activity: 55 },
+      { name: 'Wed', shipments: 7, activity: 38 },
+      { name: 'Thu', shipments: 12, activity: 70 },
+      { name: 'Fri', shipments: 11, activity: 62 },
+      { name: 'Sat', shipments: 14, activity: 86 },
+      { name: 'Sun', shipments: 9, activity: 48 },
+    ]
+  }, [])
+
+  const kpis = useMemo(() => {
+    const last = trend[trend.length - 1]?.shipments ?? 0
+    const prev = trend[trend.length - 2]?.shipments ?? 0
+    const delta = prev === 0 ? 0 : Math.round(((last - prev) / prev) * 100)
+    const onTime = 92 // demo %
+    const utilization = 86 // demo %
+    return { shipmentsToday: last, delta, onTime, utilization }
+  }, [trend])
+
   return (
-    <div className="max-w-5xl space-y-6">
+    <div className="space-y-6 ll-animate-in">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-stone-800">
-            Welcome back{user?.name ? `, ${user.name}` : ''}
+          <h1 className="text-2xl font-bold text-stone-900">
+            Shipment track
           </h1>
-          <p className="text-sm text-stone-600 mt-1">
-            Today&apos;s snapshot of your fleet and the marketplace.
-          </p>
+          <p className="text-sm text-stone-600 mt-1">Live-style tracking view (demo)</p>
         </div>
-        <button
-          type="button"
-          onClick={() => setRefresh((v) => v + 1)}
-          className="inline-flex items-center gap-1.5 text-sm font-semibold text-stone-600 hover:text-stone-900 hover:underline"
-        >
-          <span className="inline-block h-1.5 w-1.5 rounded-full bg-accent" />
-          Refresh
-        </button>
+        <div className="flex flex-wrap items-center gap-3">
+          <Link
+            to="/company/shipments"
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-accent text-white text-sm font-semibold hover:bg-accent-hover transition-colors shadow-sm"
+          >
+            View shipments
+          </Link>
+          <button
+            type="button"
+            onClick={() => setRefresh((v) => v + 1)}
+            className="inline-flex items-center gap-1.5 text-sm font-semibold text-stone-600 hover:text-stone-900 hover:underline"
+          >
+            <span className="inline-block h-1.5 w-1.5 rounded-full bg-accent" />
+            Refresh
+          </button>
+        </div>
       </div>
 
-      <section className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-white rounded-2xl border border-stone-200 p-5 shadow-sm flex items-center justify-between gap-4">
-          <div>
-            <p className="text-xs font-medium uppercase tracking-wide text-stone-500">
-              Trucks
-            </p>
-            <p className="text-2xl font-bold text-stone-900">{truckCount}</p>
+      <section className="grid grid-cols-1 xl:grid-cols-12 gap-6">
+        <div className="xl:col-span-8 bg-white rounded-3xl border border-stone-200 shadow-sm overflow-hidden">
+          <div className="p-5 border-b border-stone-100 flex items-center justify-between gap-3">
+            <div>
+              <h2 className="text-sm font-semibold text-stone-900">Route map</h2>
+              <p className="text-xs text-stone-500 mt-1">Kigali → Gisenyi (simulated)</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowFleetMap(true)}
+              className="inline-flex items-center gap-2 px-3 py-2 rounded-2xl bg-stone-900 text-white text-xs font-semibold hover:bg-stone-800 transition-colors"
+            >
+              Expand
+            </button>
           </div>
-          <div className="w-11 h-11 rounded-2xl bg-sidebar/5 flex items-center justify-center text-sidebar">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <rect x="1" y="3" width="15" height="13" />
-              <polygon points="16 8 20 8 23 11 23 16 16 16 16 8" />
-              <circle cx="5.5" cy="18.5" r="2.5" />
-              <circle cx="18.5" cy="18.5" r="2.5" />
-            </svg>
+          <div className="h-[320px] relative">
+            <CompanyFleetMap
+              trucks={demoFleet}
+              heightClassName="h-full"
+              route={demoRoute}
+              movingTruckPosition={movingTruckPosition}
+            />
+            <div className="pointer-events-none absolute top-4 left-4 flex flex-wrap gap-2">
+              <span className="inline-flex items-center gap-2 rounded-2xl bg-white/95 backdrop-blur px-3 py-2 text-xs font-semibold text-stone-800 border border-stone-200 shadow-sm">
+                <span className="inline-block h-2 w-2 rounded-full bg-accent" />
+                Live track (demo)
+              </span>
+              <span className="inline-flex items-center gap-2 rounded-2xl bg-white/95 backdrop-blur px-3 py-2 text-xs font-semibold text-stone-800 border border-stone-200 shadow-sm">
+                {demoFleet.length} trucks
+              </span>
+              <span className="inline-flex items-center gap-2 rounded-2xl bg-white/95 backdrop-blur px-3 py-2 text-xs font-semibold text-stone-800 border border-stone-200 shadow-sm">
+                ETA 1h 50m
+              </span>
+            </div>
+            <div className="absolute top-4 right-4">
+              <div className="rounded-3xl bg-white/95 backdrop-blur border border-stone-200 shadow-sm p-3 w-[220px]">
+                <p className="text-[11px] font-semibold text-stone-900">Current truck capacity</p>
+                <div className="mt-2 flex items-center justify-between">
+                  <span className="text-xs text-stone-500">Utilization</span>
+                  <span className="text-xs font-semibold text-stone-900">86%</span>
+                </div>
+                <div className="mt-2 h-2.5 rounded-full bg-stone-200 overflow-hidden">
+                  <div className="h-full bg-accent rounded-full" style={{ width: '86%' }} />
+                </div>
+                <p className="mt-2 text-[11px] text-stone-500">
+                  Route is simulated for the demo UI.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl border border-stone-200 p-5 shadow-sm flex items-center justify-between gap-4">
-          <div>
-            <p className="text-xs font-medium uppercase tracking-wide text-stone-500">
-              Open shipments
-            </p>
-            <p className="text-2xl font-bold text-stone-900">{openLoadsCount}</p>
+        <div className="xl:col-span-4 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-1 gap-4">
+          <div className="bg-white rounded-3xl border border-stone-200 p-5 shadow-sm transition-shadow hover:shadow-md">
+            <p className="text-xs font-semibold text-stone-500">Trucks</p>
+            <p className="mt-2 text-3xl font-bold text-stone-900">{truckCount}</p>
+            <p className="mt-2 text-xs text-stone-500">Total in fleet</p>
           </div>
-          <div className="w-11 h-11 rounded-2xl bg-accent/10 flex items-center justify-center text-accent">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7h18M5 7v10a2 2 0 002 2h10a2 2 0 002-2V7M9 11h6" />
-            </svg>
+          <div className="bg-white rounded-3xl border border-stone-200 p-5 shadow-sm transition-shadow hover:shadow-md">
+            <p className="text-xs font-semibold text-stone-500">Open shipments</p>
+            <p className="mt-2 text-3xl font-bold text-stone-900">{openLoadsCount}</p>
+            <p className="mt-2 text-xs text-stone-500">Available to accept</p>
           </div>
-        </div>
-
-        <div className="bg-white rounded-2xl border border-stone-200 p-5 shadow-sm flex items-center justify-between gap-4">
-          <div>
-            <p className="text-xs font-medium uppercase tracking-wide text-stone-500">
-              Offers on open loads
-            </p>
-            <p className="text-2xl font-bold text-stone-900">{totalOpenOffers}</p>
+          <div className="bg-white rounded-3xl border border-stone-200 p-5 shadow-sm transition-shadow hover:shadow-md">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold text-stone-500">On-time rate</p>
+                <p className="mt-2 text-3xl font-bold text-stone-900">{kpis.onTime}%</p>
+                <p className="mt-2 text-xs text-stone-500">Delivery performance (demo)</p>
+              </div>
+              <span className="inline-flex items-center gap-1 rounded-full bg-accent/10 text-accent border border-accent/20 px-2.5 py-1 text-xs font-semibold">
+                +3%
+              </span>
+            </div>
           </div>
-          <div className="w-11 h-11 rounded-2xl bg-cream flex items-center justify-center text-sidebar border border-stone-200">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h6m-7 9h14a2 2 0 002-2V7a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
+          <div className="bg-white rounded-3xl border border-stone-200 p-5 shadow-sm transition-shadow hover:shadow-md">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold text-stone-500">Shipments today</p>
+                <p className="mt-2 text-3xl font-bold text-stone-900">{kpis.shipmentsToday}</p>
+                <p className="mt-2 text-xs text-stone-500">Compared to yesterday</p>
+              </div>
+              <span
+                className={[
+                  'inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-semibold',
+                  kpis.delta >= 0
+                    ? 'bg-accent/10 text-accent border-accent/20'
+                    : 'bg-stone-100 text-stone-700 border-stone-200',
+                ].join(' ')}
+              >
+                {kpis.delta >= 0 ? '+' : ''}
+                {kpis.delta}%
+              </span>
+            </div>
+            <div className="mt-3 h-20">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={trend} margin={{ left: -18, right: 6, top: 8, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
+                  <XAxis dataKey="name" tickLine={false} axisLine={false} fontSize={10} />
+                  <YAxis hide />
+                  <Tooltip formatter={(v: unknown) => [String(v ?? ''), 'Shipments']} />
+                  <Bar dataKey="shipments" radius={[8, 8, 8, 8]} fill="#F5C518" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
           </div>
         </div>
       </section>
 
       <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 bg-white rounded-2xl border border-stone-200 p-5 shadow-sm">
-          <div className="flex items-start justify-between gap-3 mb-4">
+        <div className="bg-white rounded-3xl border border-stone-200 p-5 shadow-sm transition-shadow hover:shadow-md">
+          <h2 className="text-sm font-semibold text-stone-900">Fleet utilization</h2>
+          <p className="text-xs text-stone-500 mt-1">Truck deployment status</p>
+          <div className="h-[220px] mt-4">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={pieFleet}
+                  dataKey="value"
+                  nameKey="name"
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={50}
+                  outerRadius={80}
+                  paddingAngle={2}
+                  label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}
+                >
+                  {pieFleet.map((entry) => (
+                    <Cell key={entry.name} fill={entry.fill} />
+                  ))}
+                </Pie>
+                <Tooltip formatter={(v: unknown, n: unknown) => [String(v ?? ''), String(n ?? '')]} />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+        <div className="bg-white rounded-3xl border border-stone-200 p-5 shadow-sm transition-shadow hover:shadow-md">
+          <h2 className="text-sm font-semibold text-stone-900">Marketplace activity</h2>
+          <p className="text-xs text-stone-500 mt-1">Bid vs open opportunities</p>
+          <div className="h-[220px] mt-4">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={pieMarketplace}
+                  dataKey="value"
+                  nameKey="name"
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={50}
+                  outerRadius={80}
+                  paddingAngle={2}
+                  label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}
+                >
+                  {pieMarketplace.map((entry) => (
+                    <Cell key={entry.name} fill={entry.fill} />
+                  ))}
+                </Pie>
+                <Tooltip formatter={(v: unknown, n: unknown) => [String(v ?? ''), String(n ?? '')]} />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+        <div className="bg-white rounded-3xl border border-stone-200 p-5 shadow-sm transition-shadow hover:shadow-md">
+          <h2 className="text-sm font-semibold text-stone-900">Weekly shipments</h2>
+          <p className="text-xs text-stone-500 mt-1">Last 7 days (demo)</p>
+          <div className="h-[220px] mt-4">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={trend} margin={{ top: 8, right: 8, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
+                <XAxis dataKey="name" tickLine={false} axisLine={false} fontSize={10} />
+                <YAxis hide />
+                <Tooltip formatter={(v: unknown) => [String(v ?? ''), 'Shipments']} />
+                <Bar dataKey="shipments" radius={[6, 6, 0, 0]} fill="#F5C518" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </section>
+
+      <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 bg-white rounded-3xl border border-stone-200 p-5 shadow-sm">
+          <div className="flex items-center justify-between gap-3 mb-4">
             <div>
-              <h2 className="text-sm font-semibold text-stone-800">Quick actions</h2>
-              <p className="text-xs text-stone-500 mt-1">
-                Jump to the most common tasks.
-              </p>
+              <h2 className="text-sm font-semibold text-stone-900">Quick actions</h2>
+              <p className="text-xs text-stone-500 mt-1">Common tasks</p>
             </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <Link
-              to="/company/shipments"
-              className="group rounded-2xl border border-stone-200 bg-sand p-4 hover:bg-white hover:border-stone-300 transition-all"
-            >
-              <div className="w-10 h-10 rounded-2xl bg-accent/10 text-accent flex items-center justify-center mb-3 group-hover:bg-accent group-hover:text-white transition-all">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                </svg>
-              </div>
+            <Link to="/company/shipments" className="rounded-2xl border border-stone-200 bg-stone-50 p-4 hover:bg-white transition-colors">
               <p className="text-sm font-semibold text-stone-900">Browse shipments</p>
-              <p className="text-xs text-stone-500 mt-1">Accept fixed-price loads.</p>
+              <p className="text-xs text-stone-500 mt-1">Accept fixed-price loads</p>
             </Link>
-
-            <Link
-              to="/company/trucks"
-              className="group rounded-2xl border border-stone-200 bg-sand p-4 hover:bg-white hover:border-stone-300 transition-all"
-            >
-              <div className="w-10 h-10 rounded-2xl bg-sidebar/5 text-sidebar flex items-center justify-center mb-3 group-hover:bg-sidebar group-hover:text-white transition-all">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <rect x="1" y="3" width="15" height="13" />
-                  <polygon points="16 8 20 8 23 11 23 16 16 16 16 8" />
-                  <circle cx="5.5" cy="18.5" r="2.5" />
-                  <circle cx="18.5" cy="18.5" r="2.5" />
-                </svg>
-              </div>
-              <p className="text-sm font-semibold text-stone-900">Manage fleet</p>
-              <p className="text-xs text-stone-500 mt-1">Add, edit, or remove trucks.</p>
+            <Link to="/company/trucks" className="rounded-2xl border border-stone-200 bg-stone-50 p-4 hover:bg-white transition-colors">
+              <p className="text-sm font-semibold text-stone-900">My trucks</p>
+              <p className="text-xs text-stone-500 mt-1">Fleet details & ratings</p>
             </Link>
-
-            <Link
-              to="/company/active-shipments"
-              className="group rounded-2xl border border-stone-200 bg-sand p-4 hover:bg-white hover:border-stone-300 transition-all"
-            >
-              <div className="w-10 h-10 rounded-2xl bg-cream text-sidebar border border-stone-200 flex items-center justify-center mb-3 group-hover:bg-sidebar group-hover:text-white group-hover:border-sidebar transition-all">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" />
-                </svg>
-              </div>
+            <Link to="/company/active-shipments" className="rounded-2xl border border-stone-200 bg-stone-50 p-4 hover:bg-white transition-colors">
               <p className="text-sm font-semibold text-stone-900">Active shipments</p>
-              <p className="text-xs text-stone-500 mt-1">Track live delivery statuses.</p>
+              <p className="text-xs text-stone-500 mt-1">Track stages & progress</p>
             </Link>
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl border border-stone-200 p-5 shadow-sm">
-          <h2 className="text-sm font-semibold text-stone-800">Marketplace snapshot</h2>
-          <p className="text-xs text-stone-500 mt-1">
-            Latest open loads (demo).
-          </p>
+        <div className="bg-white rounded-3xl border border-stone-200 p-5 shadow-sm">
+          <h2 className="text-sm font-semibold text-stone-900">Latest loads</h2>
+          <p className="text-xs text-stone-500 mt-1">Marketplace snapshot (demo)</p>
           <div className="mt-4 space-y-3">
             {recentOpenLoads.map((l) => (
-              <div key={l.id} className="rounded-2xl border border-stone-200 bg-sand p-4">
+              <div key={l.id} className="rounded-2xl border border-stone-200 bg-stone-50 p-4">
                 <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-semibold text-stone-900">
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-stone-900 truncate">
                       {l.origin} → {l.destination}
                     </p>
                     <p className="text-xs text-stone-500 mt-1">
                       {new Date(l.date).toLocaleDateString()} · {l.weight}
                     </p>
                   </div>
-                  <span className="text-xs font-semibold text-accent">
+                  <span className="text-xs font-semibold text-accent whitespace-nowrap">
                     {l.price ?? 'Fixed price'}
                   </span>
                 </div>
                 <div className="mt-3 flex items-center justify-between">
-                  <span className="text-xs text-stone-500">
-                    Posted by {l.createdBy}
-                  </span>
+                  <span className="text-[11px] text-stone-500">by {l.createdBy}</span>
                   <Link to="/company/shipments" className="text-xs font-semibold text-stone-700 hover:text-stone-900 hover:underline">
                     View
                   </Link>
@@ -184,34 +363,6 @@ export default function CompanyDashboard() {
               </div>
             ))}
           </div>
-        </div>
-      </section>
-
-      <section className="mt-8">
-        <div className="bg-white rounded-2xl border border-stone-200 p-5 shadow-sm flex items-center justify-between gap-4">
-          <div>
-            <h2 className="text-sm font-semibold text-stone-800">Track fleet movement</h2>
-            <p className="text-xs text-stone-500 mt-1">
-              Open a map view to see where your trucks are operating (demo).
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={() => setShowFleetMap(true)}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-accent text-white text-sm font-semibold shadow-sm hover:bg-accent-hover transition-all"
-          >
-            <span aria-hidden>
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M3 7l6-3 6 3 6-3v13l-6 3-6-3-6 3V7z"
-                />
-              </svg>
-            </span>
-            View map
-          </button>
         </div>
       </section>
       {showFleetMap && (

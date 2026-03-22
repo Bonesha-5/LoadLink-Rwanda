@@ -109,13 +109,11 @@ export default function AdminDisputes() {
   }
 
   return (
-    <div className="max-w-5xl">
-      <div className="flex items-center justify-between mb-6">
+    <div className="space-y-5">
+      <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-stone-800">Dispute Resolution</h1>
-          <p className="text-stone-600 mt-1">
-            Resolve disputes between shippers and transport companies based on escrow balances.
-          </p>
+          <h1 className="text-2xl font-bold text-stone-900">Dispute resolution</h1>
+          <p className="text-sm text-stone-600 mt-1">Resolve escrow disputes with clear outcomes.</p>
         </div>
         <button
           type="button"
@@ -127,7 +125,7 @@ export default function AdminDisputes() {
         </button>
       </div>
 
-      <div className="mb-4 flex flex-wrap items-center gap-3 text-xs text-stone-600">
+      <div className="flex flex-wrap items-center gap-3 text-xs text-stone-600">
         <span className="inline-flex items-center gap-2 rounded-full bg-cream px-3 py-1 border border-stone-200">
           <span className="inline-block h-2 w-2 rounded-full bg-red-500" />
           <span className="font-semibold text-stone-800">
@@ -155,7 +153,7 @@ export default function AdminDisputes() {
       )}
 
       {state === 'success' && disputes.length === 0 && (
-        <div className="bg-white border border-stone-200 rounded-2xl p-8 text-center">
+        <div className="bg-white border border-stone-200 rounded-3xl p-10 text-center shadow-sm">
           <p className="text-stone-600">
             There are no active disputes at the moment.
           </p>
@@ -163,7 +161,7 @@ export default function AdminDisputes() {
       )}
 
       {disputes.length > 0 && (
-        <div className="bg-white border border-stone-200 rounded-2xl overflow-hidden shadow-sm">
+        <div className="bg-white border border-stone-200 rounded-3xl overflow-hidden shadow-sm">
           <table className="min-w-full text-left text-sm">
             <thead className="bg-stone-50 border-b border-stone-200">
               <tr>
