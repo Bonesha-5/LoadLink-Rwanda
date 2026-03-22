@@ -87,3 +87,15 @@ export const deliverShipment = catchAsync(async (req, res) => {
     message: "Shipment delivered successfully",
   });
 });
+
+// Fetch active shipments for the logged-in company
+export const getActiveShipments = catchAsync(async (req, res) => {
+  const { company_id } = req.user;
+
+  const shipments = await shipmentsService.getActiveShipments(company_id);
+
+  res.status(200).json({
+    success: true,
+    data: shipments,
+  });
+});

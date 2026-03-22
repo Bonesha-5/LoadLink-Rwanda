@@ -1,3 +1,5 @@
+import pool from "../config/db.js";
+
 // Fetch available shipments for a company based on truck capacity
 export const getAvailableShipmentsForCompany = async (companyId) => {
   const query = `
@@ -67,11 +69,25 @@ export const deliverShipment = async (shipmentId, companyId, truckId) => {
     [shipmentId, truckId],
   );
 
-  if (result.rows.length === 0) {
-    throw new Error(
-      "Shipment not found, not in IN_TRANSIT status, or not assigned to this truck",
-    );
-  }
-
   return result.rows[0];
+};
+
+// Fetch active shipments for a company
+export const getActiveShipments = async (companyId) => {
+  const query = `
+    SELECT s.id AS shipment_id, s.pickup_district, s.dropoff_district, 
+           s.pickup_description, s.cargo_description, s.weight, 
+           s.offered_price, s.pickup_date, s.status AS shipment_status,
+           u.name AS shipper_name, u.phone AS shipper_phone, u.email AS shipper_email,
+           t.plate_number, t.truck_type
+    FROM shipments s
+    JOIN trucks t ON s.selected_truck_id = t.id
+    JOIN users u ON s.shipper_id = u.id
+    WHERE t.company_id = $1
+      AND s.status IN ('ESCROW_FUNDED', 'IN_TRANSIT', 'AWAITING_CONFIRMATION')
+    ORDER BY s.created_at DESC;
+  `;
+
+  const result = await pool.query(query, [companyId]);
+  return result.rows;
 };
