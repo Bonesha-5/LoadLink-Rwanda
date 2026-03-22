@@ -105,6 +105,15 @@ Fetch shipments that are available for companies to express interest in.
 - **Responses:**
   - `200 OK`: Returns a list of shipments.
 
+### Get Active Shipments
+Fetch ongoing shipments assigned to the company's trucks.
+- **Method:** `GET`
+- **Path:** `/api/shipments/active`
+- **Auth Required:** Yes (Company Role)
+- **Description:** Returns all shipments in `ESCROW_FUNDED`, `IN_TRANSIT`, or `AWAITING_CONFIRMATION` statuses. Includes full cargo details and **shipper contact information** (name, phone, email).
+- **Responses:**
+  - `200 OK`: Returns a list of active shipments.
+
 ### Pickup Shipment
 Mark a shipment as picked up by a specific truck.
 - **Method:** `PATCH`
