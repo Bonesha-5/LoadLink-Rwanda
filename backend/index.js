@@ -3,7 +3,10 @@ import cors from "cors";
 import dotenv from "dotenv";
 
 import companyRoutes from "./routes/company.js";
-import shipperRoutes from "./routes/shipper.js";
+import shippersRoutes from "./routes/shippers.js";
+import shipmentsRoutes from "./routes/shipments.js";
+import interestsRoutes from "./routes/interests.js";
+import trucksRoutes from "./routes/trucks.js";
 import requestLogger from "./middleware/logger.js";
 import errorMiddleware from "./middleware/errorMiddleware.js";
 
@@ -19,7 +22,10 @@ app.use(express.urlencoded({ extended: true }));
 app.use(requestLogger);
 
 app.use("/api/company", companyRoutes);
-app.use("/api/shipper", shipperRoutes);
+app.use("/api/shippers", shippersRoutes);
+app.use("/api/shipments", shipmentsRoutes);
+app.use("/api/interests", interestsRoutes);
+app.use("/api/trucks", trucksRoutes);
 
 // Global Error Handler
 app.use(errorMiddleware);
