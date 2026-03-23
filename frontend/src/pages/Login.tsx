@@ -12,28 +12,33 @@ const ROLE_LABELS: Record<Role, string> = {
 }
 
 const ROLE_DASHBOARDS: Record<Role, string> = {
-  shipper: '/profile',
+  shipper: '/loads',
   company: '/company/dashboard',
   admin: '/admin/dashboard',
 }
 
-const SHIPPER_BENEFITS = [
-  'Post loads in minutes',
-  'Get offers from verified transport companies',
-  'Track shipments in one place',
-]
-
-const COMPANY_BENEFITS = [
-  'Get shipment requests from shippers',
-  'Submit competitive offers and win loads',
-  'Manage your fleet in one place',
-]
+const PANEL_CONTENT: Partial<Record<Role, { heading: string; description: string; footer: string; benefits: string[] }>> = {
+  shipper: {
+    heading: 'Post shipments. Get competitive offers.',
+    description: "Rwanda's logistics marketplace for shippers. Reach verified transport companies and manage your loads in one place.",
+    footer: "After sign in you'll go to your shipper dashboard.",
+    benefits: ['Post loads in minutes', 'Get offers from verified transport companies', 'Track shipments in one place'],
+  },
+  company: {
+    heading: 'Win loads. Grow your transport business.',
+    description: 'Sign in to your company portal to view shipment requests, submit offers, and manage your trucks.',
+    footer: "After sign in you'll go to your company dashboard.",
+    benefits: ['Get shipment requests from shippers', 'Submit competitive offers and win loads', 'Manage your fleet in one place'],
+  },
+}
 
 export default function Login() {
   const { role: urlRole } = useParams<{ role: string }>()
   const role = (ROLES.includes(urlRole as Role) ? urlRole : 'shipper') as Role
-  const [phone, setPhone] = useState('')
+  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
   const location = useLocation()
   const { login, user } = useAuth()
@@ -42,8 +47,7 @@ export default function Login() {
     ROLE_DASHBOARDS[role]
 
   const isLoggedInForThisRole = user?.role === role
-  const isShipperPage = role === 'shipper'
-  const isCompanyPage = role === 'company'
+  const panel = PANEL_CONTENT[role]
 
   useEffect(() => {
     if (!isLoggedInForThisRole) return
@@ -51,11 +55,27 @@ export default function Login() {
     if (location.pathname !== from) navigate(from, { replace: true })
   }, [isLoggedInForThisRole, navigate, from, location.pathname])
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!phone.trim()) return
-    login(phone.trim(), role)
-    navigate(from, { replace: true })
+    if (!email.trim() || !password.trim()) return
+    setLoading(true)
+    setError('')
+    try {
+      const endpoint = role === 'company' ? '/api/company/login' : '/api/shipper/login'
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim(), password }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.message ?? 'Login failed')
+      login(data.user.name, role, data.token)
+      navigate(from, { replace: true })
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Login failed')
+    } finally {
+      setLoading(false)
+    }
   }
 
   const formCard = (
@@ -78,15 +98,15 @@ export default function Login() {
         </div>
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <label htmlFor="phone" className="block text-sm font-semibold text-stone-700 mb-2">
-              Phone number
+            <label htmlFor="email" className="block text-sm font-semibold text-stone-700 mb-2">
+              Email address
             </label>
             <input
-              id="phone"
-              type="tel"
-              placeholder="+250 788 123 456"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
+              id="email"
+              type="email"
+              placeholder="you@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               className="w-full px-4 py-3.5 rounded-xl bg-stone-50 border border-stone-200 text-stone-800 placeholder:text-stone-400 focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 transition-all"
             />
           </div>
@@ -103,11 +123,13 @@ export default function Login() {
               className="w-full px-4 py-3.5 rounded-xl bg-stone-50 border border-stone-200 text-stone-800 placeholder:text-stone-400 focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 transition-all"
             />
           </div>
+          {error && <p className="text-red-500 text-sm">{error}</p>}
           <button
             type="submit"
-            className="w-full py-3.5 bg-accent text-white font-semibold rounded-xl hover:bg-accent-hover transition-all shadow-lg shadow-accent/25 hover:shadow-xl hover:shadow-accent/30 hover:-translate-y-0.5 active:scale-[0.99]"
+            disabled={loading}
+            className="w-full py-3.5 bg-accent text-white font-semibold rounded-xl hover:bg-accent-hover transition-all shadow-lg shadow-accent/25 hover:shadow-xl hover:shadow-accent/30 hover:-translate-y-0.5 active:scale-[0.99] disabled:opacity-60"
           >
-            Sign in
+            {loading ? 'Signing in...' : 'Sign in'}
           </button>
         </form>
         <p className="mt-6 text-center text-stone-500 text-sm">
@@ -123,33 +145,22 @@ export default function Login() {
     </div>
   )
 
-  if (isShipperPage) {
+  if (panel) {
     return (
       <div className="min-h-screen flex">
         <div
           className="hidden lg:flex lg:w-[48%] flex-col justify-between p-10 xl:p-14 bg-sidebar text-white relative overflow-hidden"
-          style={{
-            backgroundImage: 'url(/cargo.jpg)',
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-          }}
+          style={{ backgroundImage: 'url(/cargo.jpg)', backgroundSize: 'cover', backgroundPosition: 'center' }}
         >
           <div className="absolute inset-0 bg-sidebar/92" />
-          <Link
-            to="/"
-            className="relative z-10 text-xl font-bold tracking-tight text-white hover:text-white/90 transition-opacity"
-          >
+          <Link to="/" className="relative z-10 text-xl font-bold tracking-tight text-white hover:text-white/90 transition-opacity">
             LoadLink Rwanda
           </Link>
           <div className="relative z-10 space-y-8">
-            <h2 className="text-3xl xl:text-4xl font-bold tracking-tight leading-tight">
-              Post shipments. Get competitive offers.
-            </h2>
-            <p className="text-white/90 text-lg max-w-sm">
-              Rwanda&apos;s logistics marketplace for shippers. Reach verified transport companies and manage your loads in one place.
-            </p>
+            <h2 className="text-3xl xl:text-4xl font-bold tracking-tight leading-tight">{panel.heading}</h2>
+            <p className="text-white/90 text-lg max-w-sm">{panel.description}</p>
             <ul className="space-y-3">
-              {SHIPPER_BENEFITS.map((benefit) => (
+              {panel.benefits.map((benefit) => (
                 <li key={benefit} className="flex items-center gap-3 text-white/95">
                   <span className="w-5 h-5 rounded-full bg-accent flex items-center justify-center flex-shrink-0">
                     <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -161,70 +172,10 @@ export default function Login() {
               ))}
             </ul>
           </div>
-          <p className="relative z-10 text-sm text-white/70">
-            After sign in you&apos;ll go to your shipper dashboard.
-          </p>
+          <p className="relative z-10 text-sm text-white/70">{panel.footer}</p>
         </div>
         <div className="flex-1 flex flex-col items-center justify-center p-6 sm:p-10 bg-sand min-h-screen">
-          <Link
-            to="/"
-            className="lg:hidden absolute top-6 left-6 text-sidebar font-bold text-xl tracking-tight z-20 hover:opacity-80"
-          >
-            LoadLink Rwanda
-          </Link>
-          {formCard}
-        </div>
-      </div>
-    )
-  }
-
-  if (isCompanyPage) {
-    return (
-      <div className="min-h-screen flex">
-        <div
-          className="hidden lg:flex lg:w-[48%] flex-col justify-between p-10 xl:p-14 bg-sidebar text-white relative overflow-hidden"
-          style={{
-            backgroundImage: 'url(/cargo.jpg)',
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-          }}
-        >
-          <div className="absolute inset-0 bg-sidebar/92" />
-          <Link
-            to="/"
-            className="relative z-10 text-xl font-bold tracking-tight text-white hover:text-white/90 transition-opacity"
-          >
-            LoadLink Rwanda
-          </Link>
-          <div className="relative z-10 space-y-8">
-            <h2 className="text-3xl xl:text-4xl font-bold tracking-tight leading-tight">
-              Win loads. Grow your transport business.
-            </h2>
-            <p className="text-white/90 text-lg max-w-sm">
-              Sign in to your company portal to view shipment requests, submit offers, and manage your trucks.
-            </p>
-            <ul className="space-y-3">
-              {COMPANY_BENEFITS.map((benefit) => (
-                <li key={benefit} className="flex items-center gap-3 text-white/95">
-                  <span className="w-5 h-5 rounded-full bg-accent flex items-center justify-center flex-shrink-0">
-                    <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-                    </svg>
-                  </span>
-                  {benefit}
-                </li>
-              ))}
-            </ul>
-          </div>
-          <p className="relative z-10 text-sm text-white/70">
-            After sign in you&apos;ll go to your company dashboard.
-          </p>
-        </div>
-        <div className="flex-1 flex flex-col items-center justify-center p-6 sm:p-10 bg-sand min-h-screen">
-          <Link
-            to="/"
-            className="lg:hidden absolute top-6 left-6 text-sidebar font-bold text-xl tracking-tight z-20 hover:opacity-80"
-          >
+          <Link to="/" className="lg:hidden absolute top-6 left-6 text-sidebar font-bold text-xl tracking-tight z-20 hover:opacity-80">
             LoadLink Rwanda
           </Link>
           {formCard}

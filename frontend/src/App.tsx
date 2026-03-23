@@ -10,15 +10,15 @@ import Register from './pages/Register'
 import Profile from './pages/Profile'
 import PostShipment from './pages/PostShipment'
 import Shipment from './pages/Shipment'
-import USSDHelp from './pages/USSDHelp'
 import CompanyDashboard from './pages/CompanyDashboard'
 import CompanyTrucks from './pages/CompanyTrucks'
 import CompanyShipments from './pages/CompanyShipments'
 import ProtectedRoute from './components/ProtectedRoute'
-import InterestedTrucks from './pages/InterestedTrucks'
-import Payments from './pages/Payments'
+import ShipperInterestedTrucks from './pages/ShipperInterestedTrucks'
+import ShipperPayments from './pages/ShipperPayments'
+import ShipperRatings from './pages/ShipperRatings'
 import DeliveryConfirmation from './pages/DeliveryConfirmation'
-import RateTruck from './pages/RateTruck'
+import PaymentsHistory from './pages/PaymentsHistory'
 
 export default function App() {
   return (
@@ -32,11 +32,11 @@ export default function App() {
         <Route path="profile" element={<Profile />} />
         <Route path="post-shipment" element={<PostShipment />} />
         <Route path="loads" element={<Loads />} />
-        <Route path="payments" element={<Payments />} />
-        <Route path="shipment/:id/trucks" element={<InterestedTrucks />} />
-        <Route path="shipment/:id/pay" element={<Payments />} />
+        <Route path="shipment/:id/trucks" element={<ShipperInterestedTrucks />} />
+        <Route path="shipment/:id/pay" element={<ShipperPayments />} />
         <Route path="shipment/:id/confirm" element={<DeliveryConfirmation />} />
-        <Route path="shipment/:id/rate" element={<RateTruck />} />
+        <Route path="shipment/:id/rate" element={<ShipperRatings />} />
+        <Route path="payments" element={<PaymentsHistory />} />
       </Route>
       <Route element={<ProtectedRoute role="company"><CompanyLayout /></ProtectedRoute>}>
         <Route path="company/dashboard" element={<CompanyDashboard />} />
@@ -46,7 +46,6 @@ export default function App() {
       <Route element={<Layout />}>
         <Route path="trucks" element={<Trucks />} />
         <Route path="shipment/:id" element={<Shipment />} />
-        <Route path="ussd-help" element={<USSDHelp />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

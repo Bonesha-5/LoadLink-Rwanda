@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
 
 type ShipmentInfo = {
   plate_number: string
@@ -7,9 +8,10 @@ type ShipmentInfo = {
   truck_id: number
 }
 
-export default function RateTruck() {
+export default function ShipperRatings() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const { getToken } = useAuth()
   const [info, setInfo] = useState<ShipmentInfo | null>(null)
   const [stars, setStars] = useState(0)
   const [hovered, setHovered] = useState(0)
@@ -18,9 +20,8 @@ export default function RateTruck() {
   const [error, setError] = useState('')
 
   useEffect(() => {
-    const token = localStorage.getItem('loadlink_shipper')
     fetch(`/api/shipments/${id}/truck-info`, {
-      headers: { Authorization: `Bearer ${token ? JSON.parse(token).token : ''}` },
+      headers: { Authorization: `Bearer ${getToken()}` },
     })
       .then((r) => r.json())
       .then(setInfo)
@@ -32,19 +33,18 @@ export default function RateTruck() {
     if (!stars) { setError('Please select a star rating'); return }
     setSubmitting(true)
     try {
-      const token = localStorage.getItem('loadlink_shipper')
       const res = await fetch('/api/ratings', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token ? JSON.parse(token).token : ''}`,
+          Authorization: `Bearer ${getToken()}`,
         },
         body: JSON.stringify({ shipment_id: id, truck_id: info?.truck_id, stars, comment }),
       })
       if (!res.ok) throw new Error()
       navigate('/loads')
     } catch {
-      alert('Failed to submit rating. Please try again.')
+      setError('Failed to submit rating. Please try again.')
     } finally {
       setSubmitting(false)
     }

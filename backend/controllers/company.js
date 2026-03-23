@@ -4,6 +4,11 @@ import { catchAsync } from "../utils/catchAsync.js";
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
+export const getMyTrucks = catchAsync(async (req, res) => {
+  const trucks = await companyService.getTrucksByCompany(req.user.company_id);
+  res.json(trucks);
+});
+
 // Register a new company
 export const registerCompany = catchAsync(async (req, res) => {
   const {

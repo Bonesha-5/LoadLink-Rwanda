@@ -12,7 +12,7 @@ const ROLE_LABELS: Record<Role, string> = {
 }
 
 const ROLE_DASHBOARDS: Record<Role, string> = {
-  shipper: '/profile',
+  shipper: '/loads',
   company: '/company/dashboard',
   admin: '/admin/dashboard',
 }
@@ -23,42 +23,62 @@ const ROLE_REGISTER_DESCRIPTIONS: Record<Role, string> = {
   admin: 'Register for admin access to manage the platform',
 }
 
-const SHIPPER_BENEFITS = [
-  'Post loads in minutes',
-  'Get offers from verified transport companies',
-  'Track shipments in one place',
-]
-
-const COMPANY_BENEFITS = [
-  'Get shipment requests from shippers',
-  'Submit competitive offers and win loads',
-  'Manage your fleet in one place',
-]
+const PANEL_CONTENT: Partial<Record<Role, { heading: string; description: string; footer: string; benefits: string[] }>> = {
+  shipper: {
+    heading: "Join Rwanda's logistics marketplace",
+    description: 'Create your shipper account to post loads, receive offers from verified transport companies, and manage shipments in one place.',
+    footer: "After registering you'll go to your shipper dashboard.",
+    benefits: ['Post loads in minutes', 'Get offers from verified transport companies', 'Track shipments in one place'],
+  },
+  company: {
+    heading: 'Join as a transport company',
+    description: "Register to receive shipment requests from shippers, submit offers, and manage your trucks on Rwanda's logistics marketplace.",
+    footer: "After registering you'll go to your company dashboard.",
+    benefits: ['Get shipment requests from shippers', 'Submit competitive offers and win loads', 'Manage your fleet in one place'],
+  },
+}
 
 export default function Register() {
   const { role: urlRole } = useParams<{ role: string }>()
   const role = (ROLES.includes(urlRole as Role) ? urlRole : 'shipper') as Role
   const [name, setName] = useState('')
+  const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
   const [password, setPassword] = useState('')
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
   const location = useLocation()
   const { login, user } = useAuth()
   const dashboard = ROLE_DASHBOARDS[role]
   const isLoggedInForThisRole = user?.role === role
-  const isShipperPage = role === 'shipper'
-  const isCompanyPage = role === 'company'
+  const panel = PANEL_CONTENT[role]
 
   useEffect(() => {
     if (!isLoggedInForThisRole) return
     if (location.pathname !== dashboard) navigate(dashboard, { replace: true })
   }, [isLoggedInForThisRole, navigate, dashboard, location.pathname])
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!name.trim() || !phone.trim()) return
-    login(name.trim(), role)
-    navigate(dashboard, { replace: true })
+    if (!name.trim() || !email.trim() || !password.trim()) return
+    setLoading(true)
+    setError('')
+    try {
+      const res = await fetch('/api/shipper/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: name.trim(), phone: phone.trim(), email: email.trim(), password }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.message ?? 'Registration failed')
+      login(data.user.name, 'shipper', data.token)
+      navigate(dashboard, { replace: true })
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Registration failed')
+    } finally {
+      setLoading(false)
+    }
   }
 
   const formCard = (
@@ -94,6 +114,19 @@ export default function Register() {
             />
           </div>
           <div>
+            <label htmlFor="email" className="block text-sm font-semibold text-stone-700 mb-2">
+              Email address
+            </label>
+            <input
+              id="email"
+              type="email"
+              placeholder="you@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full px-4 py-3.5 rounded-xl bg-stone-50 border border-stone-200 text-stone-800 placeholder:text-stone-400 focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 transition-all"
+            />
+          </div>
+          <div>
             <label htmlFor="phone" className="block text-sm font-semibold text-stone-700 mb-2">
               Phone number
             </label>
@@ -119,11 +152,13 @@ export default function Register() {
               className="w-full px-4 py-3.5 rounded-xl bg-stone-50 border border-stone-200 text-stone-800 placeholder:text-stone-400 focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 transition-all"
             />
           </div>
+          {error && <p className="text-red-500 text-sm">{error}</p>}
           <button
             type="submit"
-            className="w-full py-3.5 bg-accent text-white font-semibold rounded-xl hover:bg-accent-hover transition-all shadow-lg shadow-accent/25 hover:shadow-xl hover:shadow-accent/30 hover:-translate-y-0.5 active:scale-[0.99]"
+            disabled={loading}
+            className="w-full py-3.5 bg-accent text-white font-semibold rounded-xl hover:bg-accent-hover transition-all shadow-lg shadow-accent/25 hover:shadow-xl hover:shadow-accent/30 hover:-translate-y-0.5 active:scale-[0.99] disabled:opacity-60"
           >
-            Create account
+            {loading ? 'Creating account...' : 'Create account'}
           </button>
         </form>
         <p className="mt-6 text-center text-stone-500 text-sm">
@@ -139,33 +174,22 @@ export default function Register() {
     </div>
   )
 
-  if (isShipperPage) {
+  if (panel) {
     return (
       <div className="min-h-screen flex">
         <div
           className="hidden lg:flex lg:w-[48%] flex-col justify-between p-10 xl:p-14 bg-sidebar text-white relative overflow-hidden"
-          style={{
-            backgroundImage: 'url(/cargo.jpg)',
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-          }}
+          style={{ backgroundImage: 'url(/cargo.jpg)', backgroundSize: 'cover', backgroundPosition: 'center' }}
         >
           <div className="absolute inset-0 bg-sidebar/92" />
-          <Link
-            to="/"
-            className="relative z-10 text-xl font-bold tracking-tight text-white hover:text-white/90 transition-opacity"
-          >
+          <Link to="/" className="relative z-10 text-xl font-bold tracking-tight text-white hover:text-white/90 transition-opacity">
             LoadLink Rwanda
           </Link>
           <div className="relative z-10 space-y-8">
-            <h2 className="text-3xl xl:text-4xl font-bold tracking-tight leading-tight">
-              Join Rwanda&apos;s logistics marketplace
-            </h2>
-            <p className="text-white/90 text-lg max-w-sm">
-              Create your shipper account to post loads, receive offers from verified transport companies, and manage shipments in one place.
-            </p>
+            <h2 className="text-3xl xl:text-4xl font-bold tracking-tight leading-tight">{panel.heading}</h2>
+            <p className="text-white/90 text-lg max-w-sm">{panel.description}</p>
             <ul className="space-y-3">
-              {SHIPPER_BENEFITS.map((benefit) => (
+              {panel.benefits.map((benefit) => (
                 <li key={benefit} className="flex items-center gap-3 text-white/95">
                   <span className="w-5 h-5 rounded-full bg-accent flex items-center justify-center flex-shrink-0">
                     <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -177,70 +201,10 @@ export default function Register() {
               ))}
             </ul>
           </div>
-          <p className="relative z-10 text-sm text-white/70">
-            After registering you&apos;ll go to your shipper dashboard.
-          </p>
+          <p className="relative z-10 text-sm text-white/70">{panel.footer}</p>
         </div>
         <div className="flex-1 flex flex-col items-center justify-center p-6 sm:p-10 bg-sand min-h-screen">
-          <Link
-            to="/"
-            className="lg:hidden absolute top-6 left-6 text-sidebar font-bold text-xl tracking-tight z-20 hover:opacity-80"
-          >
-            LoadLink Rwanda
-          </Link>
-          {formCard}
-        </div>
-      </div>
-    )
-  }
-
-  if (isCompanyPage) {
-    return (
-      <div className="min-h-screen flex">
-        <div
-          className="hidden lg:flex lg:w-[48%] flex-col justify-between p-10 xl:p-14 bg-sidebar text-white relative overflow-hidden"
-          style={{
-            backgroundImage: 'url(/cargo.jpg)',
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-          }}
-        >
-          <div className="absolute inset-0 bg-sidebar/92" />
-          <Link
-            to="/"
-            className="relative z-10 text-xl font-bold tracking-tight text-white hover:text-white/90 transition-opacity"
-          >
-            LoadLink Rwanda
-          </Link>
-          <div className="relative z-10 space-y-8">
-            <h2 className="text-3xl xl:text-4xl font-bold tracking-tight leading-tight">
-              Join as a transport company
-            </h2>
-            <p className="text-white/90 text-lg max-w-sm">
-              Register to receive shipment requests from shippers, submit offers, and manage your trucks on Rwanda&apos;s logistics marketplace.
-            </p>
-            <ul className="space-y-3">
-              {COMPANY_BENEFITS.map((benefit) => (
-                <li key={benefit} className="flex items-center gap-3 text-white/95">
-                  <span className="w-5 h-5 rounded-full bg-accent flex items-center justify-center flex-shrink-0">
-                    <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-                    </svg>
-                  </span>
-                  {benefit}
-                </li>
-              ))}
-            </ul>
-          </div>
-          <p className="relative z-10 text-sm text-white/70">
-            After registering you&apos;ll go to your company dashboard.
-          </p>
-        </div>
-        <div className="flex-1 flex flex-col items-center justify-center p-6 sm:p-10 bg-sand min-h-screen">
-          <Link
-            to="/"
-            className="lg:hidden absolute top-6 left-6 text-sidebar font-bold text-xl tracking-tight z-20 hover:opacity-80"
-          >
+          <Link to="/" className="lg:hidden absolute top-6 left-6 text-sidebar font-bold text-xl tracking-tight z-20 hover:opacity-80">
             LoadLink Rwanda
           </Link>
           {formCard}

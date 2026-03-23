@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
 
 type Shipment = {
   id: number
@@ -37,14 +38,15 @@ function useCountdown(deliveryTimestamp: string | undefined) {
 export default function DeliveryConfirmation() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const { getToken } = useAuth()
   const [shipment, setShipment] = useState<Shipment | null>(null)
   const [loading, setLoading] = useState(false)
+  const [actionError, setActionError] = useState('')
   const timeLeft = useCountdown(shipment?.delivery_timestamp)
 
   useEffect(() => {
-    const token = localStorage.getItem('loadlink_shipper')
     fetch(`/api/shipments/${id}`, {
-      headers: { Authorization: `Bearer ${token ? JSON.parse(token).token : ''}` },
+      headers: { Authorization: `Bearer ${getToken()}` },
     })
       .then((r) => r.json())
       .then(setShipment)
@@ -54,15 +56,14 @@ export default function DeliveryConfirmation() {
   async function handleAction(action: 'confirm' | 'dispute') {
     setLoading(true)
     try {
-      const token = localStorage.getItem('loadlink_shipper')
       const res = await fetch(`/api/shipments/${id}/${action}`, {
         method: 'PATCH',
-        headers: { Authorization: `Bearer ${token ? JSON.parse(token).token : ''}` },
+        headers: { Authorization: `Bearer ${getToken()}` },
       })
       if (!res.ok) throw new Error()
       navigate('/loads')
     } catch {
-      alert('Action failed. Please try again.')
+      setActionError('Action failed. Please try again.')
     } finally {
       setLoading(false)
     }
@@ -100,6 +101,7 @@ export default function DeliveryConfirmation() {
         <p className="text-4xl font-bold text-stone-800 font-mono">{timeLeft || '--:--:--'}</p>
       </div>
 
+      {actionError && <p className="text-red-500 text-sm mb-3">{actionError}</p>}
       <div className="flex gap-3 mb-4">
         <button
           type="button"

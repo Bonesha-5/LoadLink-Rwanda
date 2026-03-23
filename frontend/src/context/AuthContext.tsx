@@ -3,12 +3,13 @@ import { createContext, useContext, useState, type ReactNode } from 'react'
 
 export type Role = 'shipper' | 'company' | 'admin'
 
-export type User = { role: Role; name: string } | null
+export type User = { role: Role; name: string; token: string } | null
 
 type AuthContextType = {
   user: User
-  login: (name: string, role: Role) => void
+  login: (name: string, role: Role, token: string) => void
   logout: () => void
+  getToken: () => string
   isShipper: boolean
   isCompany: boolean
   isAdmin: boolean
@@ -28,7 +29,7 @@ function readStoredUser(): User {
       const stored = localStorage.getItem(STORAGE_KEYS[role])
       if (!stored) continue
       const data = JSON.parse(stored)
-      if (data.role === role && data.name) return { role, name: data.name }
+      if (data.role === role && data.name && data.token) return { role, name: data.name, token: data.token }
     } catch {
       localStorage.removeItem(STORAGE_KEYS[role])
     }
@@ -39,12 +40,14 @@ function readStoredUser(): User {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User>(readStoredUser)
 
-  const login = (name: string, role: Role) => {
+  const login = (name: string, role: Role, token: string) => {
     Object.values(STORAGE_KEYS).forEach((key) => localStorage.removeItem(key))
-    const u = { role, name }
+    const u = { role, name, token }
     setUser(u)
     localStorage.setItem(STORAGE_KEYS[role], JSON.stringify(u))
   }
+
+  const getToken = () => user?.token ?? ''
 
   const logout = () => {
     if (user) localStorage.removeItem(STORAGE_KEYS[user.role])
@@ -57,6 +60,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user,
         login,
         logout,
+        getToken,
         isShipper: user?.role === 'shipper',
         isCompany: user?.role === 'company',
         isAdmin: user?.role === 'admin',

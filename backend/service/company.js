@@ -85,6 +85,16 @@ export const findCompanyUserByEmail = async (email) => {
   return result.rows[0];
 };
 
+// Get trucks belonging to a company
+export const getTrucksByCompany = async (company_id) => {
+  const result = await pool.query(
+    `SELECT id, plate_number, truck_type, declared_capacity, availability_status, rating_average
+     FROM trucks WHERE company_id = $1 ORDER BY created_at DESC`,
+    [company_id]
+  );
+  return result.rows;
+};
+
 // Handle company login logic
 export const loginCompany = async (email, password) => {
   const user = await findCompanyUserByEmail(email);

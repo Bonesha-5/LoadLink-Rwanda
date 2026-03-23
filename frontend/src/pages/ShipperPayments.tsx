@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
 
 type Shipment = {
   id: number
@@ -10,44 +11,66 @@ type Shipment = {
   status: string
 }
 
-export default function Payments() {
+export default function ShipperPayments() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const { getToken } = useAuth()
   const [shipment, setShipment] = useState<Shipment | null>(null)
   const [provider, setProvider] = useState<'MTN' | 'AIRTEL'>('MTN')
   const [phone, setPhone] = useState('')
   const [phoneError, setPhoneError] = useState('')
   const [paying, setPaying] = useState(false)
   const [paymentStatus, setPaymentStatus] = useState<string | null>(null)
+  const [polling, setPolling] = useState(false)
 
   useEffect(() => {
-    const token = localStorage.getItem('loadlink_shipper')
     fetch(`/api/shipments/${id}`, {
-      headers: { Authorization: `Bearer ${token ? JSON.parse(token).token : ''}` },
+      headers: { Authorization: `Bearer ${getToken()}` },
     })
       .then((r) => r.json())
-      .then(setShipment)
+      .then((data) => {
+        setShipment(data)
+        if (data.status === 'ESCROW_FUNDED') setPaymentStatus('ESCROW_FUNDED')
+      })
       .catch(() => null)
   }, [id])
+
+  // Poll every 3s after initiation until ESCROW_FUNDED
+  useEffect(() => {
+    if (!polling) return
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/shipments/${id}`, {
+          headers: { Authorization: `Bearer ${getToken()}` },
+        })
+        const data = await res.json()
+        if (data.status === 'ESCROW_FUNDED') {
+          setPaymentStatus('ESCROW_FUNDED')
+          setPolling(false)
+        }
+      } catch { /* ignore */ }
+    }, 3000)
+    return () => clearInterval(interval)
+  }, [polling, id])
 
   async function handlePay(e: React.FormEvent) {
     e.preventDefault()
     if (!phone.trim()) { setPhoneError('Phone number is required'); return }
     setPaying(true)
     try {
-      const token = localStorage.getItem('loadlink_shipper')
       const res = await fetch('/api/payments/initiate', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token ? JSON.parse(token).token : ''}`,
+          Authorization: `Bearer ${getToken()}`,
         },
         body: JSON.stringify({ shipment_id: id, provider, phone }),
       })
       const data = await res.json()
       setPaymentStatus(data.status ?? 'PENDING')
+      if (data.status !== 'ESCROW_FUNDED') setPolling(true)
     } catch {
-      alert('Payment initiation failed. Please try again.')
+      setPhoneError('Payment initiation failed. Please try again.')
     } finally {
       setPaying(false)
     }
@@ -81,12 +104,18 @@ export default function Payments() {
 
       {paymentStatus === 'ESCROW_FUNDED' ? (
         <div className="bg-green-50 border border-green-200 rounded-xl p-5 text-center">
+          <svg className="w-10 h-10 text-green-500 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
           <p className="text-green-700 font-semibold text-lg">Payment confirmed — waiting for pickup</p>
         </div>
       ) : paymentStatus ? (
         <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-5 text-center space-y-2">
           <p className="text-yellow-700 font-semibold">Payment status: {paymentStatus}</p>
           <p className="text-yellow-600 text-sm">Please complete the payment prompt on your phone.</p>
+          <div className="flex justify-center mt-2">
+            <div className="w-5 h-5 border-2 border-yellow-500 border-t-transparent rounded-full animate-spin" />
+          </div>
         </div>
       ) : (
         <form onSubmit={handlePay} className="bg-white rounded-xl border border-stone-200 p-5 space-y-5">
