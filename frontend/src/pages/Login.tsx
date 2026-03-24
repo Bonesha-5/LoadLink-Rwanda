@@ -68,13 +68,6 @@ export default function Login() {
       login(data.user.name, role, data.token)
       navigate(dashboard, { replace: true })
     } catch (err) {
-      // Demo fallback: if API is unavailable, allow any credentials
-      if (err instanceof TypeError && err.message.includes('fetch')) {
-        const demoName = email.split('@')[0] || 'User'
-        login(demoName, role, 'demo-token')
-        navigate(dashboard, { replace: true })
-        return
-      }
       setError(err instanceof Error ? err.message : 'Login failed')
     } finally {
       setLoading(false)
