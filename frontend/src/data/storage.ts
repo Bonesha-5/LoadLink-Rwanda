@@ -33,6 +33,34 @@ export type Rating = {
 }
 
 // ---------------------------------------------------------------------------
+// Ship stage
+// ---------------------------------------------------------------------------
+
+export type ShipStage =
+  | 'POSTED'
+  | 'AWAITING_ESCROW'
+  | 'IN_TRANSIT'
+  | 'AWAITING_CONFIRMATION'
+  | 'COMPLETED'
+  | 'DISPUTED'
+
+const STAGES_KEY = 'll_shipper_stages'
+
+export function getStageMap(): Record<string, ShipStage> {
+  try {
+    return JSON.parse(localStorage.getItem(STAGES_KEY) ?? '{}') as Record<string, ShipStage>
+  } catch {
+    return {}
+  }
+}
+
+export function setStageForLoad(loadId: string, stage: ShipStage) {
+  const map = getStageMap()
+  map[loadId] = stage
+  localStorage.setItem(STAGES_KEY, JSON.stringify(map))
+}
+
+// ---------------------------------------------------------------------------
 // Storage keys
 // ---------------------------------------------------------------------------
 

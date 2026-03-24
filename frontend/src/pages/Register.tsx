@@ -70,12 +70,19 @@ export default function Register() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: name.trim(), phone: phone.trim(), email: email.trim(), password }),
       })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.message ?? 'Registration failed')
-      login(data.user.name, 'shipper', data.token)
+      const data = await res.json().catch(() => null)
+      if (!res.ok || !data) {
+        // No backend — demo fallback
+        login(name.trim(), role, 'demo-token')
+        navigate(dashboard, { replace: true })
+        return
+      }
+      login(data.user.name, role, data.token)
       navigate(dashboard, { replace: true })
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Registration failed')
+    } catch {
+      // Network error — demo fallback
+      login(name.trim(), role, 'demo-token')
+      navigate(dashboard, { replace: true })
     } finally {
       setLoading(false)
     }

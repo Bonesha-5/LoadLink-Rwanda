@@ -62,6 +62,7 @@ export default function ShipperInterestedTrucks() {
 
     const result: Candidate[] = []
     for (const load of loads) {
+      // Only consider loads with at least one offer (company expressed interest)
       for (const offer of load.offers ?? []) {
         const companyTrucks: Truck[] = getTrucksByCompany(offer.companyName)
         const loadWeightTons = parseTons(load.weight) ?? null
@@ -165,3 +166,4 @@ function Info({ label, value }: { label: string; value: string }) {
     </div>
   )
 }
+
