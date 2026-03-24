@@ -32,10 +32,12 @@ export default function App() {
         <Route path="profile" element={<Profile />} />
         <Route path="post-shipment" element={<PostShipment />} />
         <Route path="loads" element={<Loads />} />
+        <Route path="interested-trucks" element={<ShipperInterestedTrucks />} />
         <Route path="shipment/:id/trucks" element={<ShipperInterestedTrucks />} />
         <Route path="shipment/:id/pay" element={<ShipperPayments />} />
         <Route path="shipment/:id/confirm" element={<DeliveryConfirmation />} />
         <Route path="shipment/:id/rate" element={<ShipperRatings />} />
+        <Route path="ratings" element={<ShipperRatings />} />
         <Route path="payments" element={<PaymentsHistory />} />
       </Route>
       <Route element={<ProtectedRoute role="company"><CompanyLayout /></ProtectedRoute>}>

@@ -95,7 +95,7 @@ export default function ShipperPayments() {
         }),
       )
       setBusy(null)
-      navigate('/ratings')
+      navigate(`/shipment/${selected.loadId}/rate`)
     }, 800)
   }
 

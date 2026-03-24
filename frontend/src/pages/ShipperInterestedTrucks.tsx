@@ -100,7 +100,7 @@ export default function ShipperInterestedTrucks() {
       }),
     )
     setStageForLoad(item.loadId, 'AWAITING_ESCROW')
-    navigate('/payments')
+    navigate(`/shipment/${item.loadId}/pay`)
   }
 
   return (
