@@ -3,9 +3,18 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { addLoad, setStageForLoad } from '../data/storage'
 
+const RWANDA_DISTRICTS = [
+  'Bugesera','Burera','Gakenke','Gasabo','Gatsibo','Gicumbi','Gisagara',
+  'Huye','Kamonyi','Karongi','Kayonza','Kicukiro','Kirehe','Muhanga',
+  'Musanze','Ngoma','Ngororero','Nyabihu','Nyagatare','Nyamagabe',
+  'Nyamasheke','Nyanza','Nyarugenge','Nyaruguru','Rubavu','Ruhango',
+  'Rulindo','Rusizi','Rutsiro','Rwamagana',
+]
+
 export default function PostShipment() {
   const navigate = useNavigate()
-  const { user } = useAuth()
+  const { user, getToken } = useAuth()
+  const [submitting, setSubmitting] = useState(false)
   const [form, setForm] = useState({
     origin: '',
     destination: '',
@@ -15,26 +24,74 @@ export default function PostShipment() {
     price: '',
     date: '',
   })
+  const [errors, setErrors] = useState<Partial<typeof form & { sameDistrict: string }>>({})
 
   const onChange = (key: keyof typeof form, value: string) => {
     setForm((prev) => ({ ...prev, [key]: value }))
+    setErrors((prev) => ({ ...prev, [key]: '', sameDistrict: '' }))
   }
 
-  const onSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!form.origin || !form.destination || !form.weight || !form.price || !form.date) return
-    const newLoad = addLoad({
-      origin: form.origin,
-      destination: form.destination,
-      date: form.date,
-      weight: `${form.weight} tons`,
-      description: [form.pickupDescription, form.description].filter(Boolean).join(' | '),
-      price: `${form.price} RWF`,
-      createdBy: user?.name || 'Shipper',
-    })
-    setStageForLoad(newLoad.id, 'POSTED')
-    navigate('/loads')
+  const validate = (): boolean => {
+    const e: typeof errors = {}
+    if (!form.origin)      e.origin      = 'Pickup district is required'
+    if (!form.destination) e.destination = 'Drop-off district is required'
+    if (form.origin && form.destination && form.origin === form.destination)
+      e.sameDistrict = 'Pickup and drop-off district cannot be the same'
+    if (!form.weight)      e.weight      = 'Weight is required'
+    if (!form.price)       e.price       = 'Price is required'
+    if (!form.date)        e.date        = 'Pickup date is required'
+    setErrors(e)
+    return Object.keys(e).length === 0
   }
+
+  const onSubmit = async (e: React.SyntheticEvent) => {
+    e.preventDefault()
+    if (!validate()) return
+    setSubmitting(true)
+
+    const localSave = () => {
+      const newLoad = addLoad({
+        origin:        form.origin,
+        destination:   form.destination,
+        date:          form.date,
+        weight:        `${form.weight} tons`,
+        description:   form.description,
+        pickupAddress: form.pickupDescription,
+        price:         `${Number(form.price).toLocaleString()} RWF`,
+        createdBy:     user?.name || 'Shipper',
+      })
+      setStageForLoad(newLoad.id, 'POSTED')
+    }
+
+    try {
+      const res = await fetch('/api/shipments', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${getToken()}`,
+        },
+        body: JSON.stringify({
+          pickup_district:    form.origin,
+          dropoff_district:   form.destination,
+          pickup_description: form.pickupDescription,
+          cargo_description:  form.description,
+          weight_tons:        Number(form.weight),
+          offered_price_rwf:  Number(form.price),
+          pickup_date:        form.date,
+        }),
+      })
+      if (!res.ok) throw new Error()
+    } catch {
+      // API unavailable — save locally
+    } finally {
+      localSave()
+      setSubmitting(false)
+      navigate('/loads')
+    }
+  }
+
+  const selectCls = 'w-full rounded-2xl border bg-white px-4 py-3 text-sm text-stone-800 focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20'
+  const inputCls  = 'w-full rounded-2xl border bg-white px-4 py-3 text-sm text-stone-800 focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20'
 
   return (
     <div className="space-y-6 ll-animate-in">
@@ -43,44 +100,118 @@ export default function PostShipment() {
         <p className="text-sm text-stone-600 mt-1">Create a shipment for verified companies to accept.</p>
       </div>
 
-      <form onSubmit={onSubmit} className="bg-white rounded-3xl border border-stone-200 shadow-sm p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Field label="Pickup district">
-          <input className="w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-800 focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20" value={form.origin} onChange={(e) => onChange('origin', e.target.value)} />
-        </Field>
-        <Field label="Drop-off district">
-          <input className="w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-800 focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20" value={form.destination} onChange={(e) => onChange('destination', e.target.value)} />
-        </Field>
-        <Field label="Pickup description">
-          <input className="w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-800 focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20" value={form.pickupDescription} onChange={(e) => onChange('pickupDescription', e.target.value)} placeholder="Landmark or road number" />
-        </Field>
-        <Field label="Cargo weight (tons)">
-          <input className="w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-800 focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20" type="number" step="0.1" value={form.weight} onChange={(e) => onChange('weight', e.target.value)} />
-        </Field>
-        <Field label="Offered price (RWF)">
-          <input className="w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-800 focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20" type="number" value={form.price} onChange={(e) => onChange('price', e.target.value)} />
-        </Field>
-        <Field label="Pickup date">
-          <input className="w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-800 focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20" type="date" value={form.date} onChange={(e) => onChange('date', e.target.value)} />
-        </Field>
-        <div className="md:col-span-2">
-          <label className="block text-sm font-semibold text-stone-700 mb-2">Cargo description</label>
-          <textarea className="w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-800 focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 min-h-24" value={form.description} onChange={(e) => onChange('description', e.target.value)} />
+      <form onSubmit={onSubmit} className="bg-white rounded-3xl border border-stone-200 shadow-sm p-6 space-y-5">
+        {errors.sameDistrict && (
+          <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3">
+            <p className="text-sm text-red-700 font-semibold">{errors.sameDistrict}</p>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Field label="Pickup district" error={errors.origin}>
+            <select
+              className={`${selectCls} ${errors.origin ? 'border-red-300' : 'border-stone-200'}`}
+              value={form.origin}
+              onChange={(e) => onChange('origin', e.target.value)}
+            >
+              <option value="">Select district</option>
+              {RWANDA_DISTRICTS.map((d) => (
+                <option key={d} value={d}>{d}</option>
+              ))}
+            </select>
+          </Field>
+
+          <Field label="Drop-off district" error={errors.destination}>
+            <select
+              className={`${selectCls} ${errors.destination ? 'border-red-300' : 'border-stone-200'}`}
+              value={form.destination}
+              onChange={(e) => onChange('destination', e.target.value)}
+            >
+              <option value="">Select district</option>
+              {RWANDA_DISTRICTS.filter((d) => d !== form.origin).map((d) => (
+                <option key={d} value={d}>{d}</option>
+              ))}
+            </select>
+          </Field>
+
+          <Field label="Pickup description">
+            <input
+              className={`${inputCls} border-stone-200`}
+              value={form.pickupDescription}
+              onChange={(e) => onChange('pickupDescription', e.target.value)}
+              placeholder="Landmark or road number"
+            />
+          </Field>
+
+          <Field label="Cargo weight (tons)" error={errors.weight}>
+            <input
+              className={`${inputCls} ${errors.weight ? 'border-red-300' : 'border-stone-200'}`}
+              type="number"
+              step="0.1"
+              min="0.1"
+              value={form.weight}
+              onChange={(e) => onChange('weight', e.target.value)}
+              placeholder="e.g. 5"
+            />
+          </Field>
+
+          <Field label="Offered price (RWF)" error={errors.price}>
+            <input
+              className={`${inputCls} ${errors.price ? 'border-red-300' : 'border-stone-200'}`}
+              type="number"
+              min="1"
+              value={form.price}
+              onChange={(e) => onChange('price', e.target.value)}
+              placeholder="e.g. 150000"
+            />
+          </Field>
+
+          <Field label="Pickup date" error={errors.date}>
+            <input
+              className={`${inputCls} ${errors.date ? 'border-red-300' : 'border-stone-200'}`}
+              type="date"
+              value={form.date}
+              min={new Date().toISOString().slice(0, 10)}
+              onChange={(e) => onChange('date', e.target.value)}
+            />
+          </Field>
         </div>
-        <div className="md:col-span-2">
-          <button type="submit" className="inline-flex items-center rounded-2xl bg-accent text-sidebar px-5 py-3 font-semibold hover:bg-accent-hover transition-colors">
-            POST SHIPMENT
-          </button>
-        </div>
+
+        <Field label="Cargo description">
+          <textarea
+            className={`${inputCls} border-stone-200 min-h-24 resize-none`}
+            value={form.description}
+            onChange={(e) => onChange('description', e.target.value)}
+            placeholder="Describe cargo type, fragility, special handling requirements…"
+          />
+        </Field>
+
+        <button
+          type="submit"
+          disabled={submitting}
+          className="inline-flex items-center rounded-2xl bg-accent text-sidebar px-6 py-3 font-semibold hover:bg-accent-hover transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+        >
+          {submitting ? 'Posting…' : 'Post Shipment'}
+        </button>
       </form>
     </div>
   )
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({
+  label,
+  error,
+  children,
+}: {
+  label: string
+  error?: string
+  children: React.ReactNode
+}) {
   return (
     <label className="block">
       <span className="block text-sm font-semibold text-stone-700 mb-2">{label}</span>
       {children}
+      {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
     </label>
   )
 }

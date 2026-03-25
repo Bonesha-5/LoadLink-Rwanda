@@ -9,6 +9,7 @@ export type Load = {
   date: string
   weight: string
   description?: string
+  pickupAddress?: string
   price?: string
   createdBy: string
   status: 'open' | 'closed'
@@ -20,6 +21,9 @@ export type Truck = {
   plateNumber?: string
   capacity: string
   companyName: string
+  type?: string
+  phone?: string
+  email?: string
 }
 
 export type Rating = {
@@ -43,6 +47,7 @@ export type ShipStage =
   | 'AWAITING_CONFIRMATION'
   | 'COMPLETED'
   | 'DISPUTED'
+  | 'CANCELLED'
 
 const STAGES_KEY = 'll_shipper_stages'
 
@@ -65,7 +70,6 @@ export function setStageForLoad(loadId: string, stage: ShipStage) {
 // ---------------------------------------------------------------------------
 
 const LOADS_KEY = 'll_loads'
-const TRUCKS_KEY = 'll_trucks'
 const RATINGS_KEY = 'll_ratings'
 
 // ---------------------------------------------------------------------------
@@ -100,35 +104,54 @@ export function addLoad(data: Omit<Load, 'id' | 'status' | 'offers'>): Load {
   return newLoad
 }
 
-export function ensureSeedLoads() {
+export function ensureSeedLoads(userName = 'Shipper') {
   const existing = getAllLoads()
-  if (existing.length > 0) return
+  const s1 = existing.find((l) => l.id === 's1')
 
+  // If seeds exist but belong to a different user, re-assign them
+  if (s1) {
+    if (s1.createdBy !== userName) {
+      const updated = existing.map((l) =>
+        (l.id === 's1' || l.id === 's2') ? { ...l, createdBy: userName } : l
+      )
+      saveLoads(updated)
+    }
+    return
+  }
+
+  const nonSeed = existing.filter((l) => l.id !== 's1' && l.id !== 's2')
   const seeds: Load[] = [
     {
-      id: uid(),
+      id: 's1',
       origin: 'Kigali',
       destination: 'Musanze',
-      date: new Date().toISOString().slice(0, 10),
-      weight: '5 tons',
-      description: 'Electronics cargo — fragile',
-      price: '150,000 RWF',
-      createdBy: 'Shipper',
+      date: '2026-03-10',
+      weight: '8 tons',
+      description: 'Construction materials - cement bags and iron sheets',
+      pickupAddress: 'Near Nyabugogo Market, KN 3 Road',
+      price: 'RWF 250,000',
+      createdBy: userName,
       status: 'open',
-      offers: [{ companyName: 'Kigali Freight Ltd' }, { companyName: 'RwandaMove Co.' }],
+      offers: [
+        { companyName: 'Fast Move Transport' },
+        { companyName: 'Rwanda Trans Co.' },
+        { companyName: 'Kigali Express Logistics' },
+      ],
     },
     {
-      id: uid(),
+      id: 's2',
       origin: 'Huye',
-      destination: 'Rubavu',
-      date: new Date().toISOString().slice(0, 10),
-      weight: '10 tons',
-      description: 'Agricultural produce',
-      price: '320,000 RWF',
-      createdBy: 'Shipper',
-      status: 'open',
-      offers: [{ companyName: 'Kigali Freight Ltd' }],
+      destination: 'Kigali',
+      date: '2026-03-05',
+      weight: '5 tons',
+      description: 'Agricultural produce — fresh vegetables',
+      pickupAddress: 'Huye Market, Near Bus Park',
+      price: 'RWF 180,000',
+      createdBy: userName,
+      status: 'closed',
+      offers: [],
     },
+    ...nonSeed,
   ]
   saveLoads(seeds)
 }
@@ -138,21 +161,16 @@ export function ensureSeedLoads() {
 // ---------------------------------------------------------------------------
 
 export function getAllTrucks(): Truck[] {
-  try {
-    const stored = JSON.parse(localStorage.getItem(TRUCKS_KEY) ?? '[]') as Truck[]
-    if (stored.length > 0) return stored
-    return getSeedTrucks()
-  } catch {
-    return getSeedTrucks()
-  }
+  return getSeedTrucks()
 }
 
 function getSeedTrucks(): Truck[] {
   return [
-    { id: 'truck-1', plateNumber: 'RAA 001 A', capacity: '10 tons', companyName: 'Kigali Freight Ltd' },
-    { id: 'truck-2', plateNumber: 'RAB 002 B', capacity: '5 tons', companyName: 'Kigali Freight Ltd' },
-    { id: 'truck-3', plateNumber: 'RAC 003 C', capacity: '15 tons', companyName: 'RwandaMove Co.' },
-    { id: 'truck-4', plateNumber: 'RAD 004 D', capacity: '8 tons', companyName: 'RwandaMove Co.' },
+    { id: 'truck-1', plateNumber: 'RAF 789 C', capacity: '9 tons',  companyName: 'Fast Move Transport',     type: 'Box Truck',    phone: '+250788345678', email: 'info@fastmove.rw' },
+    { id: 'truck-2', plateNumber: 'RAE 456 B', capacity: '12 tons', companyName: 'Rwanda Trans Co.',         type: 'Refrigerated', phone: '+250788234567', email: 'contact@rwandatrans.rw' },
+    { id: 'truck-3', plateNumber: 'RAD 123 A', capacity: '10 tons', companyName: 'Kigali Express Logistics', type: 'Flatbed',      phone: '+250788123456', email: 'info@kigaliexpress.rw' },
+    { id: 'truck-4', plateNumber: 'RAA 001 A', capacity: '10 tons', companyName: 'Kigali Freight Ltd',       type: 'Box Truck',    phone: '+250788000001', email: 'info@kigalifreight.rw' },
+    { id: 'truck-5', plateNumber: 'RAC 003 C', capacity: '15 tons', companyName: 'RwandaMove Co.',           type: 'Flatbed',      phone: '+250788000002', email: 'info@rwandamove.rw' },
   ]
 }
 

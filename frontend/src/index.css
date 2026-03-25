@@ -1,12 +1,12 @@
 @import "tailwindcss";
 
 @theme {
-  --color-sidebar: #3D2923;
-  --color-sidebar-hover: #4A342C;
-  --color-accent: #E85D04;
-  --color-accent-hover: #F48C36;
-  --color-cream: #F5F0E8;
-  --color-sand: #FAFAF9;
+  --color-sidebar: #6B1E1E;
+  --color-sidebar-hover: #7D2424;
+  --color-accent: #C49B1A;
+  --color-accent-hover: #B08A15;
+  --color-cream: #F5EFE6;
+  --color-sand: #F5EFE6;
 }
 
 @layer base {
@@ -58,3 +58,12 @@
 .trucks-image-stack img:nth-child(1) { transform: translateY(-12px) rotate(-4deg); }
 .trucks-image-stack img:nth-child(2) { transform: translateY(8px) rotate(2deg); z-index: 1; }
 .trucks-image-stack img:nth-child(3) { transform: translateY(-12px) rotate(4deg); }
+
+/* Page enter animation */
+@keyframes ll-fade-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.ll-animate-in {
+  animation: ll-fade-in 0.3s ease-out both;
+}
