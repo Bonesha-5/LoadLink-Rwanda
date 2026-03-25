@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import {
   addRating,
-  getTruckRatingAverage,
-  getRatingsByTruck,
+  getAllLoads,
+  getAllRatings,
   getStageMap,
+  getTrucksByCompany,
   setStageForLoad,
 } from '../data/storage'
 
@@ -23,7 +24,20 @@ type Selected = {
   email: string
 }
 
+function StarIcon({ filled }: { filled: boolean }) {
+  return (
+    <svg
+      className={`w-10 h-10 ${filled ? 'text-amber-500' : 'text-stone-200'}`}
+      fill="currentColor"
+      viewBox="0 0 20 20"
+    >
+      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+    </svg>
+  )
+}
+
 export default function ShipperRatings() {
+  const { id } = useParams<{ id: string }>()
   const { user } = useAuth()
   const navigate = useNavigate()
 
@@ -35,52 +49,46 @@ export default function ShipperRatings() {
     } catch { return null }
   }, [])
 
+  // Derive truck info from route param if selected truck not in localStorage
+  const truckInfo = useMemo(() => {
+    if (selected) return { plate: selected.plate, type: selected.type, loadId: selected.loadId, truckId: selected.truckId }
+    if (!id) return null
+    const load = getAllLoads().find((l) => l.id === id)
+    if (!load) return null
+    const offer = load.offers?.[0]
+    if (!offer) return null
+    const trucks = getTrucksByCompany(offer.companyName)
+    const truck = trucks[0]
+    if (!truck) return null
+    return { plate: truck.plateNumber ?? 'RAA 000 A', type: truck.type ?? 'Truck', loadId: id, truckId: truck.id }
+  }, [selected, id])
+
   const stage = useMemo(() => {
-    if (!selected) return null
-    return getStageMap()[selected.loadId] ?? null
-  }, [selected])
+    const loadId = truckInfo?.loadId ?? selected?.loadId
+    if (!loadId) return null
+    return getStageMap()[loadId] ?? null
+  }, [truckInfo, selected])
 
   const alreadyRated = useMemo(() => {
-    if (!selected) return false
-    return getRatingsByTruck(selected.truckId).some((r) => r.shipmentId === selected.loadId)
-  }, [selected])
+    if (!truckInfo) return false
+    return getAllRatings().some((r) => r.shipmentId === truckInfo.loadId)
+  }, [truckInfo])
 
-  const currentAvg   = useMemo(() => selected ? getTruckRatingAverage(selected.truckId) : null, [selected])
-  const ratingsCount = useMemo(() => selected ? getRatingsByTruck(selected.truckId).length : 0, [selected])
+  const [stars, setStars] = useState(0)
+  const [hover, setHover] = useState<number | null>(null)
 
-  const [stars, setStars]     = useState(5)
-  const [hover, setHover]     = useState<number | null>(null)
-  const [comment, setComment] = useState('')
-
-  if (!selected) {
-    return (
-      <div className="space-y-6 ll-animate-in">
-        <div>
-          <h1 className="text-2xl font-bold text-stone-900">Rate Truck</h1>
-          <p className="text-sm text-stone-600 mt-1">No truck selected yet.</p>
-        </div>
-        <Link
-          to="/interested-trucks"
-          className="inline-flex items-center rounded-2xl bg-accent text-sidebar px-4 py-2.5 font-semibold hover:bg-accent-hover transition-colors"
-        >
-          Select a truck
-        </Link>
-      </div>
-    )
-  }
-
-  const canSubmit = stage === 'IN_TRANSIT' || stage === 'AWAITING_CONFIRMATION' || stage === 'COMPLETED'
+  const activeStars = hover ?? stars
 
   const submit = async (e: React.SyntheticEvent) => {
     e.preventDefault()
-    if (!canSubmit || alreadyRated) return
+    if (stars === 0 || alreadyRated || !truckInfo) return
 
     const ratingData = {
-      truckId:     selected.truckId,
-      shipmentId:  selected.loadId,
+      truckId:     truckInfo.truckId,
+      shipmentId:  truckInfo.loadId,
       shipperName: user?.name ?? 'Shipper',
       stars:       stars as 1 | 2 | 3 | 4 | 5,
-      comment:     comment.trim() || undefined,
+      comment:     undefined,
     }
 
     try {
@@ -91,7 +99,6 @@ export default function ShipperRatings() {
           truck_id:    ratingData.truckId,
           shipment_id: ratingData.shipmentId,
           stars:       ratingData.stars,
-          comment:     ratingData.comment,
         }),
       })
       if (!res.ok) throw new Error()
@@ -99,51 +106,58 @@ export default function ShipperRatings() {
       // API unavailable — save locally
     } finally {
       addRating(ratingData)
-      setStageForLoad(selected.loadId, 'COMPLETED')
+      setStageForLoad(truckInfo.loadId, 'COMPLETED')
       navigate('/loads')
     }
   }
 
-  const recentRatings = getRatingsByTruck(selected.truckId).slice(0, 4)
+  const skip = () => navigate('/loads')
 
   return (
-    <div className="space-y-6 ll-animate-in">
-      <div>
-        <h1 className="text-2xl font-bold text-stone-900">Rate Truck</h1>
-        <p className="text-sm text-stone-600 mt-1">Rate the truck and confirm delivery.</p>
-      </div>
+    <div className="flex justify-center ll-animate-in">
+      <div className="w-full max-w-xl">
+        {/* Red top accent bar */}
+        <div className="h-1 w-full rounded-t-2xl bg-sidebar" />
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Rating form */}
-        <div className="lg:col-span-7 bg-white rounded-3xl border border-stone-200 p-6 shadow-sm">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="text-xs font-semibold text-stone-500 uppercase tracking-wide">Selected truck</p>
-              <p className="mt-2 text-sm font-semibold text-stone-900">{selected.companyName}</p>
-              <p className="text-sm text-stone-500 mt-0.5">{selected.plate} · {selected.type}</p>
-            </div>
-            <span className="inline-flex items-center gap-1 rounded-full bg-accent/10 text-accent border border-accent/20 px-3 py-1 text-xs font-semibold">
-              ★ {currentAvg != null ? currentAvg.toFixed(1) : selected.rating.toFixed(1)} ({ratingsCount})
-            </span>
+        <div className="bg-white rounded-b-2xl border border-stone-200 shadow-sm px-10 py-10 space-y-7">
+          {/* Title */}
+          <h1 className="text-2xl font-bold text-sidebar text-center">Rate this Truck</h1>
+
+          {/* Truck info card */}
+          <div className="bg-cream rounded-xl border border-stone-200 px-6 py-6 text-center space-y-4">
+            {truckInfo ? (
+              <>
+                <div>
+                  <p className="text-xs text-stone-400 font-medium mb-1">Truck Plate Number</p>
+                  <p className="text-lg font-bold text-stone-900">{truckInfo.plate}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-stone-400 font-medium mb-1">Truck Type</p>
+                  <p className="text-lg font-bold text-stone-900">{truckInfo.type}</p>
+                </div>
+              </>
+            ) : (
+              <p className="text-sm text-stone-400">No truck information available.</p>
+            )}
           </div>
 
           {alreadyRated ? (
-            <div className="mt-6 rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4">
-              <p className="text-sm font-semibold text-emerald-800">You already rated this shipment.</p>
-              <p className="text-xs text-emerald-700 mt-1">Thank you for your feedback!</p>
+            <div className="text-center space-y-4">
+              <p className="text-sm font-semibold text-emerald-700">You already rated this shipment. Thank you!</p>
               <button
                 type="button"
                 onClick={() => navigate('/loads')}
-                className="mt-4 inline-flex items-center px-4 py-2 rounded-2xl bg-emerald-600 text-white font-semibold text-sm hover:bg-emerald-700 transition-colors"
+                className="w-full py-3.5 rounded-xl bg-amber-500 text-white font-bold text-base hover:bg-amber-600 transition-colors"
               >
                 Back to My Shipments
               </button>
             </div>
           ) : (
-            <form onSubmit={submit} className="mt-6 space-y-5">
-              <div>
-                <p className="text-sm font-semibold text-stone-700 mb-3">Your rating</p>
-                <div className="flex gap-2 items-center">
+            <form onSubmit={submit} className="space-y-6">
+              {/* Stars */}
+              <div className="text-center space-y-3">
+                <p className="text-sm text-stone-500">How would you rate your experience with this truck?</p>
+                <div className="flex justify-center gap-2">
                   {[1, 2, 3, 4, 5].map((v) => (
                     <button
                       key={v}
@@ -151,74 +165,39 @@ export default function ShipperRatings() {
                       onClick={() => setStars(v)}
                       onMouseEnter={() => setHover(v)}
                       onMouseLeave={() => setHover(null)}
-                      className={[
-                        'w-11 h-11 rounded-2xl border text-lg transition-all',
-                        (hover ?? stars) >= v
-                          ? 'bg-amber-400 border-amber-400 text-white scale-110'
-                          : 'bg-white border-stone-200 text-stone-300 hover:border-amber-300',
-                      ].join(' ')}
+                      className="focus:outline-none transition-transform hover:scale-110"
                     >
-                      ★
+                      <StarIcon filled={activeStars >= v} />
                     </button>
                   ))}
-                  <span className="ml-2 text-sm text-stone-500">{hover ?? stars} / 5</span>
                 </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-stone-700 mb-2" htmlFor="ratingComment">
-                  Comment <span className="font-normal text-stone-400">(optional)</span>
-                </label>
-                <textarea
-                  id="ratingComment"
-                  value={comment}
-                  onChange={(e) => setComment(e.target.value)}
-                  placeholder="How was the delivery experience?"
-                  className="w-full rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3 text-sm text-stone-800 focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 min-h-24 resize-none"
-                />
-              </div>
-
-              <div className="flex flex-wrap items-center gap-3">
-                <button
-                  type="submit"
-                  disabled={!canSubmit}
-                  className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-accent text-sidebar font-semibold hover:bg-accent-hover transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-                >
-                  Confirm Delivery &amp; Submit Rating
-                </button>
-                {!canSubmit && (
-                  <p className="text-sm text-stone-500">
-                    Complete payment first. Stage: <span className="font-semibold">{stage ?? '—'}</span>
+                {activeStars > 0 && (
+                  <p className="text-sm font-semibold text-sidebar">
+                    You selected {activeStars} star{activeStars !== 1 ? 's' : ''}
                   </p>
                 )}
               </div>
-            </form>
-          )}
-        </div>
 
-        {/* Recent ratings panel */}
-        <div className="lg:col-span-5 bg-white rounded-3xl border border-stone-200 p-6 shadow-sm">
-          <p className="text-sm font-semibold text-stone-900">Recent ratings for this truck</p>
-          <p className="text-xs text-stone-500 mt-1 mb-4">
-            {ratingsCount === 0 ? 'No ratings yet — be the first!' : `${ratingsCount} rating${ratingsCount !== 1 ? 's' : ''} total`}
-          </p>
-          {recentRatings.length > 0 ? (
-            <div className="space-y-3">
-              {recentRatings.map((r) => (
-                <div key={r.id} className="rounded-2xl border border-stone-200 bg-stone-50 p-4">
-                  <div className="flex items-center justify-between">
-                    <p className="text-xs font-semibold text-stone-600">{r.shipperName}</p>
-                    <span className="text-amber-400 text-sm">{'★'.repeat(r.stars)}</span>
-                  </div>
-                  {r.comment && <p className="mt-2 text-sm text-stone-600">{r.comment}</p>}
-                  <p className="mt-2 text-[11px] text-stone-400">{new Date(r.createdAt).toLocaleDateString()}</p>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="rounded-2xl border border-dashed border-stone-200 p-6 text-center">
-              <p className="text-sm text-stone-400">No ratings yet</p>
-            </div>
+              {/* Submit */}
+              <button
+                type="submit"
+                disabled={stars === 0}
+                className="w-full py-3.5 rounded-xl bg-amber-500 text-white font-bold text-base hover:bg-amber-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Submit Rating
+              </button>
+
+              {/* Skip */}
+              <div className="text-center">
+                <button
+                  type="button"
+                  onClick={skip}
+                  className="text-sm text-stone-400 hover:text-stone-600 transition-colors"
+                >
+                  Skip for now
+                </button>
+              </div>
+            </form>
           )}
         </div>
       </div>

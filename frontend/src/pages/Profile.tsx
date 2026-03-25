@@ -1,7 +1,7 @@
 import { useMemo, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { getAllLoads, getStageMap, type ShipStage } from '../data/storage'
+import { ensureSeedLoads, getAllLoads, getStageMap, type ShipStage } from '../data/storage'
 import CustomerShipmentMap from '../components/CustomerShipmentMap'
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
@@ -22,9 +22,10 @@ const STAGE_COLORS: Record<ShipStage, string> = {
   POSTED:                '#3B82F6',
   AWAITING_ESCROW:       '#F59E0B',
   IN_TRANSIT:            '#8B5CF6',
-  AWAITING_CONFIRMATION: '#6B7280',
+  AWAITING_CONFIRMATION: '#44403c',
   COMPLETED:             '#10B981',
   DISPUTED:              '#EF4444',
+  CANCELLED:             '#a8a29e',
 }
 
 const STAGE_LABELS: Record<ShipStage, string> = {
@@ -34,6 +35,7 @@ const STAGE_LABELS: Record<ShipStage, string> = {
   AWAITING_CONFIRMATION: 'Awaiting Confirm',
   COMPLETED:             'Completed',
   DISPUTED:              'Disputed',
+  CANCELLED:             'Cancelled',
 }
 
 const DEMO_CHART = [
@@ -62,6 +64,7 @@ export default function Profile() {
   }, [])
 
   const { myLoads, stageMap } = useMemo(() => {
+    ensureSeedLoads(user?.name || 'Shipper')
     const loads = getAllLoads()
     const stages = getStageMap()
     return {

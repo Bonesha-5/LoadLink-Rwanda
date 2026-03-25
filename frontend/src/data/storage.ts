@@ -112,14 +112,38 @@ export function ensureSeedLoads(userName = 'Shipper') {
   if (s1) {
     if (s1.createdBy !== userName) {
       const updated = existing.map((l) =>
-        (l.id === 's1' || l.id === 's2') ? { ...l, createdBy: userName } : l
+        (['s1', 's2', 's3'].includes(l.id)) ? { ...l, createdBy: userName } : l
       )
       saveLoads(updated)
     }
+    // Add s3 if missing
+    if (!existing.find((l) => l.id === 's3')) {
+      const loads = getAllLoads()
+      loads.splice(2, 0, {
+        id: 's3',
+        origin: 'Rubavu',
+        destination: 'Musanze',
+        date: '2026-03-20',
+        weight: '3 tons',
+        description: 'Electronic goods',
+        pickupAddress: 'Rubavu Port, Lake Kivu Road',
+        price: 'RWF 120,000',
+        createdBy: userName,
+        status: 'open',
+        offers: [{ companyName: 'Fast Move Transport' }],
+      })
+      saveLoads(loads)
+    }
+    // Always enforce correct stages for seed loads
+    const stageMap = getStageMap()
+    stageMap['s1'] = 'AWAITING_ESCROW'
+    stageMap['s2'] = 'COMPLETED'
+    stageMap['s3'] = 'POSTED'
+    localStorage.setItem(STAGES_KEY, JSON.stringify(stageMap))
     return
   }
 
-  const nonSeed = existing.filter((l) => l.id !== 's1' && l.id !== 's2')
+  const nonSeed = existing.filter((l) => !['s1', 's2', 's3'].includes(l.id))
   const seeds: Load[] = [
     {
       id: 's1',
@@ -151,9 +175,29 @@ export function ensureSeedLoads(userName = 'Shipper') {
       status: 'closed',
       offers: [],
     },
+    {
+      id: 's3',
+      origin: 'Rubavu',
+      destination: 'Musanze',
+      date: '2026-03-20',
+      weight: '3 tons',
+      description: 'Electronic goods',
+      pickupAddress: 'Rubavu Port, Lake Kivu Road',
+      price: 'RWF 120,000',
+      createdBy: userName,
+      status: 'open',
+      offers: [{ companyName: 'Fast Move Transport' }],
+    },
     ...nonSeed,
   ]
   saveLoads(seeds)
+
+  // Set stages for seed loads
+  const stageMap = getStageMap()
+  stageMap['s1'] = 'AWAITING_ESCROW'
+  stageMap['s2'] = 'COMPLETED'
+  stageMap['s3'] = 'POSTED'
+  localStorage.setItem(STAGES_KEY, JSON.stringify(stageMap))
 }
 
 // ---------------------------------------------------------------------------

@@ -5,9 +5,9 @@ import { ensureSeedLoads, getAllLoads, getAllRatings, getStageMap, type Load, ty
 
 const statusClass: Record<ShipStage, string> = {
   POSTED:                'bg-accent text-sidebar border-accent',
-  AWAITING_ESCROW:       'bg-amber-100 text-amber-800 border-amber-200',
+  AWAITING_ESCROW:       'bg-teal-600 text-white border-teal-600',
   IN_TRANSIT:            'bg-blue-500 text-white border-blue-500',
-  AWAITING_CONFIRMATION: 'bg-stone-500 text-white border-stone-500',
+  AWAITING_CONFIRMATION: 'bg-stone-700 text-white border-stone-700',
   COMPLETED:             'bg-emerald-600 text-white border-emerald-600',
   DISPUTED:              'bg-red-600 text-white border-red-600',
   CANCELLED:             'bg-stone-200 text-stone-500 border-stone-300',
@@ -15,7 +15,7 @@ const statusClass: Record<ShipStage, string> = {
 
 const statusLabel: Record<ShipStage, string> = {
   POSTED:                'POSTED',
-  AWAITING_ESCROW:       'AWAITING ESCROW',
+  AWAITING_ESCROW:       'ESCROW FUNDED',
   IN_TRANSIT:            'IN TRANSIT',
   AWAITING_CONFIRMATION: 'AWAITING CONFIRMATION',
   COMPLETED:             'COMPLETED',
@@ -76,7 +76,7 @@ export default function Loads() {
                   className="border-b border-stone-100 last:border-0 hover:bg-stone-50 transition-colors"
                 >
                   <td className="px-5 py-3.5 font-mono text-xs text-stone-500 font-semibold">
-                    {l.id.slice(0, 2).toLowerCase()}
+                    {l.id}
                   </td>
                   <td className="px-5 py-3.5 text-stone-800">{l.origin}</td>
                   <td className="px-5 py-3.5 text-stone-800">{l.destination}</td>
@@ -232,7 +232,8 @@ function ActionButton({ stage, loadId, rated }: { stage: ShipStage; loadId: stri
           className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 text-white px-3 py-1.5 text-xs font-bold hover:bg-emerald-700 transition-colors"
         >
           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+            <circle cx="12" cy="12" r="10" strokeWidth={2} />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M8 12l3 3 5-5" />
           </svg>
           Confirm Delivery
         </Link>

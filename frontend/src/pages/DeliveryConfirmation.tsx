@@ -156,23 +156,25 @@ export default function DeliveryConfirmation() {
 
       {/* Info card */}
       <div className="bg-cream rounded-2xl border border-stone-200 p-6 grid grid-cols-2 gap-x-8 gap-y-5">
-        <InfoItem label="Pickup Location"   value={info.pickupLocation} />
-        <InfoItem label="Dropoff Location"  value={info.dropoffLocation} />
-        <InfoItem label="Cargo Description" value={info.cargoDescription} />
+        <InfoItem label="Pickup Location"    value={info.pickupLocation} />
+        <InfoItem label="Dropoff Location"   value={info.dropoffLocation} />
+        <InfoItem label="Cargo Description"  value={info.cargoDescription} />
         <InfoItem label="Truck Plate Number" value={info.truckPlate} />
-        <InfoItem label="Transport Company" value={info.transportCompany} />
+        <div className="col-span-2">
+          <InfoItem label="Transport Company" value={info.transportCompany} />
+        </div>
       </div>
 
       {/* Countdown */}
-      <div className="bg-white rounded-2xl border border-stone-200 p-6 text-center">
-        <p className="text-sm font-semibold text-blue-600 mb-3">Time Remaining for Confirmation</p>
-        <p className="text-6xl font-bold text-sidebar font-mono tracking-tight">
+      <div className="bg-white rounded-2xl border border-stone-200 px-6 py-8 text-center">
+        <p className="text-sm font-semibold text-blue-500 mb-4">Time Remaining for Confirmation</p>
+        <p className="text-7xl font-bold text-sidebar tracking-tight" style={{ fontFamily: 'Georgia, serif' }}>
           {timeLeft || '--:--:--'}
         </p>
         {/* Progress bar */}
-        <div className="mt-4 h-1.5 rounded-full bg-stone-100 overflow-hidden">
+        <div className="mt-6 h-1.5 rounded-full bg-rose-100 overflow-hidden">
           <div
-            className="h-full rounded-full bg-red-300 transition-all duration-1000"
+            className="h-full rounded-full bg-rose-300 transition-all duration-1000"
             style={{ width: `${elapsed}%` }}
           />
         </div>
@@ -185,7 +187,7 @@ export default function DeliveryConfirmation() {
           type="button"
           onClick={() => handleAction('confirm')}
           disabled={actionBusy}
-          className="flex items-center justify-center gap-2 py-4 bg-emerald-700 text-white font-bold rounded-xl hover:bg-emerald-800 transition-all disabled:opacity-60 text-sm"
+          className="flex items-center justify-center gap-2 py-4 bg-emerald-800 text-white font-bold rounded-xl hover:bg-emerald-900 transition-all disabled:opacity-60 text-base"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <circle cx="12" cy="12" r="10" strokeWidth={2} />
@@ -197,7 +199,7 @@ export default function DeliveryConfirmation() {
           type="button"
           onClick={() => handleAction('dispute')}
           disabled={actionBusy}
-          className="flex items-center justify-center gap-2 py-4 border-2 border-red-600 text-red-600 font-bold rounded-xl hover:bg-red-50 transition-all disabled:opacity-60 text-sm"
+          className="flex items-center justify-center gap-2 py-4 border-2 border-red-600 text-red-600 font-bold rounded-xl hover:bg-red-50 transition-all disabled:opacity-60 text-base"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
