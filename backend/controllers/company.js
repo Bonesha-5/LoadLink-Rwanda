@@ -14,8 +14,8 @@ export const registerCompany = catchAsync(async (req, res) => {
     contact_person,
     phone,
     base_district,
-    business_cert_url,
-    insurance_doc_url,
+    business_cert_path,
+    insurance_doc_path,
   } = req.body;
 
   // Check if user already exists
@@ -49,8 +49,8 @@ export const registerCompany = catchAsync(async (req, res) => {
     contact_person,
     phone,
     base_district,
-    business_cert_url,
-    insurance_doc_url,
+    business_cert_path,
+    insurance_doc_path,
   });
 
   res.status(201).json({

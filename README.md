@@ -79,49 +79,68 @@ Payments are held in **escrow** until delivery is confirmed, protecting both par
 | Testing | Postman |
 
 ---
-
 ## Project Structure
 
 ```
 LoadLink-Rwanda/
 ├── backend/
 │   ├── config/
-│   │   └── db.js                  # CockroachDB connection pool
-│   ├── controllers/
-│   │   ├── shipperAuth.js         # Shipper register + login
-│   │   ├── companyAuth.js         # Company register + login
-│   │   ├── shipments.js           # Shipment CRUD
-│   │   ├── interests.js           # Express interest logic
-│   │   ├── payments.js            # Escrow + webhook handlers
-│   │   ├── ratings.js             # Post-completion ratings
-│   │   └── admin.js               # Admin actions
-│   ├── middleware/
-│   │   └── auth.js                # JWT verification + role enforcement
-│   ├── routes/
-│   │   ├── auth.js                # /api/auth/*
-│   │   ├── shipments.js           # /api/shipments/*
-│   │   ├── interests.js           # /api/interests/*
-│   │   ├── payments.js            # /api/payments/*
-│   │   ├── ratings.js             # /api/ratings/*
-│   │   └── admin.js               # /api/admin/*
-│   ├── uploads/                   # Uploaded company documents
-│   ├── .env.example               # Environment variable template
-│   ├── index.js                   # Express app entry point
-│   └── package.json
+│   │   └── db.js                  # Database connection pool
+│   ├── controllers/               # Route controllers
+│   │   ├── company.js
+│   │   ├── interests.js
+│   │   ├── shipments.js
+│   │   ├── shippers.js
+│   │   └── trucks.js
+│   ├── database/                  # SQL scripts (seeds/test)
+│   │   └── database.sql
+│   ├── middleware/                # Express middleware
+│   │   ├── auth.js
+│   │   ├── errorMiddleware.js
+│   │   └── logger.js
+│   ├── routes/                    # API route definitions
+│   │   ├── company.js
+│   │   ├── interests.js
+│   │   ├── shipments.js
+│   │   ├── shippers.js
+│   │   └── trucks.js
+│   ├── service/                   # Business logic layer
+│   │   ├── company.js
+│   │   ├── interests.js
+│   │   ├── shipments.js
+│   │   ├── shippers.js
+│   │   └── trucks.js
+│   ├── utils/                     # Utility functions
+│   │   └── catchAsync.js
+│   ├── .env                       # Environment variables (local-only)
+│   ├── API_DOCUMENTATION.md       # API endpoint details
+│   ├── api_test_requests.md       # Sample requests for testing
+│   ├── index.js                   # App entry point
+│   ├── migrate.js                 # Database migration script
+│   ├── package.json               # Dependencies and scripts
+│   └── schema.sql                 # Core database schema
 │
 └── frontend/
+    ├── public/                    # Static assets
     ├── src/
-    │   ├── app/
-    │   │   ├── pages/
-    │   │   │   ├── LandingPage.tsx
-    │   │   │   ├── shipper/       # PostShipment, MyShipments, InterestedTrucks, Payments
-    │   │   │   ├── company/       # AvailableShipments, MyTrucks, ActiveShipments
-    │   │   │   └── admin/         # CompanyVerification, ShipmentMonitoring, DisputeResolution
-    │   │   ├── components/        # Shared UI components
-    │   │   ├── context/           # AppContext — global state
-    │   │   └── routes.ts          # React Router configuration
-    │   └── styles/
-    └── package.json
+    │   ├── App.tsx                # Main app component
+    │   ├── components/            # Reusable UI components
+    │   ├── context/               # Global state (Context API)
+    │   ├── data/                  # Static data and constants
+    │   ├── main.tsx               # Entry point for Vite
+    │   ├── index.css              # Global styles (Tailwind)
+    │   └── pages/                 # Full-page components
+    │       ├── CompanyDashboard.tsx
+    │       ├── CompanyShipments.tsx
+    │       ├── CompanyTrucks.tsx
+    │       ├── Home.tsx
+    │       ├── Login.tsx
+    │       ├── PostShipment.tsx
+    │       ├── Register.tsx
+    │       └── ...
+    ├── package.json               # Frontend dependencies
+    ├── tailwind.config.js         # Styling configuration
+    └── vite.config.ts             # Vite build configuration
 ```
 
 ---
