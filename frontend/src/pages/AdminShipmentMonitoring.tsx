@@ -1,5 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { ensureSeedAdminData, getAdminShipments, type ShipmentStatus } from '../data/storage'
+import { useAuth } from '../context/AuthContext'
+import { getAdminShipmentsApi, type AdminShipmentDto, type ShipmentStatus as ApiShipmentStatus } from '../api/adminOpsApi'
+import type { ApiError } from '../api/http'
+import { getApiToken } from '../auth/mockJwt'
 
 type AdminShipment = {
   id: string
@@ -19,10 +23,10 @@ type FetchState = 'idle' | 'loading' | 'error' | 'success'
 
 const STATUS_LABELS: Record<ShipmentStatus, string> = {
   POSTED: 'Posted',
-  AWAITING_ESCROW: 'Awaiting escrow',
-  ESCROW_FUNDED: 'Escrow funded',
-  IN_TRANSIT: 'In transit',
-  AWAITING_CONFIRMATION: 'Awaiting confirmation',
+  AWAITING_ESCROW: 'Waiting for payment',
+  ESCROW_FUNDED: 'Payment received',
+  IN_TRANSIT: 'On the way',
+  AWAITING_CONFIRMATION: 'Waiting for confirmation',
   COMPLETED: 'Completed',
   CANCELLED: 'Cancelled',
   DISPUTED: 'Disputed',
@@ -52,37 +56,9 @@ const STATUS_FILTER_OPTIONS: (ShipmentStatus | 'ALL')[] = [
   'DISPUTED',
 ]
 
-const ACTIVE_STATUSES: ShipmentStatus[] = ['ESCROW_FUNDED', 'IN_TRANSIT', 'AWAITING_CONFIRMATION']
-
-function relativeTime(iso: string): string {
-  const d = new Date(iso)
-  const diff = Date.now() - d.getTime()
-  const hrs = Math.floor(diff / 3_600_000)
-  const days = Math.floor(diff / 86_400_000)
-  if (hrs < 24) return `${hrs}h ago`
-  if (days < 7) return `${days}d ago`
-  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
-}
-
-function RouteArrow() {
-  return (
-    <span className="inline-flex items-center justify-center shrink-0 text-accent" aria-hidden>
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-      </svg>
-    </span>
-  )
-}
-
-function TruckIcon() {
-  return (
-    <svg className="w-4 h-4 text-stone-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0" />
-    </svg>
-  )
-}
-
 export default function AdminShipmentMonitoring() {
+  const { user } = useAuth()
+  const token = getApiToken(user?.token ?? null)
   const [allShipments, setAllShipments] = useState<AdminShipment[]>([])
   const [state, setState] = useState<FetchState>('idle')
   const [error, setError] = useState<string | null>(null)
@@ -93,35 +69,57 @@ export default function AdminShipmentMonitoring() {
     setState('loading')
     setError(null)
     try {
+      if (token) {
+        const apiStatus = filter === 'ALL' ? undefined : (filter as unknown as ApiShipmentStatus)
+        const apiData = await getAdminShipmentsApi(token, apiStatus)
+        const data = apiData.map(
+          (s: AdminShipmentDto): AdminShipment => ({
+            id: String(s.id),
+            shipperName: s.shipperName ?? s.shipper_name ?? '—',
+            pickup: s.pickupDistrict ?? s.pickup_district ?? '—',
+            dropoff: s.dropoffDistrict ?? s.dropoff_district ?? '—',
+            weight: `${s.weightTons ?? s.weight_tons ?? '—'} tons`,
+            price: `${(s.offeredPriceRwf ?? s.offered_price_rwf ?? 0).toLocaleString()} RWF`,
+            priceRwf: s.offeredPriceRwf ?? s.offered_price_rwf ?? 0,
+            status: s.status as any,
+            truckPlate: s.truckPlate ?? s.truck_plate,
+            companyName: s.companyName ?? s.company_name,
+            createdAt: s.createdAt ?? s.created_at ?? new Date().toISOString(),
+          }),
+        )
+        setAllShipments(data)
+        setState('success')
+        return
+      }
+
       ensureSeedAdminData()
-      const data = getAdminShipments().map(
-        (s): AdminShipment => ({
-          id: s.id,
-          shipperName: s.shipperName,
-          pickup: s.pickupDistrict,
-          dropoff: s.dropoffDistrict,
-          weight: `${s.weightTons} tons`,
-          price: `${s.offeredPriceRwf.toLocaleString()} RWF`,
-          priceRwf: s.offeredPriceRwf,
-          status: s.status,
-          truckPlate: s.truckPlate,
-          companyName: s.companyName,
-          createdAt: s.createdAt,
-        }),
-      )
+      const data = getAdminShipments().map((s): AdminShipment => ({
+        id: s.id,
+        shipperName: s.shipperName,
+        pickup: s.pickupDistrict,
+        dropoff: s.dropoffDistrict,
+        weight: `${s.weightTons} tons`,
+        price: `${s.offeredPriceRwf.toLocaleString()} RWF`,
+        priceRwf: s.offeredPriceRwf,
+        status: s.status,
+        truckPlate: s.truckPlate,
+        companyName: s.companyName,
+        createdAt: s.createdAt,
+      }))
       setAllShipments(data)
       setState('success')
     } catch (err) {
       console.error(err)
       setAllShipments([])
-      setError('Could not load shipments from local demo data.')
+      const e = err as ApiError
+      setError(token ? (e.message || 'Could not load shipments.') : 'Could not load shipments from local demo data.')
       setState('error')
     }
   }
 
   useEffect(() => {
     void loadShipments()
-  }, [])
+  }, [filter, token])
 
   const filteredShipments = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -133,26 +131,14 @@ export default function AdminShipmentMonitoring() {
     })
   }, [allShipments, filter, query])
 
-  const kpis = useMemo(() => {
-    const active = allShipments.filter((s) => ACTIVE_STATUSES.includes(s.status)).length
-    const disputed = allShipments.filter((s) => s.status === 'DISPUTED').length
-    const totalValue = allShipments.reduce((sum, s) => sum + s.priceRwf, 0)
-    return {
-      total: allShipments.length,
-      active,
-      disputed,
-      totalValue,
-    }
-  }, [allShipments])
-
   return (
-    <div className="space-y-8 ll-animate-in max-w-5xl">
+    <div className="space-y-6 ll-animate-in max-w-6xl">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wider text-stone-500">Operations</p>
+          <p className="text-xs font-semibold uppercase tracking-wider text-stone-500">Admin</p>
           <h1 className="text-2xl font-bold text-stone-900 mt-1">Shipment monitoring</h1>
-          <p className="text-sm text-stone-600 mt-1 max-w-xl">
-            Live view of every shipment on the platform — route, carrier, escrow stage, and health at a glance.
+          <p className="text-sm text-stone-600 mt-1 max-w-2xl">
+            A full list of shipments on the platform. Use the filter to view one status at a time.
           </p>
         </div>
         <button
@@ -160,37 +146,12 @@ export default function AdminShipmentMonitoring() {
           onClick={() => void loadShipments()}
           className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-sidebar text-white text-sm font-semibold hover:bg-stone-800 transition-colors shadow-sm border border-stone-800"
         >
-          <svg className="w-4 h-4 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-          </svg>
           Refresh
         </button>
       </div>
 
-      <section className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        <div className="rounded-3xl border border-stone-200 bg-white p-4 sm:p-5 shadow-sm">
-          <p className="text-xs font-semibold text-stone-500">Total shipments</p>
-          <p className="mt-2 text-2xl sm:text-3xl font-bold text-stone-900 tabular-nums">{kpis.total}</p>
-        </div>
-        <div className="rounded-3xl border border-stone-200 bg-white p-4 sm:p-5 shadow-sm ring-1 ring-accent/15">
-          <p className="text-xs font-semibold text-stone-500">Active pipeline</p>
-          <p className="mt-2 text-2xl sm:text-3xl font-bold text-accent tabular-nums">{kpis.active}</p>
-          <p className="mt-1 text-[11px] text-stone-500">Funded · transit · confirmation</p>
-        </div>
-        <div className="rounded-3xl border border-stone-200 bg-white p-4 sm:p-5 shadow-sm">
-          <p className="text-xs font-semibold text-stone-500">Open disputes</p>
-          <p className="mt-2 text-2xl sm:text-3xl font-bold text-stone-900 tabular-nums">{kpis.disputed}</p>
-        </div>
-        <div className="rounded-3xl border border-stone-200 bg-white p-4 sm:p-5 shadow-sm col-span-2 lg:col-span-1">
-          <p className="text-xs font-semibold text-stone-500">Listed value (demo)</p>
-          <p className="mt-2 text-lg sm:text-xl font-bold text-stone-900 tabular-nums leading-tight">
-            {kpis.totalValue.toLocaleString()} <span className="text-stone-500 font-semibold text-sm">RWF</span>
-          </p>
-        </div>
-      </section>
-
-      <div className="space-y-4">
-        <div className="relative max-w-md">
+      <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
+        <div className="relative max-w-md w-full">
           <span className="absolute inset-y-0 left-3 flex items-center text-stone-400 pointer-events-none">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 104.5 4.5a7.5 7.5 0 0012.15 12.15z" />
@@ -198,29 +159,26 @@ export default function AdminShipmentMonitoring() {
           </span>
           <input
             type="search"
-            placeholder="Search ID, shipper, route, company, plate…"
+            placeholder="Search by ID, shipper, route, company, or plate…"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             className="w-full pl-10 pr-4 py-2.5 rounded-2xl border border-stone-200 bg-white text-sm text-stone-800 placeholder:text-stone-400 focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
           />
         </div>
 
-        <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
-          {STATUS_FILTER_OPTIONS.map((option) => (
-            <button
-              key={option}
-              type="button"
-              onClick={() => setFilter(option)}
-              className={[
-                'shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-all border whitespace-nowrap',
-                filter === option
-                  ? 'bg-accent text-sidebar border-accent shadow-sm'
-                  : 'bg-white text-stone-600 border-stone-200 hover:border-stone-300',
-              ].join(' ')}
-            >
-              {option === 'ALL' ? 'All' : STATUS_LABELS[option]}
-            </button>
-          ))}
+        <div className="flex items-center gap-2">
+          <label className="text-xs font-semibold text-stone-600">Status</label>
+          <select
+            value={filter}
+            onChange={(e) => setFilter(e.target.value as any)}
+            className="px-3 py-2 rounded-2xl border border-stone-200 bg-white text-sm text-stone-800 focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
+          >
+            {STATUS_FILTER_OPTIONS.map((o) => (
+              <option key={o} value={o}>
+                {o === 'ALL' ? 'All' : STATUS_LABELS[o]}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
 
@@ -248,74 +206,50 @@ export default function AdminShipmentMonitoring() {
       )}
 
       {state === 'success' && filteredShipments.length > 0 && (
-        <ul className="space-y-4">
-          {filteredShipments.map((s) => (
-            <li
-              key={s.id}
-              className="group rounded-3xl border border-stone-200 bg-white p-5 shadow-sm transition-all hover:shadow-md hover:border-stone-300"
-            >
-              <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
-                <div className="flex items-center gap-3 min-w-0">
-                  <span className="font-mono text-xs font-semibold text-stone-500 bg-stone-100 px-2.5 py-1 rounded-lg border border-stone-200">
-                    {s.id}
-                  </span>
-                  <span
-                    className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${STATUS_CLASSES[s.status]}`}
-                  >
-                    {STATUS_LABELS[s.status]}
-                  </span>
-                </div>
-                <div className="text-right text-xs text-stone-500">
-                  <span className="font-semibold text-accent">{relativeTime(s.createdAt)}</span>
-                  <p className="mt-0.5 text-[11px] text-stone-400">{new Date(s.createdAt).toLocaleString()}</p>
-                </div>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2 sm:gap-4 mb-5">
-                <span className="text-lg font-bold text-stone-900">{s.pickup}</span>
-                <RouteArrow />
-                <span className="text-lg font-bold text-stone-900">{s.dropoff}</span>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-                <div className="space-y-2">
-                  <p className="text-[11px] font-semibold uppercase tracking-wide text-stone-400">Shipper</p>
-                  <p className="font-semibold text-stone-900">{s.shipperName}</p>
-                </div>
-                <div className="space-y-2">
-                  <p className="text-[11px] font-semibold uppercase tracking-wide text-stone-400">Carrier</p>
-                  <p className="font-semibold text-stone-900">{s.companyName ?? '— Unassigned'}</p>
-                </div>
-                <div className="flex items-start gap-2">
-                  <TruckIcon />
-                  <div>
-                    <p className="text-[11px] font-semibold uppercase tracking-wide text-stone-400">Truck</p>
-                    <p className="font-mono text-stone-800">{s.truckPlate ?? '—'}</p>
-                  </div>
-                </div>
-                <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-wide text-stone-400">Cargo</p>
-                  <p className="text-stone-800">{s.weight}</p>
-                </div>
-              </div>
-
-              <div className="mt-5 pt-4 border-t border-stone-100 flex flex-wrap items-end justify-between gap-2">
-                <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-wide text-stone-400">Offered price</p>
-                  <p className="text-xl font-bold text-sidebar">{s.price}</p>
-                </div>
-                <span className="text-[11px] text-stone-400 max-w-[200px] text-right">
-                  Demo data · amounts mirror shipper offers
-                </span>
-              </div>
-            </li>
-          ))}
-        </ul>
+        <div className="bg-white border border-stone-200 rounded-3xl overflow-hidden shadow-sm">
+          <table className="min-w-full text-left text-sm">
+            <thead className="bg-stone-50 border-b border-stone-200">
+              <tr>
+                <th className="px-4 py-3 font-semibold text-stone-700">Shipment ID</th>
+                <th className="px-4 py-3 font-semibold text-stone-700">Shipper</th>
+                <th className="px-4 py-3 font-semibold text-stone-700">Pickup</th>
+                <th className="px-4 py-3 font-semibold text-stone-700">Dropoff</th>
+                <th className="px-4 py-3 font-semibold text-stone-700">Weight</th>
+                <th className="px-4 py-3 font-semibold text-stone-700">Price</th>
+                <th className="px-4 py-3 font-semibold text-stone-700">Status</th>
+                <th className="px-4 py-3 font-semibold text-stone-700">Truck plate</th>
+                <th className="px-4 py-3 font-semibold text-stone-700">Company</th>
+                <th className="px-4 py-3 font-semibold text-stone-700">Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredShipments.map((s) => (
+                <tr key={s.id} className="border-b border-stone-100 last:border-0">
+                  <td className="px-4 py-3 font-mono text-xs text-stone-700">{s.id}</td>
+                  <td className="px-4 py-3 text-stone-800">{s.shipperName}</td>
+                  <td className="px-4 py-3 text-stone-700">{s.pickup}</td>
+                  <td className="px-4 py-3 text-stone-700">{s.dropoff}</td>
+                  <td className="px-4 py-3 text-stone-700">{s.weight}</td>
+                  <td className="px-4 py-3 text-stone-800 font-semibold">{s.price}</td>
+                  <td className="px-4 py-3">
+                    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${STATUS_CLASSES[s.status]}`}>
+                      {STATUS_LABELS[s.status]}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 font-mono text-xs text-stone-700">{s.truckPlate ?? '—'}</td>
+                  <td className="px-4 py-3 text-stone-700">{s.companyName ?? '—'}</td>
+                  <td className="px-4 py-3 text-xs text-stone-500">{new Date(s.createdAt).toLocaleString()}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
 
       <p className="text-xs text-stone-500 border-t border-stone-200 pt-6">
-        Shipment records are loaded from your browser’s demo store. Connect a real API to power live updates and
-        pagination.
+        {token
+          ? 'Live data from the API.'
+          : 'Demo data (local only).'}
       </p>
     </div>
   )

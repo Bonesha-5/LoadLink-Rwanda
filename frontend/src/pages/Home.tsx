@@ -1,133 +1,103 @@
 import { Link } from 'react-router-dom'
+import { useCallback, useEffect, useState } from 'react'
 
-function Icon({
-  children,
-}: {
-  children: React.ReactNode
-}) {
-  return (
-    <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-accent/15 text-accent ring-1 ring-accent/25">
-      {children}
-    </span>
-  )
-}
+const PARTNERS = [
+  'Kigali Freight Ltd',
+  'Green Farms',
+  'ACME Manufacturing',
+  'Northern Transport',
+  'Tech Supplies',
+  'Rwanda Cargo Co',
+  'Musanze Haulage',
+  'Lake Logistics',
+]
 
 export default function Home() {
-  const shipperSteps = [
-    {
-      title: 'Post a shipment',
-      desc: 'Add pickup/dropoff, cargo details, weight, and your fixed price (RWF).',
-      icon: (
-        <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6l4 2" />
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-      ),
-    },
-    {
-      title: 'Fund escrow',
-      desc: 'Lock funds safely so companies can dispatch with confidence and fewer cancellations.',
-      icon: (
-        <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 1v22" />
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 5H9.5a3.5 3.5 0 000 7H14a3.5 3.5 0 010 7H6" />
-        </svg>
-      ),
-    },
-    {
-      title: 'Track + confirm',
-      desc: 'Follow the shipment stages and confirm delivery to release payout.',
-      icon: (
-        <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 11l3 3L22 4" />
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" />
-        </svg>
-      ),
-    },
-  ]
+  const [scrolled, setScrolled] = useState(false)
+  const [showTop, setShowTop] = useState(false)
 
-  const companySteps = [
-    {
-      title: 'Get verified',
-      desc: 'Companies submit documents once. Admin verification builds trust for the marketplace.',
-      icon: (
-        <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 2l7 4v6c0 5-3 9-7 10-4-1-7-5-7-10V6l7-4z" />
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4" />
-        </svg>
-      ),
-    },
-    {
-      title: 'Accept fixed-price loads',
-      desc: 'No bargaining — accept loads that match your fleet capacity and routes.',
-      icon: (
-        <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7h13v10H3z" />
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 10h3l2 3v4h-5v-7z" />
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 19a2 2 0 104 0H7zM17 19a2 2 0 104 0h-4z" />
-        </svg>
-      ),
-    },
-    {
-      title: 'Deliver + get paid',
-      desc: 'Escrow releases payout after confirmation, with dispute handling if needed.',
-      icon: (
-        <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-3.314 0-6 1.791-6 4s2.686 4 6 4 6-1.791 6-4-2.686-4-6-4z" />
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 12V6a2 2 0 012-2h8a2 2 0 012 2v6" />
-        </svg>
-      ),
-    },
-  ]
+  useEffect(() => {
+    const onScroll = () => {
+      const y = window.scrollY
+      setScrolled(y > 48)
+      setShowTop(y > 400)
+    }
+    onScroll()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
 
-  const bullets = [
-    { label: 'Escrow-protected payments', desc: 'Funds are locked and released only when delivery is confirmed.' },
-    { label: 'Verification + audit trail', desc: 'Admin verification, dispute resolution, and traceable actions.' },
-    { label: 'Clear, fixed-price dispatch', desc: 'Faster decisions. Less negotiation. More deliveries.' },
-  ]
+  const scrollToTop = useCallback(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }, [])
 
-  const trustedBy = ['Kigali Freight Ltd', 'Green Farms', 'ACME Manufacturing', 'Northern Transport', 'Tech Supplies']
+  const navLinkClass = scrolled
+    ? 'font-semibold text-stone-800 hover:text-accent transition-colors'
+    : 'font-semibold text-white hover:text-accent transition-colors'
 
   return (
-    <div className="min-h-screen ll-animate-in relative overflow-hidden">
-      {/* Page background (extends behind the sticky nav) */}
-      <div className="absolute left-0 right-0 top-0 h-[680px] sm:h-[720px] md:h-[820px] -z-10 bg-sidebar" />
-      <div className="absolute left-0 right-0 top-0 h-[680px] sm:h-[720px] md:h-[820px] -z-10 bg-[radial-gradient(circle_at_20%_10%,rgba(245,197,24,0.25)_0%,transparent_45%),radial-gradient(circle_at_80%_20%,rgba(245,197,24,0.18)_0%,transparent_45%)]" />
-      <div className="absolute left-0 right-0 top-0 h-[680px] sm:h-[720px] md:h-[820px] -z-10 opacity-[0.12] bg-[radial-gradient(circle_at_center,white_1px,transparent_1px)] [background-size:18px_18px]" />
+    <div id="top" className="min-h-screen ll-animate-in relative overflow-hidden">
+      {/* Original hero background — solid + gold glows + dot grid */}
+      <div className="absolute left-0 right-0 top-0 min-h-[720px] md:min-h-[820px] -z-10 bg-sidebar" />
+      {/* Background video */}
+      <div
+        className="absolute left-0 right-0 top-0 min-h-[720px] md:min-h-[820px] -z-10 pointer-events-none"
+        style={{
+          WebkitMaskImage:
+            'linear-gradient(180deg, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.55) 55%, rgba(0,0,0,0) 100%)',
+          maskImage:
+            'linear-gradient(180deg, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.55) 55%, rgba(0,0,0,0) 100%)',
+        }}
+        aria-hidden
+      >
+        <video
+          className="h-full w-full object-cover opacity-[0.22]"
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="metadata"
+        >
+          <source src="/hero.mp4" type="video/mp4" />
+        </video>
+      </div>
+      {/* Keep text readable */}
+      <div className="absolute left-0 right-0 top-0 min-h-[720px] md:min-h-[820px] -z-10 bg-sidebar/25" aria-hidden />
+      <div className="absolute left-0 right-0 top-0 min-h-[720px] md:min-h-[820px] -z-10 bg-[radial-gradient(circle_at_20%_10%,rgba(245,197,24,0.25)_0%,transparent_45%),radial-gradient(circle_at_80%_20%,rgba(245,197,24,0.18)_0%,transparent_45%)]" />
+      <div className="absolute left-0 right-0 top-0 min-h-[720px] md:min-h-[820px] -z-10 opacity-[0.12] bg-[radial-gradient(circle_at_center,white_1px,transparent_1px)] [background-size:18px_18px]" />
 
-      {/* Top nav — index / landing */}
-      <header className="sticky top-0 z-50 bg-transparent">
-        <nav className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
-          <Link
-            to="/"
-            className="flex items-center gap-2 shrink-0 group transition-opacity hover:opacity-95"
-            aria-label="LoadLink Home"
-          >
-            <span className="block text-lg font-extrabold tracking-tight leading-none text-white">
+      <header
+        className={`sticky top-0 z-50 transition-[background-color,box-shadow,border-color] duration-300 ${
+          scrolled ? 'bg-white/75 backdrop-blur-md border-b border-stone-200/60 shadow-sm' : 'bg-transparent'
+        }`}
+      >
+        <nav className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-3">
+          <Link to="/" className="shrink-0 group transition-opacity hover:opacity-95" aria-label="LoadLink Home">
+            <span className={`text-lg font-extrabold tracking-tight leading-none transition-colors ${scrolled ? 'text-sidebar' : ''}`}>
               <span className="text-accent">Load</span>
-              <span className="text-white/90">Link</span>
+              <span className={scrolled ? 'text-stone-900' : 'text-white/90'}>Link</span>
             </span>
           </Link>
-          <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-5 text-sm">
-            <a
-              href="#how-it-works"
-              className="hidden sm:inline font-semibold text-white hover:text-accent transition-colors"
-            >
+          <div className="flex flex-wrap items-center justify-end gap-x-3 gap-y-2 text-xs sm:text-sm">
+            <a href="#trucks" className={`hidden md:inline ${navLinkClass}`}>
+              Trucks
+            </a>
+            <a href="#how-it-works" className={`hidden sm:inline ${navLinkClass}`}>
               How it works
             </a>
-            <Link to="/about" className="font-semibold text-white hover:text-accent transition-colors">
-              About
-            </Link>
-            <Link to="/login/shipper" className="font-semibold text-white hover:text-accent transition-colors">
+            <a href="#why" className={`hidden md:inline ${navLinkClass}`}>
+              Why us
+            </a>
+            <a href="#partners" className={`hidden md:inline ${navLinkClass}`}>
+              Partners
+            </a>
+            <Link to="/login/shipper" className={navLinkClass}>
               Shipper
             </Link>
-            <Link to="/login/company" className="font-semibold text-white hover:text-accent transition-colors">
+            <Link to="/login/company" className={navLinkClass}>
               Company
             </Link>
-            <Link
-              to="/login/admin"
-              className="rounded-xl px-3 py-1.5 font-semibold text-white hover:text-accent transition-colors"
-            >
+            <Link to="/login/admin" className={navLinkClass}>
               Admin
             </Link>
           </div>
@@ -135,312 +105,335 @@ export default function Home() {
       </header>
 
       {/* Hero */}
-      <section className="relative overflow-hidden">
-        <div className="relative max-w-6xl mx-auto px-4 sm:px-6 py-14 md:py-20">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
-            <div className="lg:col-span-7">
-              <div className="inline-flex items-center gap-2 rounded-full bg-white/10 text-white px-3 py-1 text-xs font-semibold border border-white/10">
-                <span className="inline-block h-2 w-2 rounded-full bg-accent" />
-                Digital Freight Marketplace & Escrow Platform
-              </div>
-              <h1 className="mt-5 text-4xl md:text-6xl font-extrabold tracking-tight text-white leading-[1.05]">
-                Connect Shippers with Verified Transport Companies
-              </h1>
-              <p className="mt-5 text-base md:text-lg text-white/80 leading-relaxed max-w-2xl">
-                Rwanda's premier logistics marketplace. Post shipments, get competitive offers from verified truck companies, and
-                enjoy secure escrow payment protection.
-              </p>
-
-              <div className="mt-8 flex flex-wrap gap-3">
-                <Link
-                  to="/register/shipper"
-                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-accent text-sidebar px-6 py-3 font-semibold shadow-sm hover:shadow-md transition-all hover:-translate-y-0.5 active:scale-[0.99]"
-                >
-                  <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6l4 2" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  Start as shipper
-                </Link>
-                <Link
-                  to="/register/company"
-                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white text-sidebar px-6 py-3 font-semibold border border-white/10 hover:bg-white/95 transition-all hover:-translate-y-0.5 active:scale-[0.99]"
-                >
-                  <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7h13v10H3z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 10h3l2 3v4h-5v-7z" />
-                  </svg>
-                  Join as company
-                </Link>
-                <Link
-                  to="/login/admin"
-                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white/10 text-white px-6 py-3 font-semibold border border-white/15 hover:bg-white/15 transition-all"
-                >
-                  Admin portal
-                </Link>
-              </div>
-
-              <div className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-3">
-                {[
-                  { k: '24/7', v: 'Marketplace visibility' },
-                  { k: 'Escrow', v: 'Payment protection' },
-                  { k: 'Audit', v: 'Admin accountability' },
-                ].map((x) => (
-                  <div key={x.k} className="rounded-3xl bg-white/5 border border-white/10 p-4">
-                    <p className="text-xl font-extrabold text-white">{x.k}</p>
-                    <p className="mt-1 text-sm text-white/70">{x.v}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="lg:col-span-5">
-              <div className="rounded-[32px] bg-white border border-stone-200 shadow-xl overflow-hidden">
-                <div className="p-5 border-b border-stone-200 flex items-center justify-between">
-                  <p className="text-sm font-semibold text-stone-900">Marketplace snapshot (demo)</p>
-                  <span className="text-xs font-semibold rounded-full bg-accent/15 text-sidebar px-3 py-1 border border-accent/25">
-                    Live-style
-                  </span>
-                </div>
-                <div className="p-5 space-y-4">
-                  <div className="rounded-3xl border border-stone-200 bg-stone-50 p-4">
-                    <p className="text-xs font-semibold text-stone-600">Escrow health</p>
-                    <div className="mt-3 h-2.5 rounded-full bg-stone-200 overflow-hidden">
-                      <div className="h-full bg-accent" style={{ width: '78%' }} />
-                    </div>
-                    <div className="mt-3 flex items-center justify-between text-xs text-stone-600">
-                      <span>Funded shipments</span>
-                      <span className="font-semibold text-stone-900">78%</span>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    {[
-                      { t: 'Avg dispatch time', v: '18 min', d: '-12%' },
-                      { t: 'On-time delivery', v: '92%', d: '+3%' },
-                    ].map((x) => (
-                      <div key={x.t} className="rounded-3xl border border-stone-200 bg-white p-4">
-                        <p className="text-xs font-semibold text-stone-600">{x.t}</p>
-                        <p className="mt-2 text-2xl font-extrabold text-stone-900">{x.v}</p>
-                        <span className="mt-2 inline-flex items-center rounded-full bg-accent/15 text-sidebar px-2.5 py-1 text-xs font-semibold border border-accent/25">
-                          {x.d}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="rounded-3xl border border-stone-200 bg-white p-4">
-                    <div className="flex items-center justify-between">
-                      <p className="text-xs font-semibold text-stone-600">User mix</p>
-                      <p className="text-xs text-stone-500">demo</p>
-                    </div>
-                    <div className="mt-3 space-y-3">
-                      {[
-                        { label: 'Shippers', value: 68 },
-                        { label: 'Companies', value: 26 },
-                        { label: 'Admins', value: 6 },
-                      ].map((r) => (
-                        <div key={r.label}>
-                          <div className="flex items-center justify-between text-xs text-stone-600">
-                            <span className="font-semibold">{r.label}</span>
-                            <span>{r.value}%</span>
-                          </div>
-                          <div className="mt-2 h-2.5 w-full rounded-full bg-stone-200 overflow-hidden">
-                            <div
-                              className={r.label === 'Companies' ? 'h-full bg-sidebar' : r.label === 'Admins' ? 'h-full bg-stone-400' : 'h-full bg-accent'}
-                              style={{ width: `${r.value}%` }}
-                            />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="mt-4 grid grid-cols-2 gap-3">
-                <Link
-                  to="/login/shipper"
-                  className="rounded-3xl bg-white/10 border border-white/15 text-white p-4 hover:bg-white/15 transition-all"
-                >
-                  <p className="text-sm font-semibold">Shipper portal</p>
-                  <p className="mt-1 text-xs text-white/70">Post + fund escrow</p>
-                </Link>
-                <Link
-                  to="/login/company"
-                  className="rounded-3xl bg-white/10 border border-white/15 text-white p-4 hover:bg-white/15 transition-all"
-                >
-                  <p className="text-sm font-semibold">Company portal</p>
-                  <p className="mt-1 text-xs text-white/70">Accept + deliver</p>
-                </Link>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* How it works */}
-      <section id="how-it-works" className="max-w-6xl mx-auto px-4 sm:px-6 pb-12 md:pb-16">
-        <div className="rounded-[36px] bg-white border border-stone-200 shadow-sm overflow-hidden">
-          <div className="p-7 border-b border-stone-200 flex flex-wrap items-end justify-between gap-4">
-            <div>
-              <p className="text-xs font-semibold text-stone-600">Workflow</p>
-              <h2 className="mt-1 text-2xl font-extrabold tracking-tight text-stone-900">How LoadLink works</h2>
-              <p className="mt-2 text-sm text-stone-600 max-w-2xl">
-                Two simple journeys — one marketplace. Escrow keeps transactions fair and reduces cancellations.
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-3">
-              <Link to="/login/shipper" className="rounded-2xl bg-sidebar text-white px-5 py-2.5 font-semibold hover:bg-sidebar-hover transition-colors">
-                Shipper portal
-              </Link>
-              <Link to="/login/company" className="rounded-2xl bg-accent text-sidebar px-5 py-2.5 font-semibold hover:bg-accent-hover transition-colors">
-                Company portal
-              </Link>
-            </div>
-          </div>
-
-          <div className="p-7 grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="rounded-3xl border border-stone-200 bg-stone-50 p-6">
-              <div className="flex items-center gap-3">
-                <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-sidebar text-white">
-                  <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                  </svg>
-                </span>
-                <div>
-                  <p className="text-sm font-extrabold text-stone-900">For shippers</p>
-                  <p className="text-sm text-stone-600">Post → escrow → track</p>
-                </div>
-              </div>
-              <div className="mt-5 grid grid-cols-1 gap-3">
-                {shipperSteps.map((s) => (
-                  <div key={s.title} className="rounded-3xl bg-white border border-stone-200 p-5 hover:shadow-md transition-shadow">
-                    <div className="flex items-start gap-3">
-                      <span className="mt-0.5 inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-accent/15 text-accent ring-1 ring-accent/25">
-                        {s.icon}
-                      </span>
-                      <div>
-                        <p className="text-sm font-semibold text-stone-900">{s.title}</p>
-                        <p className="mt-1 text-sm text-stone-600 leading-relaxed">{s.desc}</p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="rounded-3xl border border-stone-200 bg-stone-50 p-6">
-              <div className="flex items-center gap-3">
-                <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-accent text-sidebar">
-                  <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7h13v10H3z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 10h3l2 3v4h-5v-7z" />
-                  </svg>
-                </span>
-                <div>
-                  <p className="text-sm font-extrabold text-stone-900">For companies</p>
-                  <p className="text-sm text-stone-600">Verify → accept → deliver</p>
-                </div>
-              </div>
-              <div className="mt-5 grid grid-cols-1 gap-3">
-                {companySteps.map((s) => (
-                  <div key={s.title} className="rounded-3xl bg-white border border-stone-200 p-5 hover:shadow-md transition-shadow">
-                    <div className="flex items-start gap-3">
-                      <span className="mt-0.5 inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-accent/15 text-accent ring-1 ring-accent/25">
-                        {s.icon}
-                      </span>
-                      <div>
-                        <p className="text-sm font-semibold text-stone-900">{s.title}</p>
-                        <p className="mt-1 text-sm text-stone-600 leading-relaxed">{s.desc}</p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Problem / Solution / Mission */}
-      <section className="max-w-6xl mx-auto px-4 sm:px-6 py-12 md:py-16 space-y-8">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          <div className="lg:col-span-4 rounded-3xl bg-white border border-stone-200 p-7 shadow-sm hover:shadow-md transition-shadow">
-            <Icon>
-              <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </Icon>
-            <p className="mt-4 text-sm font-semibold text-stone-900">The problem</p>
-            <p className="mt-2 text-sm text-stone-600 leading-relaxed">
-              Freight coordination is slow and risky: endless calls, unclear pricing, cancellations, and payment disputes.
-            </p>
-          </div>
-
-          <div className="lg:col-span-4 rounded-3xl bg-white border border-stone-200 p-7 shadow-sm hover:shadow-md transition-shadow">
-            <Icon>
-              <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 2l7 4v6c0 5-3 9-7 10-4-1-7-5-7-10V6l7-4z" />
-              </svg>
-            </Icon>
-            <p className="mt-4 text-sm font-semibold text-stone-900">The solution</p>
-            <p className="mt-2 text-sm text-stone-600 leading-relaxed">
-              A digital marketplace with escrow: shippers post fixed-price shipments, verified companies accept, escrow funds
-              are released on delivery confirmation.
-            </p>
-          </div>
-
-          <div className="lg:col-span-4 rounded-3xl bg-sidebar text-white border border-white/10 p-7 shadow-sm hover:shadow-md transition-shadow">
-            <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-semibold border border-white/10">
+      <section className="relative max-w-6xl mx-auto px-4 sm:px-6 py-12 md:py-16 lg:py-20">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-center">
+          <div className="lg:col-span-7 relative z-10">
+            <div className="inline-flex items-center gap-2 rounded-full bg-white/10 text-white px-3 py-1 text-xs font-semibold border border-white/10">
               <span className="inline-block h-2 w-2 rounded-full bg-accent" />
-              Our mission
-            </span>
-            <p className="mt-4 text-xl font-extrabold tracking-tight">Trust, speed, and fairness in freight.</p>
-            <p className="mt-2 text-sm text-white/75 leading-relaxed">
-              Help Rwanda’s shippers and carriers move goods faster — with verified partners, transparent pricing, and secure escrow payments.
-            </p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {bullets.map((b) => (
-            <div key={b.label} className="rounded-3xl bg-white border border-stone-200 p-6 shadow-sm hover:shadow-md transition-shadow">
-              <p className="text-sm font-semibold text-stone-900">{b.label}</p>
-              <p className="mt-1 text-sm text-stone-600 leading-relaxed">{b.desc}</p>
+              Trucks & loads in one place
             </div>
-          ))}
+            <h1 className="mt-5 text-4xl md:text-[2.75rem] font-extrabold tracking-tight text-white leading-[1.08]">
+              Need a truck? Or filling your trucks?
+            </h1>
+            <p className="mt-5 text-base md:text-lg text-white/85 leading-relaxed max-w-xl">
+              LoadLink connects people <strong className="text-white font-semibold">sending goods</strong> with{' '}
+              <strong className="text-white font-semibold">transport companies</strong> in Rwanda. The price is clear up front.
+              Your payment stays protected until delivery is done.
+            </p>
+            <div id="start" className="mt-8 flex flex-wrap items-center gap-3">
+              <Link
+                to="/register/shipper"
+                className="inline-flex items-center justify-center rounded-2xl bg-accent text-sidebar px-6 py-3 font-semibold shadow-sm hover:shadow-md transition-all hover:-translate-y-0.5 active:scale-[0.99]"
+              >
+                I’m sending goods
+              </Link>
+              <Link
+                to="/register/company"
+                className="inline-flex items-center justify-center rounded-2xl bg-white text-sidebar px-6 py-3 font-semibold border border-white/10 hover:bg-white/95 transition-all hover:-translate-y-0.5 active:scale-[0.99]"
+              >
+                I have trucks
+              </Link>
+              <Link
+                to="/login/admin"
+                className="inline-flex items-center justify-center rounded-2xl bg-white/10 text-white px-5 py-3 font-semibold border border-white/15 hover:bg-white/15 transition-all text-sm"
+              >
+                Staff login
+              </Link>
+            </div>
+          </div>
+
+          <div className="lg:col-span-5 relative z-10">
+            <div className="rounded-[32px] bg-white/5 border border-white/12 shadow-[0_24px_70px_rgba(0,0,0,0.45)] overflow-hidden backdrop-blur-md">
+              <div className="p-5 border-b border-white/10 flex items-center justify-between gap-3">
+                <p className="text-sm font-semibold text-white">Start here</p>
+                <span className="text-xs font-semibold rounded-full bg-white/10 text-white px-3 py-1 border border-white/10">
+                  Quick steps
+                </span>
+              </div>
+              <div className="p-5 space-y-4">
+                <div className="rounded-3xl border border-white/10 bg-white/5 p-4">
+                  <p className="text-xs font-semibold text-white/75">If you’re sending goods</p>
+                  <p className="mt-1 text-sm text-white/90 leading-relaxed">
+                    Create a shipment, choose a truck, pay into a protected hold, then confirm delivery.
+                  </p>
+                  <Link
+                    to="/register/shipper"
+                    className="mt-3 inline-flex items-center justify-center rounded-2xl bg-accent text-sidebar px-4 py-2 text-sm font-semibold hover:bg-accent-hover transition-colors"
+                  >
+                    Create shipper account
+                  </Link>
+                </div>
+
+                <div className="rounded-3xl border border-white/10 bg-white/5 p-4">
+                  <p className="text-xs font-semibold text-white/75">If you have trucks</p>
+                  <p className="mt-1 text-sm text-white/90 leading-relaxed">
+                    Register your company, add trucks, then express interest in available shipments.
+                  </p>
+                  <Link
+                    to="/register/company"
+                    className="mt-3 inline-flex items-center justify-center rounded-2xl bg-white text-sidebar px-4 py-2 text-sm font-semibold hover:bg-white/90 transition-colors"
+                  >
+                    Register company
+                  </Link>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="rounded-3xl border border-white/10 bg-white/5 p-4">
+                    <p className="text-xs font-semibold text-white/75">Clear price</p>
+                    <p className="mt-2 text-lg font-extrabold text-white">Up front</p>
+                    <p className="mt-1 text-xs text-white/70">No guessing mid-way.</p>
+                  </div>
+                  <div className="rounded-3xl border border-white/10 bg-white/5 p-4">
+                    <p className="text-xs font-semibold text-white/75">Protected payment</p>
+                    <p className="mt-2 text-lg font-extrabold text-white">Escrow</p>
+                    <p className="mt-1 text-xs text-white/70">Paid when delivery is done.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
-      {/* Trust strip */}
-      <section className="max-w-6xl mx-auto px-4 sm:px-6 pb-14">
-        <div className="rounded-[36px] bg-sidebar text-white border border-white/10 p-8">
-          <div className="flex flex-wrap items-end justify-between gap-4">
-            <div>
-              <p className="text-xs font-semibold text-white/70">Trusted by</p>
-              <p className="mt-1 text-lg font-extrabold tracking-tight">Teams moving goods every day (demo)</p>
+      <section id="trucks" className="bg-sand border-y border-stone-200/80">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-14 md:py-16">
+          <div className="flex items-start justify-between gap-4">
+            <div className="max-w-2xl">
+              <h2 className="text-2xl md:text-3xl font-extrabold text-stone-900 tracking-tight">Built around real trucks</h2>
+              <p className="mt-3 text-stone-600 leading-relaxed">
+                Companies show their fleet. Shippers say where goods go and how heavy they are. Less calling around, more
+                clarity.
+              </p>
             </div>
-            <div className="flex flex-wrap gap-2">
-              <Link to="/about" className="rounded-2xl bg-white/10 border border-white/15 px-4 py-2 text-sm font-semibold hover:bg-white/15 transition-colors">
-                Learn more
-              </Link>
-              <Link to="/register/shipper" className="rounded-2xl bg-accent text-sidebar px-4 py-2 text-sm font-semibold hover:bg-accent-hover transition-colors">
-                Get started
-              </Link>
-            </div>
+            <a
+              href="#top"
+              className="shrink-0 inline-flex items-center gap-2 rounded-full bg-white border border-stone-200 px-3 py-1.5 text-xs font-semibold text-stone-700 hover:text-accent hover:border-accent/40 transition-colors"
+            >
+              <span>Back to top</span>
+              <span aria-hidden>↑</span>
+            </a>
           </div>
-
-          <div className="mt-6 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-            {trustedBy.map((name) => (
-              <div key={name} className="rounded-3xl bg-white/5 border border-white/10 px-4 py-3">
-                <p className="text-xs font-semibold text-white/80 truncate">{name}</p>
+          <div className="mt-10 grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {[
+              { t: 'Same route for everyone', d: 'Pickup and drop-off are visible to both sides.' },
+              { t: 'Price agreed early', d: 'The shipper sets the price before a truck is booked.' },
+              { t: 'Money held safely', d: 'Payment for the trip is protected until delivery is confirmed.' },
+            ].map((c) => (
+              <div
+                key={c.t}
+                className="rounded-3xl bg-white border border-stone-200 p-6 shadow-sm hover:shadow-md transition-shadow"
+              >
+                <div className="h-1 w-10 rounded-full bg-accent mb-4" />
+                <p className="font-semibold text-stone-900">{c.t}</p>
+                <p className="mt-2 text-sm text-stone-600 leading-relaxed">{c.d}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
+
+      <section id="how-it-works" className="max-w-6xl mx-auto px-4 sm:px-6 py-14 md:py-16">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-full flex items-start justify-between gap-4">
+            <div className="flex-1" />
+            <a
+              href="#top"
+              className="shrink-0 inline-flex items-center gap-2 rounded-full bg-white border border-stone-200 px-3 py-1.5 text-xs font-semibold text-stone-700 hover:text-accent hover:border-accent/40 transition-colors"
+            >
+              <span>Back to top</span>
+              <span aria-hidden>↑</span>
+            </a>
+          </div>
+          <h2 className="text-2xl md:text-3xl font-extrabold text-stone-900 tracking-tight text-center max-w-xl mx-auto">
+            How it works — three steps
+          </h2>
+          <p className="text-center text-stone-600 max-w-2xl mx-auto text-sm md:text-base">
+            Shippers and truck companies use the same flow; you just sign in as the role that fits you.
+          </p>
+        </div>
+        <ol className="mt-10 grid grid-cols-1 md:grid-cols-3 gap-6">
+          {[
+            {
+              n: '1',
+              t: 'List or look',
+              d: 'Shipper: what you’re moving and what you’ll pay. Company: open trips you can take on.',
+            },
+            {
+              n: '2',
+              t: 'Choose & pay in safely',
+              d: 'Pick a truck you trust. The shipper pays into a hold so the job can start.',
+            },
+            {
+              n: '3',
+              t: 'Deliver & close',
+              d: 'Follow the trip. When goods arrive, the shipper confirms and payment is completed.',
+            },
+          ].map((step) => (
+            <li key={step.n} className="relative rounded-3xl border border-stone-200 bg-white p-6 pt-8 shadow-sm">
+              <span className="absolute -top-3 left-6 inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-sidebar text-white text-sm font-extrabold">
+                {step.n}
+              </span>
+              <p className="font-semibold text-stone-900 text-lg">{step.t}</p>
+              <p className="mt-2 text-sm text-stone-600 leading-relaxed">{step.d}</p>
+            </li>
+          ))}
+        </ol>
+        <div className="mt-10 flex flex-wrap justify-center gap-3">
+          <Link
+            to="/register/shipper"
+            className="rounded-2xl bg-sidebar text-white px-6 py-3 font-semibold hover:bg-sidebar-hover transition-colors"
+          >
+            Create shipper account
+          </Link>
+          <Link
+            to="/register/company"
+            className="rounded-2xl bg-accent text-sidebar px-6 py-3 font-semibold hover:bg-accent-hover transition-colors"
+          >
+            Register your company
+          </Link>
+        </div>
+      </section>
+
+      <section id="why" className="max-w-6xl mx-auto px-4 sm:px-6 pb-14 md:pb-16">
+        <div className="rounded-[36px] bg-white border border-stone-200 shadow-sm overflow-hidden">
+          <div className="p-8 md:p-10 border-b border-stone-100 bg-stone-50/80 flex items-start justify-between gap-4">
+            <div>
+              <h2 className="text-2xl font-extrabold text-stone-900 tracking-tight">Why people use LoadLink</h2>
+              <p className="mt-2 text-stone-600 max-w-2xl">
+                Moving cargo shouldn’t mean guessing prices or chasing people on the phone. Here, the steps stay visible for both
+                sides.
+              </p>
+            </div>
+            <a
+              href="#top"
+              className="shrink-0 inline-flex items-center gap-2 rounded-full bg-white border border-stone-200 px-3 py-1.5 text-xs font-semibold text-stone-700 hover:text-accent hover:border-accent/40 transition-colors"
+            >
+              <span>Back to top</span>
+              <span aria-hidden>↑</span>
+            </a>
+          </div>
+          <div className="p-8 md:p-10 grid grid-cols-1 md:grid-cols-3 gap-6">
+            {[
+              {
+                t: 'Less back-and-forth',
+                d: 'Details and price are on the screen before anyone commits.',
+              },
+              {
+                t: 'Companies can be checked',
+                d: 'Transport businesses can go through a review so shippers know who they’re dealing with.',
+              },
+              {
+                t: 'Help if something goes wrong',
+                d: 'If there’s a disagreement, staff can step in — not “sort it out alone.”',
+              },
+            ].map((x) => (
+              <div key={x.t} className="rounded-2xl border border-stone-200 bg-cream p-5">
+                <p className="font-semibold text-stone-900">{x.t}</p>
+                <p className="mt-2 text-sm text-stone-600 leading-relaxed">{x.d}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Partners — bottom, full-width, catchy */}
+      <section id="partners" className="relative mt-2 border-t border-accent/30 bg-sidebar overflow-hidden">
+        <div
+          className="pointer-events-none absolute inset-0 opacity-[0.07]"
+          style={{
+            backgroundImage:
+              'radial-gradient(circle at 20% 50%, #F5C518 0%, transparent 50%), radial-gradient(circle at 80% 50%, #F5C518 0%, transparent 45%)',
+          }}
+          aria-hidden
+        />
+        <div className="relative max-w-6xl mx-auto px-4 sm:px-6 pt-12 pb-4">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="text-center md:text-left w-full md:w-auto">
+              <p className="text-accent text-xs font-bold uppercase tracking-[0.25em]">Together on the road</p>
+              <h2 className="mt-3 text-2xl md:text-3xl font-extrabold text-white tracking-tight">
+                Names you’ll see on LoadLink
+              </h2>
+              <p className="mt-2 text-sm text-white/65 max-w-lg mx-auto md:mx-0 leading-relaxed">
+                Sample businesses in our demo — your team can be on this list next.
+              </p>
+            </div>
+            <a
+              href="#top"
+              className="shrink-0 inline-flex items-center gap-2 rounded-full bg-white/10 border border-white/15 px-3 py-1.5 text-xs font-semibold text-white/90 hover:text-accent hover:border-accent/40 transition-colors backdrop-blur-sm"
+            >
+              <span>Back to top</span>
+              <span aria-hidden>↑</span>
+            </a>
+          </div>
+        </div>
+        <div className="relative pb-12 pt-6">
+          <div
+            className="pointer-events-none absolute left-0 top-0 bottom-0 w-20 z-10 bg-gradient-to-r from-sidebar to-transparent"
+            aria-hidden
+          />
+          <div
+            className="pointer-events-none absolute right-0 top-0 bottom-0 w-20 z-10 bg-gradient-to-l from-sidebar to-transparent"
+            aria-hidden
+          />
+          <div className="flex w-max ll-partners-track hover:[animation-play-state:paused] items-center gap-0">
+            {[...PARTNERS, ...PARTNERS].map((name, i) => (
+              <div
+                key={`${name}-${i}`}
+                className="mx-3 sm:mx-4 shrink-0 rounded-2xl border border-white/15 bg-white/[0.06] px-5 py-3 backdrop-blur-sm"
+              >
+                <span className="text-sm font-semibold text-white tracking-tight whitespace-nowrap">{name}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <footer className="border-t border-stone-200 bg-white">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-10">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-8">
+            <div>
+              <p className="text-base font-bold text-stone-900 tracking-tight">LoadLink Rwanda</p>
+              <p className="mt-1 text-sm text-stone-600 max-w-sm">Shippers and truck companies, one simple place to connect.</p>
+            </div>
+            <nav className="flex flex-wrap items-center justify-center md:justify-end gap-x-8 gap-y-3 text-sm">
+              <a href="#trucks" className="font-semibold text-stone-700 hover:text-accent transition-colors">
+                Trucks
+              </a>
+              <a href="#how-it-works" className="font-semibold text-stone-700 hover:text-accent transition-colors">
+                How it works
+              </a>
+              <a href="#why" className="font-semibold text-stone-700 hover:text-accent transition-colors">
+                Why us
+              </a>
+              <a href="#partners" className="font-semibold text-stone-700 hover:text-accent transition-colors">
+                Partners
+              </a>
+            </nav>
+          </div>
+          <p className="mt-8 pt-8 border-t border-stone-100 text-center text-xs text-stone-400">
+            © {new Date().getFullYear()} LoadLink Rwanda
+          </p>
+        </div>
+      </footer>
+
+      {/* Back to top — brand colors, aligned with content column */}
+      <div className="fixed bottom-0 left-0 right-0 z-[60] pointer-events-none">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 pb-6 flex justify-end">
+          <button
+            type="button"
+            onClick={scrollToTop}
+            aria-label="Back to top"
+            className={`pointer-events-auto flex items-center gap-2 rounded-2xl bg-sidebar pl-4 pr-5 py-3 text-sm font-semibold text-accent border border-accent/35 shadow-[0_10px_40px_rgba(0,0,0,0.35)] transition-all duration-300 hover:bg-sidebar-hover hover:border-accent hover:shadow-[0_14px_44px_rgba(0,0,0,0.4)] focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-sand ${
+              showTop ? 'translate-y-0 opacity-100' : 'translate-y-6 opacity-0 pointer-events-none'
+            }`}
+          >
+            <svg className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 10l7-7m0 0l7 7m-7-7v18" />
+            </svg>
+            Top
+          </button>
+        </div>
+      </div>
     </div>
   )
 }

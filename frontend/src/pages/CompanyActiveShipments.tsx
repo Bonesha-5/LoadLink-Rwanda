@@ -1,6 +1,9 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { getAllLoads } from '../data/storage'
+import { deliverShipment, getActiveShipments, getMyTrucks, pickupShipment, type CompanyShipment, type CompanyTruck } from '../api/companyOpsApi'
+import type { ApiError } from '../api/http'
+import { getApiToken } from '../auth/mockJwt'
 
 type ShipStage =
   | 'POSTED'
@@ -29,15 +32,15 @@ function setStageForLoad(loadId: string, stage: ShipStage) {
 }
 
 const STATUS_LABELS: Record<StatusGroup, string> = {
-  ESCROW_FUNDED: 'Escrow funded',
-  IN_TRANSIT: 'In transit',
-  AWAITING_CONFIRMATION: 'Awaiting confirmation',
+  ESCROW_FUNDED: 'Payment received',
+  IN_TRANSIT: 'On the way',
+  AWAITING_CONFIRMATION: 'Waiting for confirmation',
 }
 
 const STATUS_DESCRIPTIONS: Record<StatusGroup, string> = {
-  ESCROW_FUNDED: 'Paid and ready for pickup.',
-  IN_TRANSIT: 'On the road to destination.',
-  AWAITING_CONFIRMATION: 'Awaiting delivery confirmation.',
+  ESCROW_FUNDED: 'Ready for pickup.',
+  IN_TRANSIT: 'In transit to destination.',
+  AWAITING_CONFIRMATION: 'Waiting for the shipper to confirm delivery.',
 }
 
 const STATUS_COLORS: Record<StatusGroup, string> = {
@@ -49,9 +52,31 @@ const STATUS_COLORS: Record<StatusGroup, string> = {
 export default function CompanyActiveShipments() {
   const { user } = useAuth()
   const companyName = user?.name ?? ''
+  const rawToken = user?.token ?? null
+  const apiToken = getApiToken(rawToken)
+  const isVerified = String(user?.status ?? '').toUpperCase() === 'VERIFIED'
   const [refresh, setRefresh] = useState(0)
+  const [apiShipments, setApiShipments] = useState<CompanyShipment[]>([])
+  const [apiTrucks, setApiTrucks] = useState<CompanyTruck[]>([])
+  const [state, setState] = useState<'idle' | 'loading' | 'error' | 'success'>('idle')
+  const [error, setError] = useState<string | null>(null)
+  const [selectedTruckByShipment, setSelectedTruckByShipment] = useState<Record<string, string>>({})
 
   const grouped = useMemo(() => {
+    if (apiToken) {
+      const buckets: Record<StatusGroup, CompanyShipment[]> = {
+        ESCROW_FUNDED: [],
+        IN_TRANSIT: [],
+        AWAITING_CONFIRMATION: [],
+      }
+      for (const s of apiShipments) {
+        if (s.status === 'ESCROW_FUNDED') buckets.ESCROW_FUNDED.push(s)
+        if (s.status === 'IN_TRANSIT') buckets.IN_TRANSIT.push(s)
+        if (s.status === 'AWAITING_CONFIRMATION') buckets.AWAITING_CONFIRMATION.push(s)
+      }
+      return buckets as any
+    }
+
     const stageMap = getStageMap()
     const all = getAllLoads()
 
@@ -72,7 +97,7 @@ export default function CompanyActiveShipments() {
     }
 
     return buckets
-  }, [companyName, refresh])
+  }, [companyName, refresh, apiToken, apiShipments])
 
   const counts = {
     ESCROW_FUNDED: grouped.ESCROW_FUNDED.length,
@@ -91,12 +116,85 @@ export default function CompanyActiveShipments() {
     setRefresh((v) => v + 1)
   }
 
+  useEffect(() => {
+    const t = apiToken
+    if (!t) return
+    const tokenStr: string = t
+    let cancelled = false
+    async function load() {
+      setState('loading')
+      setError(null)
+      try {
+        const [shipments, trucks] = await Promise.all([getActiveShipments(tokenStr), getMyTrucks(tokenStr)])
+        if (cancelled) return
+        setApiShipments(shipments)
+        setApiTrucks(trucks)
+        setState('success')
+      } catch (e) {
+        if (cancelled) return
+        const err = e as ApiError
+        setError(err.message || 'Could not load active shipments.')
+        setApiShipments([])
+        setApiTrucks([])
+        setState('error')
+      }
+    }
+    void load()
+    return () => {
+      cancelled = true
+    }
+  }, [apiToken, refresh])
+
+  async function apiMarkPickup(shipmentId: string) {
+    const t = apiToken
+    if (!t) return
+    if (!isVerified) {
+      setError('Your company is waiting for admin approval. You cannot update shipments yet.')
+      return
+    }
+    setError(null)
+    const truckId = selectedTruckByShipment[shipmentId]
+    if (!truckId) {
+      setError('Choose a truck before marking pickup.')
+      return
+    }
+    try {
+      await pickupShipment(t, shipmentId, truckId)
+      setRefresh((v) => v + 1)
+    } catch (e) {
+      const err = e as ApiError
+      setError(err.message || 'Could not mark pickup.')
+    }
+  }
+
+  async function apiMarkDelivered(shipmentId: string) {
+    const t = apiToken
+    if (!t) return
+    if (!isVerified) {
+      setError('Your company is waiting for admin approval. You cannot update shipments yet.')
+      return
+    }
+    setError(null)
+    const truckId = selectedTruckByShipment[shipmentId]
+    if (!truckId) {
+      setError('Choose a truck before marking delivered.')
+      return
+    }
+    try {
+      await deliverShipment(t, shipmentId, truckId)
+      setRefresh((v) => v + 1)
+    } catch (e) {
+      const err = e as ApiError
+      setError(err.message || 'Could not mark delivered.')
+    }
+  }
+
   return (
     <div className="max-w-5xl">
       <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-stone-800">Active shipments</h1>
-          <p className="text-sm text-stone-600 mt-1">Track your deliveries by stage.</p>
+          <p className="text-sm text-stone-600 mt-1">See shipments assigned to your trucks and update progress.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2 text-xs">
           <span className="inline-flex items-center gap-2 rounded-full bg-cream px-3 py-1 border border-stone-200 text-stone-700">
@@ -122,6 +220,25 @@ export default function CompanyActiveShipments() {
         </div>
       </div>
 
+      {error && (
+        <p className="mb-4 text-sm text-red-600 bg-red-50 border border-red-100 rounded-xl px-4 py-3">
+          {error}
+        </p>
+      )}
+
+      {apiToken && state === 'loading' && (
+        <p className="text-stone-500 text-sm mb-4">Loading active shipments…</p>
+      )}
+
+      {rawToken && !isVerified && (
+        <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3">
+          <p className="text-sm font-semibold text-amber-900">Waiting for admin approval</p>
+          <p className="text-sm text-amber-800 mt-1">
+            After your company is approved, you can mark pickup and delivery.
+          </p>
+        </div>
+      )}
+
       <div className="space-y-6">
         {(Object.keys(STATUS_LABELS) as StatusGroup[]).map((status) => {
           const shipments = grouped[status]
@@ -142,41 +259,77 @@ export default function CompanyActiveShipments() {
                 <p className="text-sm text-stone-500">No shipments in this status yet.</p>
               ) : (
                 <ul className="space-y-3">
-                  {shipments.map((load) => (
+                  {shipments.map((load: any) => (
                     <li
                       key={load.id}
                       className="rounded-2xl border border-stone-200 bg-sand px-4 py-3 flex items-start justify-between gap-4"
                     >
                       <div className="min-w-0">
                         <p className="font-semibold text-stone-800 text-sm">
-                          {load.origin} → {load.destination}
+                          {apiToken
+                            ? `${load.pickupDistrict ?? load.pickup_district ?? '—'} → ${load.dropoffDistrict ?? load.dropoff_district ?? '—'}`
+                            : `${load.origin} → ${load.destination}`}
                         </p>
                         <p className="text-xs text-stone-500 mt-1">
-                          {new Date(load.date).toLocaleDateString()} · {load.weight}
+                          {apiToken
+                            ? `${load.weightTons ?? load.weight_tons ?? '—'} tons · ID ${load.id}`
+                            : `${new Date(load.date).toLocaleDateString()} · ${load.weight}`}
                         </p>
-                        <div className="mt-2 flex flex-wrap items-center gap-2">
-                          <p className="text-xs font-semibold text-accent">{load.price ?? 'Fixed price'}</p>
-                          <p className="text-[11px] text-stone-500">Shipment ID: {load.id}</p>
-                        </div>
+                        {apiToken && (
+                          <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2 text-[12px] text-stone-600">
+                            <div className="rounded-xl border border-stone-200 bg-white px-3 py-2">
+                              <p className="text-[11px] font-semibold text-stone-500">Shipper contact</p>
+                              <p className="mt-1 text-stone-800 font-semibold">{load.shipperName ?? load.shipper_name ?? '—'}</p>
+                              <p className="text-stone-600">{load.shipperPhone ?? load.shipper_phone ?? '—'}</p>
+                              <p className="text-stone-600">{load.shipperEmail ?? load.shipper_email ?? '—'}</p>
+                            </div>
+                            <div className="rounded-xl border border-stone-200 bg-white px-3 py-2">
+                              <p className="text-[11px] font-semibold text-stone-500">Truck</p>
+                              <p className="mt-1 text-stone-800 font-semibold">
+                                {load.truckPlate ?? load.truck_plate ?? 'Choose below'}
+                              </p>
+                              <p className="text-stone-600">
+                                Company: {load.companyName ?? load.company_name ?? user?.name ?? '—'}
+                              </p>
+                            </div>
+                          </div>
+                        )}
                       </div>
 
                       <div className="text-right shrink-0 flex flex-col items-end gap-2">
+                        {apiToken && (status === 'ESCROW_FUNDED' || status === 'IN_TRANSIT') ? (
+                          <select
+                            className="w-[220px] px-3 py-2 rounded-xl bg-white border border-stone-200 text-sm text-stone-800 focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
+                            value={selectedTruckByShipment[load.id] ?? ''}
+                            onChange={(e) =>
+                              setSelectedTruckByShipment((prev) => ({ ...prev, [load.id]: e.target.value }))
+                            }
+                          >
+                            <option value="">Choose a truck…</option>
+                            {apiTrucks.map((t) => (
+                              <option key={t.id} value={t.id}>
+                                {(t.plate_number ?? t.plateNumber ?? 'Plate')} · {(t.availability_status ?? t.availabilityStatus ?? 'AVAILABLE')}
+                              </option>
+                            ))}
+                          </select>
+                        ) : null}
+
                         {status === 'ESCROW_FUNDED' ? (
                           <button
                             type="button"
-                            onClick={() => markPickup(load.id)}
+                            onClick={() => (apiToken ? void apiMarkPickup(load.id) : markPickup(load.id))}
                             className="inline-flex items-center justify-center px-4 py-2 rounded-2xl bg-accent text-sidebar font-semibold hover:bg-accent-hover transition-colors"
                           >
-                            MARK PICKUP
+                            Mark pickup
                           </button>
                         ) : null}
                         {status === 'IN_TRANSIT' ? (
                           <button
                             type="button"
-                            onClick={() => markDelivered(load.id)}
+                            onClick={() => (apiToken ? void apiMarkDelivered(load.id) : markDelivered(load.id))}
                             className="inline-flex items-center justify-center px-4 py-2 rounded-2xl bg-sidebar text-white font-semibold hover:bg-sidebar-hover transition-colors"
                           >
-                            MARK DELIVERED
+                            Mark delivered
                           </button>
                         ) : null}
                         {status === 'AWAITING_CONFIRMATION' ? (

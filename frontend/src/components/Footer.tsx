@@ -9,11 +9,8 @@ export default function Footer() {
           <p className="mt-1 text-sm text-stone-600">Connecting shippers and verified transport companies.</p>
         </div>
         <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
-          <Link to="/about" className="font-semibold text-stone-700 hover:text-stone-900 transition-colors">
-            About
-          </Link>
-          <Link to="/ussd-help" className="font-semibold text-stone-700 hover:text-stone-900 transition-colors">
-            USSD help
+          <Link to="/#why" className="font-semibold text-stone-700 hover:text-stone-900 transition-colors">
+            Why LoadLink
           </Link>
           <Link to="/login/admin" className="font-semibold text-stone-700 hover:text-stone-900 transition-colors">
             Admin portal

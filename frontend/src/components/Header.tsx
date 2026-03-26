@@ -9,11 +9,8 @@ export default function Header() {
         </Link>
 
         <div className="flex flex-wrap items-center gap-3 sm:gap-5">
-          <Link to="/about" className="text-sm font-semibold text-stone-700 hover:text-stone-900 transition-colors">
-            About
-          </Link>
-          <Link to="/ussd-help" className="text-sm font-semibold text-stone-700 hover:text-stone-900 transition-colors">
-            USSD help
+          <Link to="/#why" className="text-sm font-semibold text-stone-700 hover:text-stone-900 transition-colors">
+            Why LoadLink
           </Link>
           <span className="hidden sm:inline-block h-5 w-px bg-stone-200" />
           <Link

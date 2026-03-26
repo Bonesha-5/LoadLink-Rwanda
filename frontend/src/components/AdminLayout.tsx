@@ -2,11 +2,11 @@ import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 
 const navItems = [
-  { path: '/admin/overview', label: 'Overview', icon: DashboardIcon },
-  { path: '/admin/companies', label: 'Company Verification', icon: BuildingIcon },
-  { path: '/admin/shipments', label: 'Shipment Monitoring', icon: ShipmentIcon },
-  { path: '/admin/disputes', label: 'Dispute Resolution', icon: DisputeIcon },
-  { path: '/admin/audit-log', label: 'Audit Log', icon: ListIcon },
+  { path: '/admin/overview', label: 'Dashboard', icon: DashboardIcon },
+  { path: '/admin/companies', label: 'Company checks', icon: BuildingIcon },
+  { path: '/admin/shipments', label: 'All shipments', icon: ShipmentIcon },
+  { path: '/admin/disputes', label: 'Disputes', icon: DisputeIcon },
+  { path: '/admin/audit-log', label: 'Activity log', icon: ListIcon },
 ]
 
 function BuildingIcon() {

@@ -38,6 +38,16 @@
   animation: ll-fade-up 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
+/* Partners marquee (landing) */
+@keyframes ll-marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+.ll-partners-track {
+  animation: ll-marquee 50s linear infinite;
+  will-change: transform;
+}
+
 /* auth form image stack */
 .auth-image-stack {
   display: flex;

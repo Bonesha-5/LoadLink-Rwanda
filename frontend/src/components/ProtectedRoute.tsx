@@ -14,13 +14,20 @@ type Props = {
 }
 
 export default function ProtectedRoute({ children, role }: Props) {
-  const { isShipper, isCompany, isAdmin } = useAuth()
+  const { isShipper, isCompany, isAdmin, user } = useAuth()
   const location = useLocation()
 
   const isAuthorized =
     (role === 'shipper' && isShipper) ||
     (role === 'company' && isCompany) ||
     (role === 'admin' && isAdmin)
+
+  const hasToken = Boolean(user?.token)
+
+  // Company + Admin routes require a JWT (per product requirements).
+  if ((role === 'company' || role === 'admin') && !hasToken) {
+    return <Navigate to={LOGIN_PATHS[role]} state={{ from: location }} replace />
+  }
 
   if (!isAuthorized) {
     return <Navigate to={LOGIN_PATHS[role]} state={{ from: location }} replace />

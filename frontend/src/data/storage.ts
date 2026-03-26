@@ -1,9 +1,4 @@
-/**
- * Frontend-only storage (localStorage).
- *
- * Important: avoid side-effects at import time. Some environments block
- * localStorage access, which can crash rendering if we eagerly write/read.
- */
+/** Local demo storage (localStorage). Avoid side-effects at import time. */
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -30,7 +25,7 @@ export interface Load {
   date: string
   weight: string
   description?: string
-  // Fixed price set by the shipper (e.g. "150,000 RWF")
+  // Price set by the shipper (e.g. "150,000 RWF")
   price?: string
   status: 'open' | 'closed'
   createdBy: string
@@ -60,7 +55,7 @@ function safeSetItem(key: string, value: unknown): void {
   }
 }
 
-// ── Ratings (frontend-only) ────────────────────────────────────────────────
+// ── Ratings (demo) ─────────────────────────────────────────────────────────
 
 export interface Rating {
   id: string
@@ -220,7 +215,7 @@ export function ensureSeedLoads(): void {
   saveLoads(seed)
 }
 
-// ── Admin / “Mock DB” entities (frontend-only) ──────────────────────────────
+// ── Admin demo entities ─────────────────────────────────────────────────────
 
 export type UserRole = 'SHIPPER' | 'COMPANY' | 'ADMIN'
 
@@ -246,6 +241,8 @@ export interface Company {
   id: string
   userId: string
   name: string
+  /** Email used by demo sign-in. */
+  email?: string
   rdbNumber: string
   contactPerson: string
   baseDistrict: string
@@ -392,15 +389,19 @@ export function ensureSeedAdminData(): void {
   const companies = getAllCompanies()
   const shipments = getAllShipments()
   const audit = getAllAuditLogs()
-  if (companies.length || shipments.length || audit.length) return
+  // Seed each bucket independently so partial localStorage doesn't produce empty pages.
+  if (companies.length && shipments.length && audit.length) return
 
   const now = Date.now()
 
-  const seedCompanies: Company[] = [
+  const seedCompanies: Company[] = companies.length
+    ? companies
+    : [
     {
       id: uid(),
       userId: 'company-user-1',
       name: 'Kigali Freight Ltd',
+      email: 'kigali.freight@example.com',
       rdbNumber: 'RDB-001234',
       contactPerson: 'Alice N.',
       baseDistrict: 'Gasabo',
@@ -411,6 +412,7 @@ export function ensureSeedAdminData(): void {
       id: uid(),
       userId: 'company-user-2',
       name: 'Rwanda Cargo Co',
+      email: 'rwanda.cargo@example.com',
       rdbNumber: 'RDB-005678',
       contactPerson: 'Ben M.',
       baseDistrict: 'Kicukiro',
@@ -421,6 +423,7 @@ export function ensureSeedAdminData(): void {
       id: uid(),
       userId: 'company-user-3',
       name: 'Northern Transport',
+      email: 'northern.transport@example.com',
       rdbNumber: 'RDB-009991',
       contactPerson: 'Claudine P.',
       baseDistrict: 'Musanze',
@@ -429,7 +432,9 @@ export function ensureSeedAdminData(): void {
     },
   ]
 
-  const seedShipments: Shipment[] = [
+  const seedShipments: Shipment[] = shipments.length
+    ? shipments
+    : [
     {
       id: 'SH-001',
       shipperName: 'ACME Manufacturing',
@@ -523,40 +528,42 @@ export function ensureSeedAdminData(): void {
   savePayments(seedPayments)
   saveRefunds([])
   saveRevenues([])
-  saveAuditLogs([
-    {
-      id: 'AUD-001',
-      adminName: 'System',
-      action: 'SEED_DATA',
-      targetType: 'shipment',
-      targetId: 'SYSTEM',
-      createdAt: new Date(now - 72 * 60 * 60 * 1000).toISOString(),
-    },
-    {
-      id: 'AUD-002',
-      adminName: 'Admin A',
-      action: 'COMPANY_APPROVED',
-      targetType: 'company',
-      targetId: 'Northern Transport',
-      createdAt: new Date(now - 48 * 60 * 60 * 1000).toISOString(),
-    },
-    {
-      id: 'AUD-003',
-      adminName: 'Admin B',
-      action: 'DISPUTE_RESOLVED',
-      targetType: 'shipment',
-      targetId: 'DIS-001',
-      createdAt: new Date(now - 12 * 60 * 60 * 1000).toISOString(),
-    },
-    {
-      id: 'AUD-004',
-      adminName: 'Admin A',
-      action: 'COMPANY_REJECTED',
-      targetType: 'company',
-      targetId: 'Rwanda Cargo Co',
-      createdAt: new Date(now - 3 * 60 * 60 * 1000).toISOString(),
-    },
-  ])
+  if (!audit.length) {
+    saveAuditLogs([
+      {
+        id: 'AUD-001',
+        adminName: 'System',
+        action: 'SEED_DATA',
+        targetType: 'shipment',
+        targetId: 'SYSTEM',
+        createdAt: new Date(now - 72 * 60 * 60 * 1000).toISOString(),
+      },
+      {
+        id: 'AUD-002',
+        adminName: 'Admin A',
+        action: 'COMPANY_APPROVED',
+        targetType: 'company',
+        targetId: 'Northern Transport',
+        createdAt: new Date(now - 48 * 60 * 60 * 1000).toISOString(),
+      },
+      {
+        id: 'AUD-003',
+        adminName: 'Admin B',
+        action: 'DISPUTE_RESOLVED',
+        targetType: 'shipment',
+        targetId: 'DIS-001',
+        createdAt: new Date(now - 12 * 60 * 60 * 1000).toISOString(),
+      },
+      {
+        id: 'AUD-004',
+        adminName: 'Admin A',
+        action: 'COMPANY_REJECTED',
+        targetType: 'company',
+        targetId: 'Rwanda Cargo Co',
+        createdAt: new Date(now - 3 * 60 * 60 * 1000).toISOString(),
+      },
+    ])
+  }
 
   // Optional: seed a couple ratings linked to demo plates if the user creates matching trucks.
   // (No side effects unless trucks exist; actual rating display uses truckId.)
@@ -567,6 +574,42 @@ export function getPendingCompanies(): Company[] {
   return getAllCompanies()
     .filter((c) => c.status === 'PENDING_VERIFICATION')
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+}
+
+export function registerCompanyDemo(data: {
+  email: string
+  name: string
+  rdbNumber: string
+  contactPerson: string
+  baseDistrict: string
+}): Company {
+  ensureSeedAdminData()
+  const companies = getAllCompanies()
+  const email = data.email.trim().toLowerCase()
+
+  const existingByEmail = companies.find((c) => String(c.email ?? '').toLowerCase() === email)
+  if (existingByEmail) return existingByEmail
+
+  const created: Company = {
+    id: uid(),
+    userId: `company-user-${uid()}`,
+    name: data.name.trim(),
+    email,
+    rdbNumber: data.rdbNumber.trim(),
+    contactPerson: data.contactPerson.trim(),
+    baseDistrict: data.baseDistrict.trim(),
+    status: 'PENDING_VERIFICATION',
+    createdAt: new Date().toISOString(),
+  }
+
+  saveCompanies([created, ...companies])
+  return created
+}
+
+export function getCompanyByEmailDemo(email: string): Company | null {
+  ensureSeedAdminData()
+  const e = email.trim().toLowerCase()
+  return getAllCompanies().find((c) => String(c.email ?? '').toLowerCase() === e) ?? null
 }
 
 export function approveCompany(companyId: string, adminName = 'Admin'): void {

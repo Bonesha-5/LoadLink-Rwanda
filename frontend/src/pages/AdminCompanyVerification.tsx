@@ -1,5 +1,9 @@
 import { useEffect, useState } from 'react'
 import { approveCompany, ensureSeedAdminData, getPendingCompanies, rejectCompany } from '../data/storage'
+import { useAuth } from '../context/AuthContext'
+import { approveCompanyApi, getCompanyDocsApi, getPendingCompaniesApi, rejectCompanyApi } from '../api/adminApi'
+import type { ApiError } from '../api/http'
+import { getApiToken } from '../auth/mockJwt'
 
 type PendingCompany = {
   id: string
@@ -12,6 +16,8 @@ type PendingCompany = {
 type FetchState = 'idle' | 'loading' | 'error' | 'success'
 
 export default function AdminCompanyVerification() {
+  const { user } = useAuth()
+  const token = getApiToken(user?.token ?? null)
   const [companies, setCompanies] = useState<PendingCompany[]>([])
   const [state, setState] = useState<FetchState>('idle')
   const [error, setError] = useState<string | null>(null)
@@ -23,22 +29,36 @@ export default function AdminCompanyVerification() {
     setState('loading')
     setError(null)
     try {
+      if (token) {
+        const data = (await getPendingCompaniesApi(token)).map(
+          (c): PendingCompany => ({
+            id: c.id,
+            name: c.name,
+            rdbNumber: c.rdbNumber ?? c.rdb_number ?? '—',
+            contactPerson: c.contactPerson ?? c.contact_person ?? '—',
+            createdAt: c.createdAt ?? c.created_at ?? new Date().toISOString(),
+          }),
+        )
+        setCompanies(data)
+        setState('success')
+        return
+      }
+
       ensureSeedAdminData()
-      const data = getPendingCompanies().map(
-        (c): PendingCompany => ({
-          id: c.id,
-          name: c.name,
-          rdbNumber: c.rdbNumber,
-          contactPerson: c.contactPerson,
-          createdAt: c.createdAt,
-        }),
-      )
+      const data = getPendingCompanies().map((c): PendingCompany => ({
+        id: c.id,
+        name: c.name,
+        rdbNumber: c.rdbNumber,
+        contactPerson: c.contactPerson,
+        createdAt: c.createdAt,
+      }))
       setCompanies(data)
       setState('success')
     } catch (err) {
       console.error(err)
       setCompanies([])
-      setError('Could not load companies from local demo data.')
+      const e = err as ApiError
+      setError(token ? (e.message || 'Could not load pending companies.') : 'Could not load companies from local demo data.')
       setState('error')
     }
   }
@@ -48,13 +68,38 @@ export default function AdminCompanyVerification() {
   }, [])
 
   function openDoc(id: string, type: 'business' | 'insurance') {
-    const url = `/api/admin/companies/${id}/docs?type=${type}`
-    window.open(url, '_blank', 'noopener,noreferrer')
+    if (!token) {
+      // Fallback demo: keep existing behavior for local setups
+      const url = `/api/admin/companies/${id}/docs`
+      window.open(url, '_blank', 'noopener,noreferrer')
+      return
+    }
+
+    void (async () => {
+      try {
+        const docs = await getCompanyDocsApi(token, id)
+        const business = docs.business_cert_path ?? docs.businessCertPath
+        const insurance = docs.insurance_doc_path ?? docs.insuranceDocPath
+        const toOpen = type === 'business' ? business : insurance
+        if (!toOpen) {
+          alert('No document path returned for this company.')
+          return
+        }
+        window.open(toOpen, '_blank', 'noopener,noreferrer')
+      } catch (e) {
+        const err = e as ApiError
+        alert(err.message || 'Could not load documents.')
+      }
+    })()
   }
 
   async function approve(id: string) {
     try {
-      approveCompany(id, 'Admin')
+      if (token) {
+        await approveCompanyApi(token, id)
+      } else {
+        approveCompany(id, 'Admin')
+      }
       setCompanies((prev) => prev.filter((c) => c.id !== id))
     } catch (err) {
       console.error(err)
@@ -76,7 +121,15 @@ export default function AdminCompanyVerification() {
     e.preventDefault()
     if (!rejectingId) return
     try {
-      rejectCompany(rejectingId, rejectReason || undefined, 'Admin')
+      if (token) {
+        if (!rejectReason.trim()) {
+          alert('Please add a reason for rejection.')
+          return
+        }
+        await rejectCompanyApi(token, rejectingId, rejectReason.trim())
+      } else {
+        rejectCompany(rejectingId, rejectReason || undefined, 'Admin')
+      }
       setCompanies((prev) => prev.filter((c) => c.id !== rejectingId))
       closeReject()
     } catch (err) {
@@ -89,8 +142,10 @@ export default function AdminCompanyVerification() {
     <div className="space-y-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-stone-900">Company verification</h1>
-          <p className="text-sm text-stone-600 mt-1">Review and approve companies before they join.</p>
+          <h1 className="text-2xl font-bold text-stone-900">Company checks</h1>
+          <p className="text-sm text-stone-600 mt-1">
+            Check documents, then approve or reject the company request.
+          </p>
         </div>
         <button
           type="button"
@@ -113,7 +168,7 @@ export default function AdminCompanyVerification() {
           </span>
         </span>
         <span className="hidden sm:inline text-stone-500">
-          Check business registration and insurance before approving.
+          Open the documents to confirm they are valid.
         </span>
       </div>
 
@@ -167,14 +222,14 @@ export default function AdminCompanyVerification() {
                         onClick={() => openDoc(company.id, 'business')}
                         className="px-2 py-1 text-xs font-semibold text-sidebar bg-cream rounded-lg hover:bg-stone-100"
                       >
-                        Business cert
+                        Business certificate
                       </button>
                       <button
                         type="button"
                         onClick={() => openDoc(company.id, 'insurance')}
                         className="px-2 py-1 text-xs font-semibold text-sidebar bg-cream rounded-lg hover:bg-stone-100"
                       >
-                        Insurance
+                        Insurance document
                       </button>
                       <button
                         type="button"

@@ -17,13 +17,26 @@ import {
   Cell,
   Legend,
 } from 'recharts'
+import { getActiveShipments, getAvailableShipments, getMyTrucks } from '../api/companyOpsApi'
+import type { ApiError } from '../api/http'
+import { getApiToken } from '../auth/mockJwt'
+import { getCompanyByEmailDemo } from '../data/storage'
 
 export default function CompanyDashboard() {
-  const { user } = useAuth()
+  const { user, updateUser } = useAuth()
   const companyName = user?.name ?? ''
+  const apiToken = getApiToken(user?.token ?? null)
+  const companyEmail = user?.email ?? null
   const [refresh, setRefresh] = useState(0)
   const [showFleetMap, setShowFleetMap] = useState(false)
   const [tick, setTick] = useState(0)
+  const [apiSummary, setApiSummary] = useState<{ trucks: any[]; openShipments: any[]; activeShipments: any[] }>({
+    trucks: [],
+    openShipments: [],
+    activeShipments: [],
+  })
+  const [apiError, setApiError] = useState<string | null>(null)
+  const [approvalNotice, setApprovalNotice] = useState<string | null>(null)
 
   const demoFleet = [
     { id: 'T1', position: [-1.95, 30.06] as [number, number] },
@@ -47,10 +60,61 @@ export default function CompanyDashboard() {
     return () => window.clearInterval(id)
   }, [])
 
+  useEffect(() => {
+    // Sync company status from local storage (demo).
+    if (!companyEmail) return
+    const c = getCompanyByEmailDemo(companyEmail)
+    if (!c) return
+    const nextStatus = String(c.status ?? '').toUpperCase()
+    const currentStatus = String(user?.status ?? '').toUpperCase()
+    if (nextStatus && nextStatus !== currentStatus) {
+      updateUser({ status: nextStatus })
+    }
+
+    const key = `ll_seen_company_status:${companyEmail.toLowerCase()}`
+    const seen = String(localStorage.getItem(key) ?? '')
+    if (nextStatus === 'VERIFIED' && seen !== 'VERIFIED') {
+      setApprovalNotice('Your company has been approved. You now have full access to shipments and truck actions.')
+      localStorage.setItem(key, 'VERIFIED')
+    }
+  }, [companyEmail, updateUser, user?.status])
+
   const movingTruckPosition: LatLngExpression = demoRoute[tick % demoRoute.length]
 
   const { truckCount, openLoadsCount, recentOpenLoads, pieMarketplace, pieFleet } = useMemo(() => {
     void refresh
+    if (apiToken) {
+      const trucks = apiSummary.trucks
+      const openShipments = apiSummary.openShipments
+      const activeShipments = apiSummary.activeShipments
+      const availabilityCounts = trucks.reduce(
+        (acc, t) => {
+          const s = String(t.availability_status ?? t.availabilityStatus ?? 'AVAILABLE')
+          acc[s] = (acc[s] ?? 0) + 1
+          return acc
+        },
+        {} as Record<string, number>,
+      )
+      return {
+        truckCount: trucks.length,
+        openLoadsCount: openShipments.length,
+        recentOpenLoads: [] as any[],
+        pieMarketplace: [
+          { name: 'Open shipments', value: openShipments.length || 1, fill: '#0B0B0F' },
+          { name: 'Active shipments', value: activeShipments.length || 1, fill: '#F5C518' },
+        ],
+        pieFleet:
+          trucks.length > 0
+            ? [
+                { name: 'Available', value: availabilityCounts.AVAILABLE ?? 0, fill: '#F5C518' },
+                { name: 'Reserved', value: availabilityCounts.RESERVED ?? 0, fill: '#0B0B0F' },
+                { name: 'In transit', value: availabilityCounts.IN_TRANSIT ?? 0, fill: '#C9A227' },
+                { name: 'Unavailable', value: availabilityCounts.UNAVAILABLE ?? 0, fill: '#6B7280' },
+              ].map((d) => ({ ...d, value: d.value || 1 }))
+            : [{ name: 'No trucks yet', value: 1, fill: '#9CA3AF' }],
+      }
+    }
+
     ensureSeedLoads()
     const loads = getAllLoads()
     const openLoads = loads.filter((l) => l.status === 'open')
@@ -66,20 +130,20 @@ export default function CompanyDashboard() {
       openLoadsCount: openLoads.length,
       recentOpenLoads: openLoads.slice(0, 4),
       pieMarketplace: [
-        { name: 'My bids out', value: myBidLoads || 0, fill: '#F5C518' },
-        { name: 'Open marketplace', value: openNoBid || 0, fill: '#0B0B0F' },
-        { name: 'Closed / other', value: closed || 0, fill: '#6B7280' },
+        { name: 'Shipments you responded to', value: myBidLoads || 0, fill: '#F5C518' },
+        { name: 'Open shipments', value: openNoBid || 0, fill: '#0B0B0F' },
+        { name: 'Already taken', value: closed || 0, fill: '#6B7280' },
       ].map((d) => ({ ...d, value: d.value || 1 })),
       pieFleet:
         trucks.length > 0
           ? [
-              { name: 'On route', value: fleetOnRoute || 1, fill: '#F5C518' },
-              { name: 'Idle', value: fleetIdle || 1, fill: '#0B0B0F' },
-              { name: 'Maintenance', value: fleetMaintenance || 1, fill: '#C9A227' },
+              { name: 'On the road', value: fleetOnRoute || 1, fill: '#F5C518' },
+              { name: 'Available / waiting', value: fleetIdle || 1, fill: '#0B0B0F' },
+              { name: 'In maintenance', value: fleetMaintenance || 1, fill: '#C9A227' },
             ]
           : [{ name: 'No trucks yet', value: 1, fill: '#9CA3AF' }],
     }
-  }, [companyName, refresh])
+  }, [companyName, refresh, apiToken, apiSummary])
 
   const trend = useMemo(() => {
     // demo analytics for dashboard visuals
@@ -103,21 +167,50 @@ export default function CompanyDashboard() {
     return { shipmentsToday: last, delta, onTime, utilization }
   }, [trend])
 
+  useEffect(() => {
+    const t = apiToken
+    if (!t) return
+    const tokenStr: string = t
+    let cancelled = false
+    async function load() {
+      setApiError(null)
+      try {
+        const [trucks, openShipments, activeShipments] = await Promise.all([
+          getMyTrucks(tokenStr),
+          getAvailableShipments(tokenStr),
+          getActiveShipments(tokenStr),
+        ])
+        if (cancelled) return
+        setApiSummary({ trucks, openShipments, activeShipments })
+      } catch (e) {
+        if (cancelled) return
+        const err = e as ApiError
+        setApiError(err.message || 'Could not load company dashboard data.')
+      }
+    }
+    void load()
+    return () => {
+      cancelled = true
+    }
+  }, [apiToken, refresh])
+
   return (
     <div className="space-y-6 ll-animate-in">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-stone-900">
-            Shipment track
+            Company dashboard
           </h1>
-          <p className="text-sm text-stone-600 mt-1">Live-style tracking view (demo)</p>
+          <p className="text-sm text-stone-600 mt-1">
+            A clear overview of your trucks, open shipments, and what is currently on the road.
+          </p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <Link
             to="/company/shipments"
             className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-accent text-white text-sm font-semibold hover:bg-accent-hover transition-colors shadow-sm"
           >
-            View shipments
+            Open shipments
           </Link>
           <button
             type="button"
@@ -129,6 +222,28 @@ export default function CompanyDashboard() {
           </button>
         </div>
       </div>
+
+      {approvalNotice && (
+        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 flex items-start justify-between gap-3">
+          <div>
+            <p className="text-sm font-semibold text-emerald-900">Approved</p>
+            <p className="text-sm text-emerald-800 mt-1">{approvalNotice}</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setApprovalNotice(null)}
+            className="text-emerald-800 text-sm font-semibold hover:underline"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
+      {apiError && (
+        <p className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-xl px-4 py-3">
+          {apiError}
+        </p>
+      )}
 
       <section className="grid grid-cols-1 xl:grid-cols-12 gap-6">
         <div className="xl:col-span-8 bg-white rounded-3xl border border-stone-200 shadow-sm overflow-hidden">

@@ -2,11 +2,9 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import Home from './pages/Home'
 import CompanyLayout from './components/CompanyLayout'
 import Layout from './components/Layout'
-import Trucks from './pages/Trucks'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import Shipment from './pages/Shipment'
-import USSDHelp from './pages/USSDHelp'
 import CompanyDashboard from './pages/CompanyDashboard'
 import CompanyTrucks from './pages/CompanyTrucks'
 import CompanyShipments from './pages/CompanyShipments'
@@ -18,7 +16,6 @@ import AdminShipmentMonitoring from './pages/AdminShipmentMonitoring'
 import AdminDisputes from './pages/AdminDisputes'
 import AdminAuditLog from './pages/AdminAuditLog'
 import AdminAnalytics from './pages/AdminAnalytics'
-import About from './pages/About'
 
 export default function App() {
   return (
@@ -43,10 +40,9 @@ export default function App() {
         <Route path="admin/audit-log" element={<AdminAuditLog />} />
       </Route>
       <Route element={<Layout />}>
-        <Route path="about" element={<About />} />
-        <Route path="trucks" element={<Trucks />} />
+        <Route path="about" element={<Navigate to="/" replace />} />
+        <Route path="trucks" element={<Navigate to="/" replace />} />
         <Route path="shipment/:id" element={<Shipment />} />
-        <Route path="ussd-help" element={<USSDHelp />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

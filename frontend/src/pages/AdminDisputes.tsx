@@ -1,5 +1,9 @@
 import { useEffect, useState } from 'react'
 import { ensureSeedAdminData, getAdminDisputes, resolveDispute as resolveDisputeInStore } from '../data/storage'
+import { useAuth } from '../context/AuthContext'
+import { getAdminDisputesApi, resolveDisputeApi } from '../api/adminOpsApi'
+import type { ApiError } from '../api/http'
+import { getApiToken } from '../auth/mockJwt'
 
 type DisputeResolutionChoice = 'COMPANY' | 'SHIPPER' | 'SPLIT'
 
@@ -17,6 +21,8 @@ type DisputedShipment = {
 type FetchState = 'idle' | 'loading' | 'error' | 'success'
 
 export default function AdminDisputes() {
+  const { user } = useAuth()
+  const token = getApiToken(user?.token ?? null)
   const [disputes, setDisputes] = useState<DisputedShipment[]>([])
   const [state, setState] = useState<FetchState>('idle')
   const [error, setError] = useState<string | null>(null)
@@ -30,25 +36,43 @@ export default function AdminDisputes() {
     setState('loading')
     setError(null)
     try {
+      if (token) {
+        const apiData = await getAdminDisputesApi(token)
+        const data = apiData.map(
+          (s): DisputedShipment => ({
+            id: String(s.id),
+            shipperName: s.shipperName ?? s.shipper_name ?? '—',
+            companyName: s.companyName ?? s.company_name ?? '—',
+            pickup: s.pickupDistrict ?? s.pickup_district ?? '—',
+            dropoff: s.dropoffDistrict ?? s.dropoff_district ?? '—',
+            weight: `${s.weightTons ?? s.weight_tons ?? '—'} tons`,
+            escrowAmount: s.escrowAmount ?? s.escrow_amount ?? s.offeredPriceRwf ?? s.offered_price_rwf ?? 0,
+            currency: 'RWF',
+          }),
+        )
+        setDisputes(data)
+        setState('success')
+        return
+      }
+
       ensureSeedAdminData()
-      const data = getAdminDisputes().map(
-        (s): DisputedShipment => ({
-          id: s.id,
-          shipperName: s.shipperName,
-          companyName: s.companyName ?? '—',
-          pickup: s.pickupDistrict,
-          dropoff: s.dropoffDistrict,
-          weight: `${s.weightTons} tons`,
-          escrowAmount: s.offeredPriceRwf,
-          currency: 'RWF',
-        }),
-      )
+      const data = getAdminDisputes().map((s): DisputedShipment => ({
+        id: s.id,
+        shipperName: s.shipperName,
+        companyName: s.companyName ?? '—',
+        pickup: s.pickupDistrict,
+        dropoff: s.dropoffDistrict,
+        weight: `${s.weightTons} tons`,
+        escrowAmount: s.offeredPriceRwf,
+        currency: 'RWF',
+      }))
       setDisputes(data)
       setState('success')
     } catch (err) {
       console.error(err)
       setDisputes([])
-      setError('Could not load disputes from local demo data.')
+      const e = err as ApiError
+      setError(token ? (e.message || 'Could not load disputes.') : 'Could not load disputes from local demo data.')
       setState('error')
     }
   }
@@ -98,7 +122,11 @@ export default function AdminDisputes() {
     }
 
     try {
-      resolveDisputeInStore(currentDispute.id, payload, 'Admin')
+      if (token) {
+        await resolveDisputeApi(token, currentDispute.id, payload)
+      } else {
+        resolveDisputeInStore(currentDispute.id, payload, 'Admin')
+      }
       setDisputes((prev) => prev.filter((d) => d.id !== currentDispute.id))
       closeModal()
       alert(`Dispute ${currentDispute.id} resolved.`)
@@ -112,8 +140,10 @@ export default function AdminDisputes() {
     <div className="space-y-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-stone-900">Dispute resolution</h1>
-          <p className="text-sm text-stone-600 mt-1">Resolve escrow disputes with clear outcomes.</p>
+          <h1 className="text-2xl font-bold text-stone-900">Disputes</h1>
+          <p className="text-sm text-stone-600 mt-1">
+            When a shipper reports a problem, decide how the held payment should be released.
+          </p>
         </div>
         <button
           type="button"
@@ -136,7 +166,7 @@ export default function AdminDisputes() {
           </span>
         </span>
         <span className="hidden sm:inline text-stone-500">
-          Aim to release escrow fairly while keeping both sides informed.
+          Keep notes clear and aim for a fair outcome.
         </span>
       </div>
 
@@ -170,7 +200,7 @@ export default function AdminDisputes() {
                 <th className="px-4 py-3 font-semibold text-stone-700">Company</th>
                 <th className="px-4 py-3 font-semibold text-stone-700">Route</th>
                 <th className="px-4 py-3 font-semibold text-stone-700">Weight</th>
-                <th className="px-4 py-3 font-semibold text-stone-700">Escrow</th>
+                <th className="px-4 py-3 font-semibold text-stone-700">Held payment</th>
                 <th className="px-4 py-3 font-semibold text-stone-700 text-right">Actions</th>
               </tr>
             </thead>
@@ -217,13 +247,13 @@ export default function AdminDisputes() {
               Resolve dispute — {currentDispute.id}
             </h2>
             <p className="text-sm text-stone-600 mb-3">
-              Escrow amount:{' '}
+              Held payment:{' '}
               <span className="font-semibold">
                 {currentDispute.escrowAmount.toLocaleString()} {currentDispute.currency}
               </span>
             </p>
             <p className="text-xs text-stone-500 mb-4">
-              Choose how to release the escrow funds between the company and shipper.
+              Choose how the held payment should be shared between the company and shipper.
             </p>
             <form onSubmit={resolveDispute} className="space-y-4">
               <div className="space-y-2">
@@ -239,7 +269,7 @@ export default function AdminDisputes() {
                       setShipperAmount('0')
                     }}
                   />
-                  Full release to company
+                  Pay the company (full amount)
                 </label>
                 <label className="flex items-center gap-2 text-sm text-stone-800">
                   <input
@@ -253,7 +283,7 @@ export default function AdminDisputes() {
                       setShipperAmount(String(escrowTotal))
                     }}
                   />
-                  Full refund to shipper
+                  Refund the shipper (full amount)
                 </label>
                 <label className="flex items-center gap-2 text-sm text-stone-800">
                   <input
@@ -263,7 +293,7 @@ export default function AdminDisputes() {
                     checked={choice === 'SPLIT'}
                     onChange={() => setChoice('SPLIT')}
                   />
-                  Split between company and shipper
+                  Split between both sides
                 </label>
               </div>
 
@@ -294,7 +324,7 @@ export default function AdminDisputes() {
                   </p>
                   {!splitValid && (
                     <p className="text-xs text-red-600">
-                      Company + shipper amounts must add up exactly to the escrow total.
+                      Company + shipper amounts must add up exactly to the total held payment.
                     </p>
                   )}
                 </div>

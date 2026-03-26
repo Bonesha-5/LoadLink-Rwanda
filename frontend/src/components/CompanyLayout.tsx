@@ -56,6 +56,8 @@ export default function CompanyLayout() {
   const location = useLocation()
   const navigate = useNavigate()
   const { logout, user } = useAuth()
+  const status = String(user?.status ?? '').toUpperCase()
+  const isVerified = status === 'VERIFIED'
 
   const handleLogout = () => {
     logout()
@@ -141,9 +143,16 @@ export default function CompanyLayout() {
                     {user?.name || 'Company'}
                   </span>
                 </span>
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-cream text-sidebar px-3 py-1 text-xs font-semibold border border-stone-200">
-                  <span className="w-1.5 h-1.5 rounded-full bg-accent" />
-                  Verified
+                <span
+                  className={[
+                    'inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold border',
+                    isVerified
+                      ? 'bg-cream text-sidebar border-stone-200'
+                      : 'bg-amber-50 text-amber-800 border-amber-200',
+                  ].join(' ')}
+                >
+                  <span className={`w-1.5 h-1.5 rounded-full ${isVerified ? 'bg-accent' : 'bg-amber-500'}`} />
+                  {isVerified ? 'Verified' : 'Pending approval'}
                 </span>
               </div>
             </div>

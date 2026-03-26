@@ -8,8 +8,11 @@ export default function Shipment() {
 
   if (!shipment) {
     return (
-      <div className="bg-white rounded-3xl border border-stone-200 p-8">
+      <div className="bg-white rounded-3xl border border-stone-200 p-8 space-y-4">
         <p className="text-stone-600">Shipment not found.</p>
+        <Link to="/" className="inline-block text-sm font-semibold text-accent hover:underline">
+          Back to home
+        </Link>
       </div>
     )
   }
@@ -18,7 +21,9 @@ export default function Shipment() {
     <div className="space-y-6 ll-animate-in">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-stone-900">Shipment details</h1>
-        <Link to="/loads" className="text-sm font-semibold text-stone-600 hover:text-stone-900 hover:underline">Back to My Shipments</Link>
+        <Link to="/" className="text-sm font-semibold text-stone-600 hover:text-stone-900 hover:underline">
+          Back to home
+        </Link>
       </div>
 
       <div className="bg-white rounded-3xl border border-stone-200 p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -32,14 +37,13 @@ export default function Shipment() {
         <Info label="Description" value={shipment.description ?? '—'} />
       </div>
 
-      <div className="flex flex-wrap gap-3">
-        <Link to="/interested-trucks" className="rounded-2xl bg-sidebar text-white px-4 py-2.5 font-semibold hover:bg-sidebar-hover transition-colors">
-          View Interested Trucks
+      <p className="text-sm text-stone-600">
+        To view interested trucks, pay escrow, and confirm delivery, sign in to the{' '}
+        <Link to="/login/shipper" className="font-semibold text-accent hover:underline">
+          Shipper portal
         </Link>
-        <Link to="/payments" className="rounded-2xl bg-accent text-sidebar px-4 py-2.5 font-semibold hover:bg-accent-hover transition-colors">
-          Go to Escrow Payment
-        </Link>
-      </div>
+        .
+      </p>
     </div>
   )
 }
