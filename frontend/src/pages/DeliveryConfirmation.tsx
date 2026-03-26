@@ -112,6 +112,14 @@ export default function DeliveryConfirmation() {
 
   const { timeLeft, elapsed } = useCountdown(info?.deliveryTimestamp ?? new Date().toISOString())
 
+  function addNotification(message: string) {
+    try {
+      const existing = JSON.parse(localStorage.getItem('ll_notifications') ?? '[]')
+      existing.unshift({ id: Date.now().toString(), message, read: false, createdAt: new Date().toISOString() })
+      localStorage.setItem('ll_notifications', JSON.stringify(existing))
+    } catch { /* ignore */ }
+  }
+
   async function handleAction(action: 'confirm' | 'dispute') {
     setActionBusy(true)
     try {
@@ -124,6 +132,9 @@ export default function DeliveryConfirmation() {
       if (id) setStageForLoad(id, action === 'confirm' ? 'COMPLETED' : 'DISPUTED')
     } finally {
       setActionBusy(false)
+      if (action === 'dispute' && id) {
+        addNotification(`Dispute posted on shipment ${id} (${info?.pickupLocation ?? ''} → ${info?.dropoffLocation ?? ''}). Your case is under review.`)
+      }
       if (action === 'confirm' && id) {
         navigate(`/shipment/${id}/rate`)
       } else {
@@ -154,6 +165,9 @@ export default function DeliveryConfirmation() {
 
   return (
     <div className="max-w-2xl space-y-6 ll-animate-in">
+      <button type="button" onClick={() => navigate('/profile')} className="inline-flex items-center gap-1.5 rounded-lg border border-stone-300 text-stone-600 px-4 py-2 text-sm font-semibold hover:bg-stone-50 transition-colors">
+        ← Dashboard
+      </button>
       <div>
         <h1
           className="text-3xl font-bold text-sidebar"

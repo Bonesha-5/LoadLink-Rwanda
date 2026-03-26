@@ -2,13 +2,42 @@ import { useMemo, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { ensureSeedLoads, getAllLoads, getStageMap, type ShipStage } from '../data/storage'
-import CustomerShipmentMap from '../components/CustomerShipmentMap'
+import CustomerShipmentMap, { type ShipmentMarker } from '../components/CustomerShipmentMap'
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
 } from 'recharts'
 
-// Animated route: Gasabo (Kigali) → Rubavu (Gisenyi)
-const ROUTE: [number, number][] = [
+// Rwanda district coordinate lookup
+const RWANDA_COORDS: Record<string, [number, number]> = {
+  kigali:     [-1.9441, 30.0619],
+  gasabo:     [-1.9441, 30.0619],
+  nyarugenge: [-1.9536, 30.0605],
+  kicukiro:   [-1.9706, 30.1044],
+  musanze:    [-1.4989, 29.6346],
+  rubavu:     [-1.6834, 29.3644],
+  huye:       [-2.5967, 29.7444],
+  muhanga:    [-2.0833, 29.7500],
+  karongi:    [-2.0103, 29.3778],
+  rusizi:     [-2.4811, 28.9078],
+  nyagatare:  [-1.2967, 30.3283],
+  rwamagana:  [-1.9489, 30.4344],
+  ngoma:      [-2.1500, 30.5000],
+  kayonza:    [-1.9500, 30.6000],
+  gicumbi:    [-1.5800, 30.1000],
+  rulindo:    [-1.7200, 29.9800],
+}
+
+const ROUTE_STEPS = 7
+
+function interpolateRoute(from: [number, number], to: [number, number]): [number, number][] {
+  return Array.from({ length: ROUTE_STEPS }, (_, i) => [
+    from[0] + (to[0] - from[0]) * (i / (ROUTE_STEPS - 1)),
+    from[1] + (to[1] - from[1]) * (i / (ROUTE_STEPS - 1)),
+  ] as [number, number])
+}
+
+// Demo route: Gasabo (Kigali) → Rubavu (Gisenyi)
+const DEMO_ROUTE: [number, number][] = [
   [-1.9536, 30.0605],
   [-1.92,   29.95],
   [-1.87,   29.82],
@@ -47,28 +76,24 @@ const DEMO_CHART = [
 
 export default function Profile() {
   const { user } = useAuth()
-  const [truckIdx, setTruckIdx] = useState(0)
+  const [truckIdx, setTruckIdx]       = useState(0)
   const [lastUpdated, setLastUpdated] = useState(new Date())
 
-  // Animate truck along route every 3 s; full reset every hour
+  // Animate trucks every 3 s
   useEffect(() => {
-    const move = setInterval(() => {
-      setTruckIdx((i) => (i + 1) % ROUTE.length)
+    const iv = setInterval(() => {
+      setTruckIdx((i) => (i + 1) % ROUTE_STEPS)
       setLastUpdated(new Date())
     }, 3000)
-    const reset = setInterval(() => {
-      setTruckIdx(0)
-      setLastUpdated(new Date())
-    }, 3_600_000)
-    return () => { clearInterval(move); clearInterval(reset) }
+    return () => clearInterval(iv)
   }, [])
 
   const { myLoads, stageMap } = useMemo(() => {
     ensureSeedLoads(user?.name || 'Shipper')
-    const loads = getAllLoads()
+    const loads  = getAllLoads()
     const stages = getStageMap()
     return {
-      myLoads: loads.filter((l) => l.createdBy === (user?.name || 'Shipper')),
+      myLoads:  loads.filter((l) => l.createdBy === (user?.name || 'Shipper')),
       stageMap: stages,
     }
   }, [user?.name])
@@ -97,9 +122,50 @@ export default function Profile() {
     }))
   }, [myLoads, stageMap])
 
-  const pickup: [number, number] = ROUTE[0]
-  const dropoff: [number, number] = ROUTE[ROUTE.length - 1]
-  const truck:   [number, number] = ROUTE[truckIdx]
+  // Build active routes for all IN_TRANSIT / AWAITING_CONFIRMATION shipments
+  const activeRoutes = useMemo(() => {
+    const active = myLoads.filter((l) => {
+      const s = stageMap[l.id] ?? 'POSTED'
+      return s === 'IN_TRANSIT' || s === 'AWAITING_CONFIRMATION'
+    })
+    if (active.length === 0) return null
+    return active.map((l) => {
+      const pickup  = RWANDA_COORDS[l.origin.toLowerCase()]      ?? [-1.9441, 30.0619] as [number, number]
+      const dropoff = RWANDA_COORDS[l.destination.toLowerCase()] ?? [-1.4989, 29.6346] as [number, number]
+      return {
+        id:     l.id,
+        pickup,
+        dropoff,
+        route:  interpolateRoute(pickup, dropoff),
+        label:  `${l.origin} → ${l.destination}`,
+      }
+    })
+  }, [myLoads, stageMap])
+
+  // Compose ShipmentMarker props for the map
+  const mapShipments = useMemo<ShipmentMarker[]>(() => {
+    if (activeRoutes) {
+      return activeRoutes.map((r) => ({
+        id:      r.id,
+        pickup:  r.pickup,
+        dropoff: r.dropoff,
+        truck:   r.route[truckIdx],
+        label:   r.label,
+      }))
+    }
+    // Demo fallback
+    return [{
+      id:      'demo',
+      pickup:  DEMO_ROUTE[0],
+      dropoff: DEMO_ROUTE[DEMO_ROUTE.length - 1],
+      truck:   DEMO_ROUTE[truckIdx],
+      label:   'Gasabo → Rubavu · Demo',
+    }]
+  }, [activeRoutes, truckIdx])
+
+  const mapSubtitle = activeRoutes
+    ? `${activeRoutes.length} active shipment${activeRoutes.length !== 1 ? 's' : ''} in transit · trucks move every 3s`
+    : 'Demo data — Gasabo → Rubavu · Truck moves every 3s'
 
   return (
     <div className="space-y-6 ll-animate-in">
@@ -158,10 +224,8 @@ export default function Profile() {
               Updated {lastUpdated.toLocaleTimeString()}
             </span>
           </div>
-          <p className="text-xs text-stone-400 mb-4">
-            Gasabo → Rubavu · Truck moves every 3 s · resets hourly
-          </p>
-          <CustomerShipmentMap pickup={pickup} dropoff={dropoff} truck={truck} />
+          <p className="text-xs text-stone-400 mb-4">{mapSubtitle}</p>
+          <CustomerShipmentMap shipments={mapShipments} />
         </div>
       </div>
 

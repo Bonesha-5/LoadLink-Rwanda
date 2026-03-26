@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { addLoad, setStageForLoad } from '../data/storage'
 
@@ -94,6 +94,9 @@ export default function PostShipment() {
 
   return (
     <div className="space-y-6 ll-animate-in">
+      <Link to="/profile" className="inline-flex items-center gap-1.5 rounded-lg border border-stone-300 text-stone-600 px-4 py-2 text-sm font-semibold hover:bg-stone-50 transition-colors">
+        ← Dashboard
+      </Link>
       <div>
         <h1 className="text-3xl font-bold text-sidebar" style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>Post Shipment</h1>
         <p className="text-sm text-stone-600 mt-1">Create a new shipment request</p>

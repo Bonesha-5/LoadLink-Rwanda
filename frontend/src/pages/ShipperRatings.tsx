@@ -116,7 +116,12 @@ export default function ShipperRatings() {
   const skip = () => navigate('/loads')
 
   return (
-    <div className="flex justify-center ll-animate-in">
+    <div className="flex flex-col items-center ll-animate-in gap-4">
+      <div className="w-full max-w-xl">
+        <button type="button" onClick={() => navigate('/profile')} className="inline-flex items-center gap-1.5 rounded-lg border border-stone-300 text-stone-600 px-4 py-2 text-sm font-semibold hover:bg-stone-50 transition-colors mb-4">
+          ← Dashboard
+        </button>
+      </div>
       <div className="w-full max-w-xl">
         {/* Red top accent bar */}
         <div className="h-1 w-full rounded-t-2xl bg-sidebar" />

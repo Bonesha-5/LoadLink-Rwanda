@@ -120,8 +120,14 @@ export default function ShipperInterestedTrucks() {
 
   return (
     <div className="space-y-6 ll-animate-in">
-      {/* Back button */}
-      <div>
+      {/* Back buttons */}
+      <div className="flex items-center gap-3">
+        <Link
+          to="/profile"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-stone-300 text-stone-600 px-4 py-2 text-sm font-semibold hover:bg-stone-50 transition-colors"
+        >
+          ← Dashboard
+        </Link>
         <Link
           to="/loads"
           className="inline-flex items-center gap-1.5 rounded-xl border border-stone-300 text-stone-700 px-5 py-2.5 text-sm font-semibold hover:bg-stone-50 transition-colors"

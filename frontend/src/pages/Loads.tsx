@@ -35,6 +35,12 @@ export default function Loads() {
 
   return (
     <div className="space-y-5 ll-animate-in">
+      <Link
+        to="/profile"
+        className="inline-flex items-center gap-1.5 rounded-lg border border-stone-300 text-stone-600 px-4 py-2 text-sm font-semibold hover:bg-stone-50 transition-colors"
+      >
+        ← Dashboard
+      </Link>
       <div className="flex items-center justify-between gap-3">
         <div>
           <h1 className="text-3xl font-bold text-sidebar" style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>My Shipments</h1>
@@ -128,13 +134,13 @@ export default function Loads() {
 
       {/* Shipment Details Modal */}
       {modalLoad && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl p-7 max-w-lg w-full relative">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setModalLoad(null)}>
+          <div className="bg-white rounded-2xl shadow-2xl p-7 max-w-lg w-full relative" onClick={(e) => e.stopPropagation()}>
             {/* Close button */}
             <button
               type="button"
               onClick={() => setModalLoad(null)}
-              className="absolute top-4 right-4 w-8 h-8 rounded-lg border border-stone-200 text-stone-400 flex items-center justify-center hover:bg-stone-50 transition-colors"
+              className="absolute top-4 right-4 w-8 h-8 rounded-lg bg-red-50 border border-red-400 text-red-600 flex items-center justify-center hover:bg-red-100 hover:text-red-800 transition-colors"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />

@@ -58,6 +58,7 @@ export default function ShipperPayments() {
     return getTruckRatingAverage(selected.truckId) ?? selected.rating
   }, [selected])
 
+  const [provider, setProvider]   = useState<'MTN' | 'AIRTEL' | null>(null)
   const [phone, setPhone]         = useState('')
   const [busy, setBusy]           = useState(false)
   const [payStatus, setPayStatus] = useState<null | 'pending' | 'confirmed'>(null)
@@ -65,9 +66,14 @@ export default function ShipperPayments() {
   if (!selected || !load) {
     return (
       <div className="space-y-6 ll-animate-in">
-        <Link to="/loads" className="inline-flex items-center gap-1.5 rounded-lg border border-stone-300 text-stone-700 px-4 py-2 text-sm font-semibold hover:bg-stone-50 transition-colors">
-          ← Back to Shipments
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link to="/profile" className="inline-flex items-center gap-1.5 rounded-lg border border-stone-300 text-stone-600 px-4 py-2 text-sm font-semibold hover:bg-stone-50 transition-colors">
+            ← Dashboard
+          </Link>
+          <Link to="/loads" className="inline-flex items-center gap-1.5 rounded-lg border border-stone-300 text-stone-700 px-4 py-2 text-sm font-semibold hover:bg-stone-50 transition-colors">
+            ← Back to Shipments
+          </Link>
+        </div>
         <div>
           <h1 className="text-2xl font-bold text-stone-900">Escrow Payment</h1>
           <p className="text-sm text-stone-600 mt-1">Select a truck first.</p>
@@ -82,8 +88,8 @@ export default function ShipperPayments() {
     )
   }
 
-  const pay = async (provider: 'MTN' | 'AIRTEL') => {
-    if (busy || payStatus === 'confirmed') return
+  const pay = async () => {
+    if (!provider || busy || payStatus === 'confirmed') return
     setBusy(true)
     setPayStatus('pending')
 
@@ -120,19 +126,21 @@ export default function ShipperPayments() {
       doLocal()
     } catch {
       // API unavailable — simulate locally
-      window.setTimeout(doLocal, 1500)
+      window.setTimeout(doLocal, 3000)
     }
   }
 
   return (
     <div className="space-y-6 ll-animate-in max-w-2xl">
-      {/* Back button */}
-      <Link
-        to="/loads"
-        className="inline-flex items-center gap-1.5 rounded-lg border border-stone-300 text-stone-700 px-4 py-2 text-sm font-semibold hover:bg-stone-50 transition-colors"
-      >
-        ← Back to Shipments
-      </Link>
+      {/* Back buttons */}
+      <div className="flex items-center gap-3">
+        <Link to="/profile" className="inline-flex items-center gap-1.5 rounded-lg border border-stone-300 text-stone-600 px-4 py-2 text-sm font-semibold hover:bg-stone-50 transition-colors">
+          ← Dashboard
+        </Link>
+        <Link to="/loads" className="inline-flex items-center gap-1.5 rounded-lg border border-stone-300 text-stone-700 px-4 py-2 text-sm font-semibold hover:bg-stone-50 transition-colors">
+          ← Back to Shipments
+        </Link>
+      </div>
 
       {/* Title */}
       <div>
@@ -229,45 +237,65 @@ export default function ShipperPayments() {
         <div className="bg-white rounded-2xl border border-stone-200 p-6 shadow-sm space-y-4">
           <h2 className="text-base font-bold text-stone-900">Select Payment Method</h2>
 
-          {/* Phone number input */}
-          <div>
-            <label className="block text-sm font-semibold text-stone-700 mb-2" htmlFor="payPhone">
-              Mobile Money Phone Number
-            </label>
-            <input
-              id="payPhone"
-              type="tel"
-              placeholder="+250 788 123 456"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              className="w-full max-w-sm px-4 py-3 rounded-xl border border-stone-200 bg-stone-50 text-sm text-stone-800 placeholder:text-stone-400 focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-200"
-            />
+          {/* Step 1: Choose provider */}
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => setProvider('MTN')}
+              className={`flex items-center justify-center gap-2 rounded-xl py-3.5 font-bold text-sm border-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                provider === 'MTN'
+                  ? 'bg-yellow-400 border-yellow-500 text-yellow-900'
+                  : 'bg-yellow-50 border-yellow-200 text-yellow-800 hover:border-yellow-400'
+              }`}
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+              </svg>
+              MTN MoMo
+            </button>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => setProvider('AIRTEL')}
+              className={`flex items-center justify-center gap-2 rounded-xl py-3.5 font-bold text-sm border-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                provider === 'AIRTEL'
+                  ? 'bg-red-600 border-red-700 text-white'
+                  : 'bg-red-50 border-red-200 text-red-700 hover:border-red-400'
+              }`}
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+              </svg>
+              Airtel Money
+            </button>
           </div>
 
-          {/* MTN Mobile Money */}
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => pay('MTN')}
-            className="w-full flex items-center justify-center gap-3 rounded-xl bg-yellow-400 text-yellow-900 py-4 font-bold text-base hover:bg-yellow-500 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
-            </svg>
-            Pay with MTN Mobile Money
-          </button>
+          {/* Step 2: Enter phone number */}
+          {provider && (
+            <div>
+              <label className="block text-sm font-semibold text-stone-700 mb-2" htmlFor="payPhone">
+                {provider === 'MTN' ? 'MTN' : 'Airtel'} Mobile Money Number
+              </label>
+              <input
+                id="payPhone"
+                type="tel"
+                placeholder={provider === 'MTN' ? '+250 78x xxx xxx' : '+250 72x xxx xxx'}
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                className="w-full px-4 py-3 rounded-xl border border-stone-200 bg-stone-50 text-sm text-stone-800 placeholder:text-stone-400 focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
+              />
+            </div>
+          )}
 
-          {/* Airtel Money */}
+          {/* Step 3: Pay Now */}
           <button
             type="button"
-            disabled={busy}
-            onClick={() => pay('AIRTEL')}
-            className="w-full flex items-center justify-center gap-3 rounded-xl bg-red-600 text-white py-4 font-bold text-base hover:bg-red-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+            disabled={!provider || !phone.trim() || busy}
+            onClick={pay}
+            className="w-full flex items-center justify-center gap-2 rounded-xl bg-accent text-sidebar py-4 font-bold text-base hover:bg-accent-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
-            </svg>
-            Pay with Airtel Money
+            {busy ? 'Processing…' : `Pay ${load.price ?? ''} via ${provider ?? '…'}`}
           </button>
         </div>
       )}
