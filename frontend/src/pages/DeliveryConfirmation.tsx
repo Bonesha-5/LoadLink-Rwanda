@@ -124,7 +124,11 @@ export default function DeliveryConfirmation() {
       if (id) setStageForLoad(id, action === 'confirm' ? 'COMPLETED' : 'DISPUTED')
     } finally {
       setActionBusy(false)
-      navigate('/loads')
+      if (action === 'confirm' && id) {
+        navigate(`/shipment/${id}/rate`)
+      } else {
+        navigate('/loads')
+      }
     }
   }
 
@@ -151,7 +155,12 @@ export default function DeliveryConfirmation() {
   return (
     <div className="max-w-2xl space-y-6 ll-animate-in">
       <div>
-        <h1 className="text-2xl font-bold text-sidebar">Delivery Confirmation</h1>
+        <h1
+          className="text-3xl font-bold text-sidebar"
+          style={{ fontFamily: "'Playfair Display', Georgia, serif" }}
+        >
+          Delivery Confirmation
+        </h1>
       </div>
 
       {/* Info card */}
@@ -166,9 +175,9 @@ export default function DeliveryConfirmation() {
       </div>
 
       {/* Countdown */}
-      <div className="bg-white rounded-2xl border border-stone-200 px-6 py-8 text-center">
-        <p className="text-sm font-semibold text-blue-500 mb-4">Time Remaining for Confirmation</p>
-        <p className="text-7xl font-bold text-sidebar tracking-tight" style={{ fontFamily: 'Georgia, serif' }}>
+      <div className="px-6 py-8 text-center">
+        <p className="text-sm font-semibold text-teal-600 mb-4">Time Remaining for Confirmation</p>
+        <p className="text-7xl font-bold text-sidebar tracking-tight" style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>
           {timeLeft || '--:--:--'}
         </p>
         {/* Progress bar */}
@@ -187,7 +196,7 @@ export default function DeliveryConfirmation() {
           type="button"
           onClick={() => handleAction('confirm')}
           disabled={actionBusy}
-          className="flex items-center justify-center gap-2 py-4 bg-emerald-800 text-white font-bold rounded-xl hover:bg-emerald-900 transition-all disabled:opacity-60 text-base"
+          className="flex items-center justify-center gap-2 py-4 bg-green-700 text-white font-bold rounded-xl hover:bg-green-800 transition-all disabled:opacity-60 text-base"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <circle cx="12" cy="12" r="10" strokeWidth={2} />

@@ -27,7 +27,7 @@ type Selected = {
 function StarIcon({ filled }: { filled: boolean }) {
   return (
     <svg
-      className={`w-10 h-10 ${filled ? 'text-amber-500' : 'text-stone-200'}`}
+      className={`w-10 h-10 ${filled ? 'text-accent' : 'text-stone-200'}`}
       fill="currentColor"
       viewBox="0 0 20 20"
     >
@@ -71,6 +71,8 @@ export default function ShipperRatings() {
 
   const alreadyRated = useMemo(() => {
     if (!truckInfo) return false
+    // Seed loads always show fresh rating UI in demo mode
+    if (['s1', 's2', 's3'].includes(truckInfo.loadId)) return false
     return getAllRatings().some((r) => r.shipmentId === truckInfo.loadId)
   }, [truckInfo])
 
@@ -121,7 +123,12 @@ export default function ShipperRatings() {
 
         <div className="bg-white rounded-b-2xl border border-stone-200 shadow-sm px-10 py-10 space-y-7">
           {/* Title */}
-          <h1 className="text-2xl font-bold text-sidebar text-center">Rate this Truck</h1>
+          <h1
+            className="text-2xl font-bold text-sidebar text-center"
+            style={{ fontFamily: "'Playfair Display', Georgia, serif" }}
+          >
+            Rate this Truck
+          </h1>
 
           {/* Truck info card */}
           <div className="bg-cream rounded-xl border border-stone-200 px-6 py-6 text-center space-y-4">
@@ -147,7 +154,7 @@ export default function ShipperRatings() {
               <button
                 type="button"
                 onClick={() => navigate('/loads')}
-                className="w-full py-3.5 rounded-xl bg-amber-500 text-white font-bold text-base hover:bg-amber-600 transition-colors"
+                className="w-full py-3.5 rounded-xl bg-accent text-sidebar font-bold text-base hover:bg-accent-hover transition-colors"
               >
                 Back to My Shipments
               </button>
@@ -172,7 +179,7 @@ export default function ShipperRatings() {
                   ))}
                 </div>
                 {activeStars > 0 && (
-                  <p className="text-sm font-semibold text-sidebar">
+                  <p className="text-sm font-semibold text-accent">
                     You selected {activeStars} star{activeStars !== 1 ? 's' : ''}
                   </p>
                 )}
@@ -182,7 +189,7 @@ export default function ShipperRatings() {
               <button
                 type="submit"
                 disabled={stars === 0}
-                className="w-full py-3.5 rounded-xl bg-amber-500 text-white font-bold text-base hover:bg-amber-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full py-3.5 rounded-xl bg-accent text-sidebar font-bold text-base hover:bg-accent-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed mt-2"
               >
                 Submit Rating
               </button>

@@ -58,7 +58,7 @@ export default function PaymentsHistory() {
           </div>
           <Link
             to={`/shipment/${pendingLoad.id}/pay`}
-            className="flex-shrink-0 px-4 py-2 bg-amber-500 text-white font-semibold rounded-xl hover:bg-amber-600 transition-colors text-sm"
+            className="flex-shrink-0 px-4 py-2 bg-accent text-sidebar font-semibold rounded-xl hover:bg-accent-hover transition-colors text-sm"
           >
             Complete Payment
           </Link>

@@ -176,7 +176,7 @@ export default function ShipperInterestedTrucks() {
               <button
                 type="button"
                 onClick={() => confirmSelect(pending)}
-                className="flex-1 rounded-xl bg-sidebar text-white px-4 py-2.5 font-semibold hover:bg-sidebar-hover transition-colors"
+                className="flex-1 rounded-xl bg-accent text-white px-4 py-2.5 font-semibold hover:bg-accent-hover transition-colors"
               >
                 Confirm
               </button>
@@ -202,7 +202,7 @@ function StarRating({ rating }: { rating: number }) {
       {[1, 2, 3, 4, 5].map((i) => (
         <svg
           key={i}
-          className={`w-5 h-5 ${i <= filled ? 'text-amber-400' : 'text-stone-200'}`}
+          className={`w-5 h-5 ${i <= filled ? 'text-accent' : 'text-stone-200'}`}
           fill="currentColor"
           viewBox="0 0 20 20"
         >
@@ -221,7 +221,7 @@ function TruckCard({ candidate: t, onSelect }: { candidate: Candidate; onSelect:
       <h3 className="text-lg font-bold text-stone-900 mb-3">{t.companyName}</h3>
 
       {/* Truck Rating */}
-      <p className="text-xs font-semibold text-amber-600 mb-1.5">Truck Rating</p>
+      <p className="text-xs font-semibold text-accent mb-1.5">Truck Rating</p>
       <StarRating rating={t.rating} />
 
       {/* Details */}
@@ -260,7 +260,7 @@ function TruckCard({ candidate: t, onSelect }: { candidate: Candidate; onSelect:
       <button
         type="button"
         onClick={onSelect}
-        className="mt-5 w-full rounded-xl bg-amber-500 text-white py-3.5 font-semibold hover:bg-amber-600 transition-colors text-sm"
+        className="mt-5 w-full rounded-xl bg-accent text-sidebar py-3.5 font-semibold hover:bg-accent-hover transition-colors text-sm"
       >
         Select This Truck
       </button>

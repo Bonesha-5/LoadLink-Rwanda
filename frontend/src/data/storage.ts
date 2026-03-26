@@ -137,9 +137,13 @@ export function ensureSeedLoads(userName = 'Shipper') {
     // Always enforce correct stages for seed loads
     const stageMap = getStageMap()
     stageMap['s1'] = 'AWAITING_ESCROW'
-    stageMap['s2'] = 'COMPLETED'
+    stageMap['s2'] = 'AWAITING_CONFIRMATION'
     stageMap['s3'] = 'POSTED'
     localStorage.setItem(STAGES_KEY, JSON.stringify(stageMap))
+
+    // Clear any stale ratings for seed loads so the rating UI always shows fresh
+    const ratings = getAllRatings().filter((r) => !['s1', 's2', 's3'].includes(r.shipmentId))
+    localStorage.setItem(RATINGS_KEY, JSON.stringify(ratings))
     return
   }
 
@@ -195,7 +199,7 @@ export function ensureSeedLoads(userName = 'Shipper') {
   // Set stages for seed loads
   const stageMap = getStageMap()
   stageMap['s1'] = 'AWAITING_ESCROW'
-  stageMap['s2'] = 'COMPLETED'
+  stageMap['s2'] = 'AWAITING_CONFIRMATION'
   stageMap['s3'] = 'POSTED'
   localStorage.setItem(STAGES_KEY, JSON.stringify(stageMap))
 }

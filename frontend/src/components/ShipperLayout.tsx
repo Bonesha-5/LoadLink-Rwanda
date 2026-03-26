@@ -102,15 +102,15 @@ export default function ShipperLayout() {
             <div className="w-8 h-8 rounded-lg bg-accent flex items-center justify-center flex-shrink-0">
               <TruckIcon />
             </div>
-            <span className="text-sm font-bold tracking-tight text-white group-hover:text-white/90">
+            <span className="text-base font-bold tracking-tight text-white group-hover:text-white/90" style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>
               LoadLink Rwanda
             </span>
           </Link>
         </div>
 
         {/* Dashboard label */}
-        <div className="px-5 pt-5 pb-2">
-          <p className="text-xs font-bold uppercase tracking-widest text-white/50">
+        <div className="px-5 pt-6 pb-3">
+          <p className="text-xl font-bold text-white" style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>
             Shipper Dashboard
           </p>
         </div>
