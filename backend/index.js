@@ -9,6 +9,8 @@ import interestsRoutes from "./routes/interests.js";
 import trucksRoutes from "./routes/trucks.js";
 import requestLogger from "./middleware/logger.js";
 import errorMiddleware from "./middleware/errorMiddleware.js";
+import paymentsRoutes from './routes/payments.js';
+import simulatedMomoRoutes from './routes/simulatedMomo.js';
 
 dotenv.config();
 
@@ -22,6 +24,8 @@ app.use(express.urlencoded({ extended: true }));
 app.use(requestLogger);
 
 app.use("/api/company", companyRoutes);
+app.use('/api/payments', paymentsRoutes);
+app.use('/api/momo-simulator', simulatedMomoRoutes);
 app.use("/api/shippers", shippersRoutes);
 app.use("/api/shipments", shipmentsRoutes);
 app.use("/api/interests", interestsRoutes);
