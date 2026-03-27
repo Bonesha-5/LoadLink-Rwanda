@@ -36,7 +36,7 @@ export default function Home() {
     : 'font-semibold text-white hover:text-accent transition-colors'
 
   return (
-    <div id="top" className="min-h-screen ll-animate-in relative overflow-hidden">
+    <div id="top" className="min-h-screen ll-animate-in relative overflow-hidden ll-snap-page">
       {/* Original hero background — solid + gold glows + dot grid */}
       <div className="absolute left-0 right-0 top-0 min-h-[720px] md:min-h-[820px] -z-10 bg-sidebar" />
       {/* Background video */}
@@ -78,7 +78,7 @@ export default function Home() {
               <span className={scrolled ? 'text-stone-900' : 'text-white/90'}>Link</span>
             </span>
           </Link>
-          <div className="flex flex-wrap items-center justify-end gap-x-3 gap-y-2 text-xs sm:text-sm">
+          <div className="flex flex-wrap items-center justify-end gap-x-2 gap-y-1.5 text-[12px] max-[360px]:text-[11px] sm:text-sm">
             <a href="#trucks" className={`hidden md:inline ${navLinkClass}`}>
               Trucks
             </a>
@@ -105,37 +105,37 @@ export default function Home() {
       </header>
 
       {/* Hero */}
-      <section className="relative max-w-6xl mx-auto px-4 sm:px-6 py-12 md:py-16 lg:py-20">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-center">
+      <section className="relative max-w-6xl mx-auto px-4 sm:px-6 pt-10 pb-12 md:py-16 lg:py-20">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 md:gap-10 lg:gap-12 items-center">
           <div className="lg:col-span-7 relative z-10">
             <div className="inline-flex items-center gap-2 rounded-full bg-white/10 text-white px-3 py-1 text-xs font-semibold border border-white/10">
               <span className="inline-block h-2 w-2 rounded-full bg-accent" />
               Trucks & loads in one place
             </div>
-            <h1 className="mt-5 text-4xl md:text-[2.75rem] font-extrabold tracking-tight text-white leading-[1.08]">
+            <h1 className="mt-5 text-[2rem] max-[360px]:text-[1.75rem] sm:text-[2.35rem] md:text-[2.75rem] font-extrabold tracking-tight text-white leading-[1.1]">
               Need a truck? Or filling your trucks?
             </h1>
-            <p className="mt-5 text-base md:text-lg text-white/85 leading-relaxed max-w-xl">
+            <p className="mt-4 sm:mt-5 text-[15px] max-[360px]:text-[14px] sm:text-base md:text-lg text-white/85 leading-relaxed max-w-xl">
               LoadLink connects people <strong className="text-white font-semibold">sending goods</strong> with{' '}
               <strong className="text-white font-semibold">transport companies</strong> in Rwanda. The price is clear up front.
               Your payment stays protected until delivery is done.
             </p>
-            <div id="start" className="mt-8 flex flex-wrap items-center gap-3">
+            <div id="start" className="mt-7 sm:mt-8 flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2.5 sm:gap-3">
               <Link
                 to="/register/shipper"
-                className="inline-flex items-center justify-center rounded-2xl bg-accent text-sidebar px-6 py-3 font-semibold shadow-sm hover:shadow-md transition-all hover:-translate-y-0.5 active:scale-[0.99]"
+                className="inline-flex w-full sm:w-auto items-center justify-center rounded-2xl bg-accent text-sidebar px-5 sm:px-6 py-3.5 font-semibold text-[15px] sm:text-base shadow-sm hover:shadow-md transition-all hover:-translate-y-0.5 active:scale-[0.99]"
               >
                 I’m sending goods
               </Link>
               <Link
                 to="/register/company"
-                className="inline-flex items-center justify-center rounded-2xl bg-white text-sidebar px-6 py-3 font-semibold border border-white/10 hover:bg-white/95 transition-all hover:-translate-y-0.5 active:scale-[0.99]"
+                className="inline-flex w-full sm:w-auto items-center justify-center rounded-2xl bg-white text-sidebar px-5 sm:px-6 py-3.5 font-semibold text-[15px] sm:text-base border border-white/10 hover:bg-white/95 transition-all hover:-translate-y-0.5 active:scale-[0.99]"
               >
                 I have trucks
               </Link>
               <Link
                 to="/login/admin"
-                className="inline-flex items-center justify-center rounded-2xl bg-white/10 text-white px-5 py-3 font-semibold border border-white/15 hover:bg-white/15 transition-all text-sm"
+                className="inline-flex w-full sm:w-auto items-center justify-center rounded-2xl bg-white/10 text-white px-5 py-3.5 font-semibold border border-white/15 hover:bg-white/15 transition-all text-[13px] sm:text-sm"
               >
                 Staff login
               </Link>
@@ -143,14 +143,14 @@ export default function Home() {
           </div>
 
           <div className="lg:col-span-5 relative z-10">
-            <div className="rounded-[32px] bg-white/5 border border-white/12 shadow-[0_24px_70px_rgba(0,0,0,0.45)] overflow-hidden backdrop-blur-md">
+            <div className="rounded-[28px] sm:rounded-[32px] bg-white/5 border border-white/12 shadow-[0_24px_70px_rgba(0,0,0,0.45)] overflow-hidden backdrop-blur-md">
               <div className="p-5 border-b border-white/10 flex items-center justify-between gap-3">
                 <p className="text-sm font-semibold text-white">Start here</p>
                 <span className="text-xs font-semibold rounded-full bg-white/10 text-white px-3 py-1 border border-white/10">
                   Quick steps
                 </span>
               </div>
-              <div className="p-5 space-y-4">
+              <div className="p-4 sm:p-5 space-y-4">
                 <div className="rounded-3xl border border-white/10 bg-white/5 p-4">
                   <p className="text-xs font-semibold text-white/75">If you’re sending goods</p>
                   <p className="mt-1 text-sm text-white/90 leading-relaxed">
@@ -195,12 +195,12 @@ export default function Home() {
         </div>
       </section>
 
-      <section id="trucks" className="bg-sand border-y border-stone-200/80">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-14 md:py-16">
+      <section id="trucks" className="bg-gradient-to-b from-slate-50 to-white border-y border-stone-200/80 ll-snap-section">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-16 md:py-20 lg:min-h-[82vh] flex flex-col justify-center">
           <div className="flex items-start justify-between gap-4">
             <div className="max-w-2xl">
-              <h2 className="text-2xl md:text-3xl font-extrabold text-stone-900 tracking-tight">Built around real trucks</h2>
-              <p className="mt-3 text-stone-600 leading-relaxed">
+              <h2 className="text-3xl md:text-4xl font-extrabold text-stone-900 tracking-tight">Built around real trucks</h2>
+              <p className="mt-4 text-base md:text-lg text-stone-600 leading-relaxed">
                 Companies show their fleet. Shippers say where goods go and how heavy they are. Less calling around, more
                 clarity.
               </p>
@@ -213,7 +213,7 @@ export default function Home() {
               <span aria-hidden>↑</span>
             </a>
           </div>
-          <div className="mt-10 grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="mt-10 sm:mt-12 grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-5">
             {[
               { t: 'Same route for everyone', d: 'Pickup and drop-off are visible to both sides.' },
               { t: 'Price agreed early', d: 'The shipper sets the price before a truck is booked.' },
@@ -221,18 +221,21 @@ export default function Home() {
             ].map((c) => (
               <div
                 key={c.t}
-                className="rounded-3xl bg-white border border-stone-200 p-6 shadow-sm hover:shadow-md transition-shadow"
+                className="rounded-3xl bg-white border border-stone-200 p-6 sm:p-7 shadow-sm hover:shadow-md transition-shadow"
               >
                 <div className="h-1 w-10 rounded-full bg-accent mb-4" />
-                <p className="font-semibold text-stone-900">{c.t}</p>
-                <p className="mt-2 text-sm text-stone-600 leading-relaxed">{c.d}</p>
+                <p className="font-semibold text-[1.05rem] sm:text-lg text-stone-900">{c.t}</p>
+                <p className="mt-2 text-[15px] sm:text-base text-stone-600 leading-relaxed">{c.d}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      <section id="how-it-works" className="max-w-6xl mx-auto px-4 sm:px-6 py-14 md:py-16">
+      <section
+        id="how-it-works"
+        className="max-w-6xl mx-auto px-4 sm:px-6 py-16 md:py-20 lg:min-h-[82vh] flex flex-col justify-center ll-snap-section"
+      >
         <div className="flex flex-col items-center gap-3">
           <div className="w-full flex items-start justify-between gap-4">
             <div className="flex-1" />
@@ -244,14 +247,14 @@ export default function Home() {
               <span aria-hidden>↑</span>
             </a>
           </div>
-          <h2 className="text-2xl md:text-3xl font-extrabold text-stone-900 tracking-tight text-center max-w-xl mx-auto">
+          <h2 className="text-[1.85rem] sm:text-3xl md:text-4xl font-extrabold text-stone-900 tracking-tight text-center max-w-2xl mx-auto">
             How it works — three steps
           </h2>
-          <p className="text-center text-stone-600 max-w-2xl mx-auto text-sm md:text-base">
+          <p className="text-center text-stone-600 max-w-2xl mx-auto text-[15px] sm:text-base md:text-lg">
             Shippers and truck companies use the same flow; you just sign in as the role that fits you.
           </p>
         </div>
-        <ol className="mt-10 grid grid-cols-1 md:grid-cols-3 gap-6">
+        <ol className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6">
           {[
             {
               n: '1',
@@ -269,12 +272,15 @@ export default function Home() {
               d: 'Follow the trip. When goods arrive, the shipper confirms and payment is completed.',
             },
           ].map((step) => (
-            <li key={step.n} className="relative rounded-3xl border border-stone-200 bg-white p-6 pt-8 shadow-sm">
+            <li
+              key={step.n}
+              className="relative rounded-3xl border border-stone-200 bg-white p-6 sm:p-7 pt-9 shadow-sm"
+            >
               <span className="absolute -top-3 left-6 inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-sidebar text-white text-sm font-extrabold">
                 {step.n}
               </span>
-              <p className="font-semibold text-stone-900 text-lg">{step.t}</p>
-              <p className="mt-2 text-sm text-stone-600 leading-relaxed">{step.d}</p>
+              <p className="font-semibold text-stone-900 text-lg sm:text-xl">{step.t}</p>
+              <p className="mt-2 text-[15px] sm:text-base text-stone-600 leading-relaxed">{step.d}</p>
             </li>
           ))}
         </ol>
@@ -294,12 +300,12 @@ export default function Home() {
         </div>
       </section>
 
-      <section id="why" className="max-w-6xl mx-auto px-4 sm:px-6 pb-14 md:pb-16">
-        <div className="rounded-[36px] bg-white border border-stone-200 shadow-sm overflow-hidden">
-          <div className="p-8 md:p-10 border-b border-stone-100 bg-stone-50/80 flex items-start justify-between gap-4">
+      <section id="why" className="max-w-6xl mx-auto px-4 sm:px-6 py-16 md:py-20 lg:min-h-[82vh] flex flex-col justify-center ll-snap-section">
+        <div className="rounded-[30px] sm:rounded-[36px] bg-white border border-stone-200 shadow-sm overflow-hidden">
+          <div className="p-8 md:p-11 border-b border-stone-100 bg-stone-50/80 flex items-start justify-between gap-4">
             <div>
-              <h2 className="text-2xl font-extrabold text-stone-900 tracking-tight">Why people use LoadLink</h2>
-              <p className="mt-2 text-stone-600 max-w-2xl">
+              <h2 className="text-[1.85rem] sm:text-3xl md:text-4xl font-extrabold text-stone-900 tracking-tight">Why people use LoadLink</h2>
+              <p className="mt-3 text-[15px] sm:text-base md:text-lg text-stone-600 max-w-2xl">
                 Moving cargo shouldn’t mean guessing prices or chasing people on the phone. Here, the steps stay visible for both
                 sides.
               </p>
@@ -312,7 +318,7 @@ export default function Home() {
               <span aria-hidden>↑</span>
             </a>
           </div>
-          <div className="p-8 md:p-10 grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="p-8 md:p-11 grid grid-cols-1 md:grid-cols-3 gap-6">
             {[
               {
                 t: 'Less back-and-forth',
@@ -327,9 +333,9 @@ export default function Home() {
                 d: 'If there’s a disagreement, staff can step in — not “sort it out alone.”',
               },
             ].map((x) => (
-              <div key={x.t} className="rounded-2xl border border-stone-200 bg-cream p-5">
-                <p className="font-semibold text-stone-900">{x.t}</p>
-                <p className="mt-2 text-sm text-stone-600 leading-relaxed">{x.d}</p>
+              <div key={x.t} className="rounded-2xl border border-stone-200 bg-cream p-5 sm:p-6">
+                <p className="font-semibold text-[1.05rem] sm:text-lg text-stone-900">{x.t}</p>
+                <p className="mt-2 text-[15px] sm:text-base text-stone-600 leading-relaxed">{x.d}</p>
               </div>
             ))}
           </div>

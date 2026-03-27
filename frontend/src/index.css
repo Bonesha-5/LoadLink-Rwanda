@@ -48,6 +48,17 @@
   will-change: transform;
 }
 
+/* Desktop section-by-section scrolling for landing page */
+@media (min-width: 1024px) {
+  .ll-snap-page {
+    scroll-snap-type: y mandatory;
+  }
+  .ll-snap-section {
+    scroll-snap-align: start;
+    scroll-margin-top: 72px; /* account for sticky header */
+  }
+}
+
 /* auth form image stack */
 .auth-image-stack {
   display: flex;
