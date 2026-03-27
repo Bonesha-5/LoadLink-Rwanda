@@ -125,41 +125,72 @@ export const rejectCompany = async (req, res) => {
 };
 
 export const getAllShipments = async (req, res) => {
-    const { status } = req.query;
+    const { status, date_from, date_to } = req.query;
 
     try {
         let query = `
-      SELECT
-        s.id,
-        s.pickup_district,
-        s.dropoff_district,
-        s.weight,
-        s.offered_price,
-        s.status,
-        s.pickup_date,
-        s.created_at,
-        u.name AS shipper_name,
-        u.email AS shipper_email,
-        t.plate_number AS truck_plate,
-        c.name AS company_name
-      FROM shipments s
-      JOIN users u ON u.id = s.shipper_id
-      LEFT JOIN trucks t ON t.id = s.selected_truck_id
-      LEFT JOIN companies c ON c.id = t.company_id
-    `;
+            SELECT
+                s.id,
+                s.pickup_district,
+                s.dropoff_district,
+                s.weight,
+                s.offered_price,
+                s.status,
+                s.pickup_date,
+                s.created_at,
+                u.name AS shipper_name,
+                u.email AS shipper_email,
+                t.plate_number AS truck_plate,
+                c.name AS company_name
+            FROM shipments s
+            JOIN users u ON u.id = s.shipper_id
+            LEFT JOIN trucks t ON t.id = s.selected_truck_id
+            LEFT JOIN companies c ON c.id = t.company_id
+        `;
 
         const values = [];
+        const conditions = [];
+
+        const validStatuses = [
+            'POSTED',
+            'AWAITING_ESCROW',
+            'WAITING_FOR_CONFIRMATION',
+            'ESCROW_FUNDED',
+            'COMPLETED',
+            'CANCELLED',
+            'DISPUTED'
+        ];
 
         if (status) {
-            query += ` WHERE s.status = $1`;
-            values.push(status);
+            const upperStatus = status.toUpperCase();
+            if (!validStatuses.includes(upperStatus)) {
+                return res.status(400).json({
+                    message: `Invalid status. Valid options: ${validStatuses.join(', ')}`
+                });
+            }
+            values.push(upperStatus);
+            conditions.push(`s.status = $${values.length}`);
+        }
+
+        if (date_from) {
+            values.push(date_from);
+            conditions.push(`s.created_at >= $${values.length}::date`);
+        }
+
+        if (date_to) {
+            values.push(date_to);
+            conditions.push(`s.created_at < ($${values.length}::date + INTERVAL '1 day')`);
+        }
+
+        if (conditions.length > 0) {
+            query += ` WHERE ` + conditions.join(' AND ');
         }
 
         query += ` ORDER BY s.created_at DESC`;
 
         const result = await pool.query(query, values);
-
         res.status(200).json(result.rows);
+
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Server error' });
