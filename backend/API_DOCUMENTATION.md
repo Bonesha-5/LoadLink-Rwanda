@@ -16,7 +16,6 @@ Most endpoints require a **Bearer Token** in the `Authorization` header.
 ## 1. Company API
 
 ### Register Company
-Register a new logistics company.
 - **Method:** `POST`
 - **Path:** `/api/company/register`
 - **Auth Required:** No
@@ -39,7 +38,6 @@ Register a new logistics company.
   - `400 Bad Request`: Email or RDB number already registered.
 
 ### Company Login
-Authenticate a company and receive a JWT token.
 - **Method:** `POST`
 - **Path:** `/api/company/login`
 - **Auth Required:** No
@@ -51,18 +49,15 @@ Authenticate a company and receive a JWT token.
 }
 ```
 - **Responses:**
-  - `200 OK`: Login successful. Returns `token` and `user` object.
+  - `200 OK`: Returns `token` and `user` object.
   - `401 Unauthorized`: Invalid email or password.
   - `403 Forbidden`: Account suspended or pending verification.
-
----
 
 ---
 
 ## 2. Shippers API
 
 ### Register Shipper
-Register a new shipper (individual or business looking to move cargo).
 - **Method:** `POST`
 - **Path:** `/api/shippers/register`
 - **Auth Required:** No
@@ -79,7 +74,6 @@ Register a new shipper (individual or business looking to move cargo).
   - `201 Created`: Returns `token` and `user` info.
 
 ### Shipper Login
-Authenticate a shipper.
 - **Method:** `POST`
 - **Path:** `/api/shippers/login`
 - **Auth Required:** No
@@ -95,27 +89,108 @@ Authenticate a shipper.
 
 ---
 
-## 3. Shipments API
+## 3. Shipper Flow API
+
+### Create Shipment
+- **Method:** `POST`
+- **Path:** `/api/shipments`
+- **Auth Required:** Yes (Shipper Role)
+- **Body (JSON):**
+```json
+{
+  "pickup_district": "Kigali",
+  "dropoff_district": "Huye",
+  "pickup_description": "Near Kimironko market",
+  "cargo_description": "Electronics, fragile",
+  "weight": 5,
+  "offered_price": 50000,
+  "pickup_date": "2026-04-01"
+}
+```
+- **Responses:**
+  - `201 Created`: Returns new shipment object.
+
+### Get My Shipments
+- **Method:** `GET`
+- **Path:** `/api/shipments/my`
+- **Auth Required:** Yes (Shipper Role)
+- **Responses:**
+  - `200 OK`: Returns list of shipments ordered by newest first.
+
+### Get Shipment Interests
+- **Method:** `GET`
+- **Path:** `/api/shipments/:id/interests`
+- **Auth Required:** Yes (Shipper Role)
+- **Responses:**
+  - `200 OK`: Returns list of trucks that expressed interest, sorted by rating.
+
+### Select Truck
+- **Method:** `PATCH`
+- **Path:** `/api/shipments/:id/select`
+- **Auth Required:** Yes (Shipper Role)
+- **Body (JSON):**
+```json
+{
+  "truck_id": "123"
+}
+```
+- **Responses:**
+  - `200 OK`: Shipment updated to AWAITING_ESCROW, truck set to RESERVED.
+  - `400 Bad Request`: Shipment not in POSTED status or truck not available.
+  - `404 Not Found`: Shipment or truck not found.
+
+### Confirm Delivery
+- **Method:** `PATCH`
+- **Path:** `/api/shipments/:id/confirm`
+- **Auth Required:** Yes (Shipper Role)
+- **Responses:**
+  - `200 OK`: Shipment set to COMPLETED, escrow released to company.
+  - `400 Bad Request`: Shipment not in AWAITING_CONFIRMATION status.
+
+### Dispute Delivery
+- **Method:** `PATCH`
+- **Path:** `/api/shipments/:id/dispute`
+- **Auth Required:** Yes (Shipper Role)
+- **Responses:**
+  - `200 OK`: Shipment set to DISPUTED.
+  - `400 Bad Request`: Shipment not in AWAITING_CONFIRMATION status.
+
+### Rate a Truck
+- **Method:** `POST`
+- **Path:** `/api/ratings`
+- **Auth Required:** Yes (Shipper Role)
+- **Body (JSON):**
+```json
+{
+  "shipment_id": "123",
+  "stars": 5,
+  "comment": "Excellent service!"
+}
+```
+- **Responses:**
+  - `201 Created`: Rating saved, truck average updated.
+  - `400 Bad Request`: Shipment not COMPLETED or stars out of range.
+  - `409 Conflict`: Already rated this shipment.
+
+---
+
+## 4. Company Shipments API
 
 ### Get Available Shipments
-Fetch shipments that are available for companies to express interest in.
 - **Method:** `GET`
 - **Path:** `/api/shipments/`
 - **Auth Required:** Yes (Company Role)
 - **Responses:**
-  - `200 OK`: Returns a list of shipments.
+  - `200 OK`: Returns list of POSTED shipments.
 
 ### Get Active Shipments
-Fetch ongoing shipments assigned to the company's trucks.
 - **Method:** `GET`
 - **Path:** `/api/shipments/active`
 - **Auth Required:** Yes (Company Role)
-- **Description:** Returns all shipments in `ESCROW_FUNDED`, `IN_TRANSIT`, or `AWAITING_CONFIRMATION` statuses. Includes full cargo details and **shipper contact information** (name, phone, email).
 - **Responses:**
-  - `200 OK`: Returns a list of active shipments.
+  - `200 OK`: Returns shipments in ESCROW_FUNDED, IN_TRANSIT, or AWAITING_CONFIRMATION.
 
 ### Pickup Shipment
-Mark a shipment as picked up by a specific truck.
 - **Method:** `PATCH`
 - **Path:** `/api/shipments/:id/pickup`
 - **Auth Required:** Yes (Company Role)
@@ -126,11 +201,9 @@ Mark a shipment as picked up by a specific truck.
 }
 ```
 - **Responses:**
-  - `200 OK`: Shipment picked up successfully.
-  - `400 Bad Request`: Missing `truckId` or invalid ID format.
+  - `200 OK`: Status changed to IN_TRANSIT.
 
 ### Deliver Shipment
-Mark a shipment as delivered.
 - **Method:** `PATCH`
 - **Path:** `/api/shipments/:id/deliver`
 - **Auth Required:** Yes (Company Role)
@@ -141,39 +214,35 @@ Mark a shipment as delivered.
 }
 ```
 - **Responses:**
-  - `200 OK`: Shipment delivered successfully.
+  - `200 OK`: Status changed to AWAITING_CONFIRMATION.
 
 ---
 
-## 4. Trucks API
+## 5. Trucks API
 
 ### Register Truck
-Register a new truck for the company.
 - **Method:** `POST`
 - **Path:** `/api/trucks/register`
 - **Auth Required:** Yes (Company Role)
-- **Body (JSON):**
-```json
-{
-  "plate_number": "RAB 123 A",
-  "truck_type": "Flatbed",
-  "declared_capacity": 15.5,
-  "reg_card_path": "path/to/reg_card.pdf"
-}
-```
+- **Content-Type:** `multipart/form-data`
+- **Body (Form Data):**
+  - `plate_number`: string
+  - `truck_type`: string
+  - `declared_capacity`: number
+  - `reg_card`: file
+  - `insurance_cert`: file
 - **Responses:**
   - `201 Created`: Truck registered successfully.
+  - `400 Bad Request`: Missing fields or files.
 
 ### Get My Trucks
-List all trucks belonging to the authenticated company.
 - **Method:** `GET`
 - **Path:** `/api/trucks/my`
 - **Auth Required:** Yes (Company Role)
 - **Responses:**
-  - `200 OK`: List of trucks.
+  - `200 OK`: Returns list of trucks with verification_status.
 
 ### Update Truck Status
-Update the availability status of a truck.
 - **Method:** `PATCH`
 - **Path:** `/api/trucks/:id/status`
 - **Auth Required:** Yes (Company Role)
@@ -183,16 +252,22 @@ Update the availability status of a truck.
   "availability_status": "AVAILABLE"
 }
 ```
-*Valid statuses: `AVAILABLE`, `RESERVED`, `IN_TRANSIT`, `UNAVAILABLE`*
 - **Responses:**
   - `200 OK`: Status updated.
 
+### Get Truck Ratings
+- **Method:** `GET`
+- **Path:** `/api/trucks/:id/ratings`
+- **Auth Required:** No (Public)
+- **Responses:**
+  - `200 OK`: Returns list of ratings with shipper name, stars, comment, date.
+  - `404 Not Found`: Truck not found.
+
 ---
 
-## 5. Interests API
+## 6. Interests API
 
 ### Express Interest
-Express interest in a shipment with a specific truck.
 - **Method:** `POST`
 - **Path:** `/api/interests`
 - **Auth Required:** Yes (Company Role)
@@ -207,9 +282,91 @@ Express interest in a shipment with a specific truck.
   - `201 Created`: Interest recorded.
 
 ### Get My Interests
-List all interests expressed by the company.
 - **Method:** `GET`
 - **Path:** `/api/interests/my`
 - **Auth Required:** Yes (Company Role)
 - **Responses:**
   - `200 OK`: List of interests.
+
+---
+
+## 7. Payments API
+
+### Initiate Payment
+- **Method:** `POST`
+- **Path:** `/api/payments/initiate`
+- **Auth Required:** Yes (Shipper Role)
+- **Body (JSON):**
+```json
+{
+  "shipment_id": "1",
+  "provider": "MTN",
+  "phone_number": "+250780000000"
+}
+```
+- **Responses:**
+  - `200 OK`: Returns `reference_id` and `status: PENDING`.
+
+### Check Payment Status
+- **Method:** `GET`
+- **Path:** `/api/payments/status/:reference_id`
+- **Auth Required:** Yes
+- **Responses:**
+  - `200 OK`: Returns current payment and shipment status.
+
+### Resolve Dispute
+- **Method:** `POST`
+- **Path:** `/api/payments/disputes/resolve`
+- **Auth Required:** Yes (Admin Role)
+- **Body (JSON):**
+```json
+{
+  "shipment_id": "1",
+  "resolution_type": "SPLIT",
+  "shipper_amount": 5000,
+  "company_amount": 5000
+}
+```
+- **Responses:**
+  - `200 OK`: Dispute resolved.
+
+---
+
+## 8. MOMO Simulator (Dev Only)
+
+### Simulate Payment Success
+- **Method:** `POST`
+- **Path:** `/api/momo-simulator/pay`
+- **Body (JSON):**
+```json
+{
+  "reference_id": "REF-123",
+  "amount": 10000,
+  "phone_number": "+25078...",
+  "webhook_url": "http://localhost:3000/api/payments/webhook"
+}
+```
+
+### Simulate Payment Failure
+- **Method:** `POST`
+- **Path:** `/api/momo-simulator/fail`
+- **Body (JSON):**
+```json
+{
+  "reference_id": "REF-123",
+  "webhook_url": "http://localhost:3000/api/payments/webhook"
+}
+```
+
+### Simulate Payout
+- **Method:** `POST`
+- **Path:** `/api/momo-simulator/payout`
+- **Body (JSON):**
+```json
+{
+  "company_phone": "+25078...",
+  "amount": 10000,
+  "reference_id": "REF-123",
+  "webhook_url": "http://localhost:3000/api/payments/payout-webhook"
+}
+```
