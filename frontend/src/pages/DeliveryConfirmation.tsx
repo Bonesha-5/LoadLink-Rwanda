@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { getAllLoads, setStageForLoad } from '../data/storage'
@@ -69,7 +69,7 @@ export default function DeliveryConfirmation() {
 
   // Try API then fall back to localStorage
   useEffect(() => {
-    fetch(`/api/shipments/${id}`, {
+    fetch(`/api/shipments?id=${id}`, {
       headers: { Authorization: `Bearer ${getToken()}` },
     })
       .then((r) => { if (!r.ok) throw new Error(); return r.json() })

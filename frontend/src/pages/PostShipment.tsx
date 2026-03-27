@@ -75,8 +75,8 @@ export default function PostShipment() {
           dropoff_district:   form.destination,
           pickup_description: form.pickupDescription,
           cargo_description:  form.description,
-          weight_tons:        Number(form.weight),
-          offered_price_rwf:  Number(form.price),
+          weight:             Number(form.weight),
+          offered_price:      Number(form.price),
           pickup_date:        form.date,
         }),
       })

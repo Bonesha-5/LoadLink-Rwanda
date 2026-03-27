@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import {
@@ -49,11 +49,22 @@ function parseTons(value: string | undefined): number | null {
   return Number(match[1])
 }
 
+type ApiInterest = {
+  id: string
+  plate_number: string
+  truck_type: string
+  declared_capacity: string
+  rating_average: number | null
+  company_name: string
+  contact_person: string
+}
+
 export default function ShipperInterestedTrucks() {
   const navigate    = useNavigate()
   const { id }      = useParams<{ id: string }>()
   const { getToken, user } = useAuth()
   const [pending, setPending] = useState<Candidate | null>(null)
+  const [candidates, setCandidates] = useState<Candidate[]>([])
 
   const load = useMemo<Load | undefined>(() => {
     ensureSeedLoads(user?.name || 'Shipper')
@@ -61,7 +72,8 @@ export default function ShipperInterestedTrucks() {
     return getAllLoads().find((l) => l.id === id)
   }, [id, user?.name])
 
-  const candidates = useMemo<Candidate[]>(() => {
+  // Build local fallback candidates from seed data
+  const localCandidates = useMemo<Candidate[]>(() => {
     ensureSeedLoads(user?.name || 'Shipper')
     const loads = getAllLoads()
     const result: Candidate[] = []
@@ -94,9 +106,39 @@ export default function ShipperInterestedTrucks() {
         }
       }
     }
-
     return result.sort((a, b) => b.rating - a.rating)
   }, [id, user?.name])
+
+  useEffect(() => {
+    if (!id) { setCandidates(localCandidates); return }
+    let cancelled = false
+    fetch(`/api/shipments/${id}/interests`, {
+      headers: { Authorization: `Bearer ${getToken()}` },
+    })
+      .then((r) => r.ok ? r.json() : Promise.reject())
+      .then((data: ApiInterest[]) => {
+        if (cancelled) return
+        const loadData = getAllLoads().find((l) => l.id === id)
+        const mapped: Candidate[] = data.map((item) => ({
+          loadId:      id,
+          origin:      loadData?.origin ?? '',
+          destination: loadData?.destination ?? '',
+          weight:      loadData?.weight ?? '',
+          price:       loadData?.price ?? '—',
+          companyName: item.company_name,
+          truckId:     item.id,
+          plate:       item.plate_number,
+          type:        item.truck_type,
+          capacity:    item.declared_capacity,
+          rating:      item.rating_average ?? 0,
+          phone:       item.contact_person,
+          email:       `${item.company_name.toLowerCase().replace(/\s+/g, '.')}@loadlink.rw`,
+        }))
+        setCandidates(mapped.sort((a, b) => b.rating - a.rating))
+      })
+      .catch(() => { if (!cancelled) setCandidates(localCandidates) })
+    return () => { cancelled = true }
+  }, [id, getToken, localCandidates])
 
   const confirmSelect = async (item: Candidate) => {
     try {

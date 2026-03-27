@@ -61,7 +61,8 @@ export default function ShipperPayments() {
   const [provider, setProvider]   = useState<'MTN' | 'AIRTEL' | null>(null)
   const [phone, setPhone]         = useState('')
   const [busy, setBusy]           = useState(false)
-  const [payStatus, setPayStatus] = useState<null | 'pending' | 'confirmed'>(null)
+  const [payStatus, setPayStatus] = useState<null | 'pending' | 'polling' | 'confirmed'>(null)
+  const [phoneError, setPhoneError] = useState('')
 
   if (!selected || !load) {
     return (
@@ -88,8 +89,25 @@ export default function ShipperPayments() {
     )
   }
 
+  const validatePhone = (): boolean => {
+    const digits = phone.trim().replace(/\s+/g, '')
+    const mtnPattern    = /^(\+250)?07[89]\d{7}$/
+    const airtelPattern = /^(\+250)?07[23]\d{7}$/
+    if (provider === 'MTN' && !mtnPattern.test(digits)) {
+      setPhoneError('MTN numbers start with 078 or 079 (e.g. 0781234567)')
+      return false
+    }
+    if (provider === 'AIRTEL' && !airtelPattern.test(digits)) {
+      setPhoneError('Airtel numbers start with 072 or 073 (e.g. 0721234567)')
+      return false
+    }
+    setPhoneError('')
+    return true
+  }
+
   const pay = async () => {
     if (!provider || busy || payStatus === 'confirmed') return
+    if (!validatePhone()) return
     setBusy(true)
     setPayStatus('pending')
 
@@ -118,12 +136,27 @@ export default function ShipperPayments() {
         body: JSON.stringify({
           shipment_id: selected.loadId,
           provider,
-          phone: phone.trim(),
-          amount: load.price ?? '0',
+          phone_number: phone.trim(),
         }),
       })
       if (!res.ok) throw new Error()
-      doLocal()
+      const data = await res.json() as { reference_id?: string }
+      const refId = data.reference_id
+      if (!refId) { doLocal(); return }
+
+      // Poll backend every 2s until payment is confirmed
+      setPayStatus('polling')
+      const interval = window.setInterval(async () => {
+        try {
+          const statusRes = await fetch(`/api/payments/status/${refId}`)
+          if (!statusRes.ok) return
+          const statusData = await statusRes.json() as { payment_status?: string }
+          if (statusData.payment_status === 'CONFIRMED') {
+            window.clearInterval(interval)
+            doLocal()
+          }
+        } catch { /* keep polling */ }
+      }, 2000)
     } catch {
       // API unavailable — simulate locally
       window.setTimeout(doLocal, 3000)
@@ -214,10 +247,14 @@ export default function ShipperPayments() {
       </div>
 
       {/* Payment status messages */}
-      {payStatus === 'pending' && (
+      {(payStatus === 'pending' || payStatus === 'polling') && (
         <div className="flex items-center gap-2 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3">
           <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse flex-shrink-0" />
-          <p className="text-sm font-semibold text-amber-800">Processing payment — please wait…</p>
+          <p className="text-sm font-semibold text-amber-800">
+            {payStatus === 'polling'
+              ? 'Waiting for payment confirmation on your phone…'
+              : 'Processing payment — please wait…'}
+          </p>
         </div>
       )}
       {payStatus === 'confirmed' && (
@@ -280,11 +317,12 @@ export default function ShipperPayments() {
               <input
                 id="payPhone"
                 type="tel"
-                placeholder={provider === 'MTN' ? '+250 78x xxx xxx' : '+250 72x xxx xxx'}
+                placeholder={provider === 'MTN' ? '078x xxx xxx' : '072x xxx xxx'}
                 value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl border border-stone-200 bg-stone-50 text-sm text-stone-800 placeholder:text-stone-400 focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
+                onChange={(e) => { setPhone(e.target.value); setPhoneError('') }}
+                className={`w-full px-4 py-3 rounded-xl border bg-stone-50 text-sm text-stone-800 placeholder:text-stone-400 focus:outline-none focus:ring-2 transition-colors ${phoneError ? 'border-red-300 focus:border-red-400 focus:ring-red-200' : 'border-stone-200 focus:border-accent focus:ring-accent/20'}`}
               />
+              {phoneError && <p className="mt-1 text-xs text-red-600">{phoneError}</p>}
             </div>
           )}
 
@@ -295,7 +333,7 @@ export default function ShipperPayments() {
             onClick={pay}
             className="w-full flex items-center justify-center gap-2 rounded-xl bg-accent text-sidebar py-4 font-bold text-base hover:bg-accent-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {busy ? 'Processing…' : `Pay ${load.price ?? ''} via ${provider ?? '…'}`}
+            {payStatus === 'polling' ? 'Waiting for confirmation…' : busy ? 'Processing…' : `Pay ${load.price ?? ''} via ${provider ?? '…'}`}
           </button>
         </div>
       )}
