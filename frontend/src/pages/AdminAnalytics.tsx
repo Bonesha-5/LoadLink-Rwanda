@@ -1,22 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
-  Area,
-  AreaChart,
-  CartesianGrid,
-  Cell,
-  Pie,
-  PieChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
+  Area, AreaChart, CartesianGrid, Cell, Pie, PieChart,
+  ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from 'recharts'
 import { ensureSeedAdminData, getAdminDisputes, getAdminShipments, getAuditLogs, getPendingCompanies } from '../data/storage'
 
 type FetchState = 'idle' | 'loading' | 'error' | 'success'
 
-const PIE_COLORS = ['#F5C518', '#0B0B0F', '#6B7280', '#C9A227', '#9CA3AF', '#D1D5DB']
+// Fixed pie colors with matching legend dots
+const PIE_COLORS = ['#F5C518', '#0B0B0F', '#6B7280', '#C9A227', '#9CA3AF', '#D1D5DB', '#EF4444', '#10B981']
 
 function formatStatusLabel(status: string): string {
   const map: Record<string, string> = {
@@ -35,7 +28,7 @@ function formatStatusLabel(status: string): string {
 function dayKey(iso: string): string {
   const d = new Date(iso)
   if (Number.isNaN(d.getTime())) return 'Unknown'
-  return d.toISOString().slice(0, 10) // YYYY-MM-DD
+  return d.toISOString().slice(0, 10)
 }
 
 function formatShortDay(yyyyMmDd: string): string {
@@ -47,7 +40,6 @@ function formatShortDay(yyyyMmDd: string): string {
 export default function AdminAnalytics() {
   const [state, setState] = useState<FetchState>('idle')
   const [error, setError] = useState<string | null>(null)
-
   const [pendingCompaniesCount, setPendingCompaniesCount] = useState(0)
   const [shipmentsCount, setShipmentsCount] = useState(0)
   const [disputesCount, setDisputesCount] = useState(0)
@@ -60,7 +52,6 @@ export default function AdminAnalytics() {
     setError(null)
     try {
       ensureSeedAdminData()
-
       const pendingCompanies = getPendingCompanies()
       const shipments = getAdminShipments()
       const disputes = getAdminDisputes()
@@ -80,29 +71,21 @@ export default function AdminAnalytics() {
         .sort((a, b) => b.count - a.count)
       setShipmentStageSummary(summary)
 
-      // Clear trend: "new shipments created per day" over the last 14 days
       const days = 14
       const today = new Date()
       today.setHours(0, 0, 0, 0)
-
       const dayCounts = new Map<string, number>()
       for (const s of shipments) {
         const k = dayKey(s.createdAt)
         dayCounts.set(k, (dayCounts.get(k) ?? 0) + 1)
       }
-
       const trend = Array.from({ length: days }).map((_, idx) => {
         const d = new Date(today)
         d.setDate(today.getDate() - (days - 1 - idx))
         const key = d.toISOString().slice(0, 10)
-        return {
-          day: key,
-          label: formatShortDay(key),
-          shipments: dayCounts.get(key) ?? 0,
-        }
+        return { day: key, label: formatShortDay(key), shipments: dayCounts.get(key) ?? 0 }
       })
       setShipmentsTrend(trend)
-
       setState('success')
     } catch (e) {
       console.error(e)
@@ -111,43 +94,14 @@ export default function AdminAnalytics() {
     }
   }, [])
 
-  useEffect(() => {
-    refresh()
-  }, [refresh])
+  useEffect(() => { refresh() }, [refresh])
 
-  const primaryCards = useMemo(
-    () => [
-      {
-        title: 'Company checks',
-        value: pendingCompaniesCount,
-        helper: 'Companies waiting for approval',
-        to: '/admin/companies',
-        tone: 'border-stone-200',
-      },
-      {
-        title: 'All shipments',
-        value: shipmentsCount,
-        helper: 'Every shipment on the platform',
-        to: '/admin/shipments',
-        tone: 'border-stone-200',
-      },
-      {
-        title: 'Disputes',
-        value: disputesCount,
-        helper: 'Shipments reported as a problem',
-        to: '/admin/disputes',
-        tone: disputesCount > 0 ? 'border-red-200 ring-1 ring-red-100' : 'border-stone-200',
-      },
-      {
-        title: 'Activity log',
-        value: recentEventsCount,
-        helper: 'Actions in the last 7 days',
-        to: '/admin/audit-log',
-        tone: 'border-stone-200',
-      },
-    ],
-    [pendingCompaniesCount, shipmentsCount, disputesCount, recentEventsCount],
-  )
+  const primaryCards = useMemo(() => [
+    { title: 'Company Verification', value: pendingCompaniesCount, helper: 'Companies waiting for approval', to: '/admin/companies', tone: 'border-stone-200' },
+    { title: 'All shipments', value: shipmentsCount, helper: 'Every shipment on the platform', to: '/admin/shipments', tone: 'border-stone-200' },
+    { title: 'Disputes', value: disputesCount, helper: 'Shipments reported as a problem', to: '/admin/disputes', tone: disputesCount > 0 ? 'border-red-200 ring-1 ring-red-100' : 'border-stone-200' },
+    { title: 'Activity log', value: recentEventsCount, helper: 'Actions in the last 7 days', to: '/admin/audit-log', tone: 'border-stone-200' },
+  ], [pendingCompaniesCount, shipmentsCount, disputesCount, recentEventsCount])
 
   return (
     <div className="max-w-6xl space-y-8 ll-animate-in">
@@ -156,7 +110,7 @@ export default function AdminAnalytics() {
           <p className="text-xs font-semibold uppercase tracking-wider text-stone-500">Admin</p>
           <h1 className="text-2xl font-bold text-stone-900 mt-1">Dashboard</h1>
           <p className="text-sm text-stone-600 mt-1 max-w-2xl">
-            This page shows what needs attention today: companies waiting for approval, shipment progress, disputes, and recent admin actions.
+            Companies waiting for approval, shipment progress, disputes, and recent admin actions.
           </p>
         </div>
         <button
@@ -196,50 +150,55 @@ export default function AdminAnalytics() {
       </section>
 
       <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Pie chart — fixed height + matching legend colors */}
         <div className="bg-white rounded-3xl border border-stone-200 p-5 shadow-sm">
           <h2 className="text-sm font-semibold text-stone-800 mb-1">Shipments by stage</h2>
           <p className="text-xs text-stone-500 mb-4">A quick visual of where shipments are right now.</p>
 
           {state === 'loading' && <p className="text-sm text-stone-500">Loading…</p>}
-
           {state === 'success' && shipmentStageSummary.length === 0 && (
             <p className="text-sm text-stone-500">No shipments yet.</p>
           )}
 
           {shipmentStageSummary.length > 0 && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
-              <div className="h-56">
+            <div className="flex flex-col sm:flex-row gap-4 items-center">
+              {/* Fixed height prevents distortion */}
+              <div className="w-full sm:w-48 h-48 shrink-0">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
                       data={shipmentStageSummary.map((s, i) => ({
                         name: s.label,
                         value: s.count,
-                        fill: PIE_COLORS[i % PIE_COLORS.length],
                       }))}
                       dataKey="value"
                       nameKey="name"
                       cx="50%"
                       cy="50%"
-                      innerRadius={50}
-                      outerRadius={75}
+                      innerRadius={46}
+                      outerRadius={72}
                       paddingAngle={2}
                     >
-                      {shipmentStageSummary.map((s, i) => (
-                        <Cell key={s.label} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+                      {shipmentStageSummary.map((_, i) => (
+                        <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
                       ))}
                     </Pie>
-                    <Tooltip
-                      formatter={(value: unknown, name: unknown) => [String(value ?? ''), String(name ?? '')]}
-                    />
+                    <Tooltip formatter={(value: unknown, name: unknown) => [String(value ?? ''), String(name ?? '')]} />
                   </PieChart>
                 </ResponsiveContainer>
               </div>
-              <ul className="space-y-2">
-                {shipmentStageSummary.slice(0, 7).map((row) => (
-                  <li key={row.label} className="flex items-center justify-between gap-4">
-                    <span className="text-sm text-stone-700">{row.label}</span>
-                    <span className="text-sm font-bold text-stone-900 tabular-nums">{row.count}</span>
+              {/* Legend with matching dot colors */}
+              <ul className="flex-1 space-y-2 w-full">
+                {shipmentStageSummary.slice(0, 8).map((row, i) => (
+                  <li key={row.label} className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span
+                        className="w-2.5 h-2.5 rounded-full shrink-0"
+                        style={{ backgroundColor: PIE_COLORS[i % PIE_COLORS.length] }}
+                      />
+                      <span className="text-xs text-stone-600 truncate">{row.label}</span>
+                    </div>
+                    <span className="text-xs font-bold text-stone-900 tabular-nums shrink-0">{row.count}</span>
                   </li>
                 ))}
               </ul>
@@ -251,7 +210,6 @@ export default function AdminAnalytics() {
           <div>
             <h2 className="text-sm font-semibold text-stone-800 mb-1">Shipments over time</h2>
             <p className="text-xs text-stone-500 mb-4">New shipments created per day (last 14 days).</p>
-
             {shipmentsTrend.length === 0 ? (
               <p className="text-sm text-stone-500">Not enough data yet.</p>
             ) : (
@@ -265,8 +223,8 @@ export default function AdminAnalytics() {
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
-                    <XAxis dataKey="label" tickLine={false} axisLine={false} interval={3} />
-                    <YAxis tickLine={false} axisLine={false} allowDecimals={false} />
+                    <XAxis dataKey="label" tickLine={false} axisLine={false} interval={3} tick={{ fontSize: 11 }} />
+                    <YAxis tickLine={false} axisLine={false} allowDecimals={false} tick={{ fontSize: 11 }} />
                     <Tooltip
                       formatter={(v: unknown) => [String(v ?? ''), 'New shipments']}
                       labelFormatter={(label: unknown) => String(label ?? '')}
@@ -280,25 +238,11 @@ export default function AdminAnalytics() {
 
           <div>
             <h2 className="text-sm font-semibold text-stone-800 mb-1">What admins can do</h2>
-            <p className="text-xs text-stone-500 mb-4">Quick reminders of your main actions.</p>
-
             <ul className="space-y-3 text-sm text-stone-700">
-              <li className="flex items-start gap-3">
-                <span className="mt-1 h-2 w-2 rounded-full bg-accent shrink-0" />
-                Approve or reject companies after checking their documents.
-              </li>
-              <li className="flex items-start gap-3">
-                <span className="mt-1 h-2 w-2 rounded-full bg-accent shrink-0" />
-                Monitor all shipments and see their current stage.
-              </li>
-              <li className="flex items-start gap-3">
-                <span className="mt-1 h-2 w-2 rounded-full bg-accent shrink-0" />
-                Handle disputes and decide how the held payment is released.
-              </li>
-              <li className="flex items-start gap-3">
-                <span className="mt-1 h-2 w-2 rounded-full bg-accent shrink-0" />
-                Review the activity log to keep a clear record of actions.
-              </li>
+              <li className="flex items-start gap-3"><span className="mt-1 h-2 w-2 rounded-full bg-accent shrink-0" />Approve or reject companies after checking their documents.</li>
+              <li className="flex items-start gap-3"><span className="mt-1 h-2 w-2 rounded-full bg-accent shrink-0" />Monitor all shipments and see their current stage.</li>
+              <li className="flex items-start gap-3"><span className="mt-1 h-2 w-2 rounded-full bg-accent shrink-0" />Handle disputes and decide how the held payment is released.</li>
+              <li className="flex items-start gap-3"><span className="mt-1 h-2 w-2 rounded-full bg-accent shrink-0" />Review the activity log to keep a clear record of actions.</li>
             </ul>
           </div>
         </div>
@@ -306,4 +250,3 @@ export default function AdminAnalytics() {
     </div>
   )
 }
-

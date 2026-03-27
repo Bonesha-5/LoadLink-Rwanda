@@ -26,7 +26,7 @@ export default function ProtectedRoute({ children, role }: Props) {
 
   // Company + Admin routes require a JWT (per product requirements).
   if ((role === 'company' || role === 'admin') && !hasToken) {
-    return <Navigate to={LOGIN_PATHS[role]} state={{ from: location }} replace />
+    return <Navigate to="{LOGIN_PATHS[role]}" state={{ from: location }} replace />
   }
 
   if (!isAuthorized) {

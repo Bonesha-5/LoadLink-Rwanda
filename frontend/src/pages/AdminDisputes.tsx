@@ -98,11 +98,13 @@ export default function AdminDisputes() {
   const currentDispute = disputes.find((d) => d.id === selectedId) ?? null
   const escrowTotal = currentDispute?.escrowAmount ?? 0
 
+  const commission = Math.round(escrowTotal * 0.05)
+  const splitTarget = escrowTotal - commission
   const splitValid =
     choice !== 'SPLIT' ||
     (!Number.isNaN(Number(companyAmount)) &&
       !Number.isNaN(Number(shipperAmount)) &&
-      Number(companyAmount) + Number(shipperAmount) === escrowTotal)
+      Number(companyAmount) + Number(shipperAmount) === splitTarget)
 
   async function resolveDispute(e: React.FormEvent) {
     e.preventDefault()
@@ -246,14 +248,14 @@ export default function AdminDisputes() {
             <h2 className="text-lg font-semibold text-stone-800 mb-2">
               Resolve dispute — {currentDispute.id}
             </h2>
-            <p className="text-sm text-stone-600 mb-3">
-              Held payment:{' '}
-              <span className="font-semibold">
-                {currentDispute.escrowAmount.toLocaleString()} {currentDispute.currency}
-              </span>
-            </p>
+            <div className="rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 mb-4 space-y-1 text-sm">
+              <p className="font-semibold text-amber-800">Escrow held: {currentDispute.escrowAmount.toLocaleString()} {currentDispute.currency}</p>
+              <p className="text-amber-700">LoadLink 5% commission: <span className="font-semibold">{commission.toLocaleString()} {currentDispute.currency}</span></p>
+              <p className="text-amber-700">Available to split: <span className="font-semibold">{splitTarget.toLocaleString()} {currentDispute.currency}</span></p>
+              <p className="text-xs text-amber-600 mt-1">Full refund = shipper gets full escrow back, platform earns nothing.</p>
+            </div>
             <p className="text-xs text-stone-500 mb-4">
-              Choose how the held payment should be shared between the company and shipper.
+              Choose how the held payment should be released.
             </p>
             <form onSubmit={resolveDispute} className="space-y-4">
               <div className="space-y-2">
@@ -265,11 +267,11 @@ export default function AdminDisputes() {
                     checked={choice === 'COMPANY'}
                     onChange={() => {
                       setChoice('COMPANY')
-                      setCompanyAmount(String(escrowTotal))
+                      setCompanyAmount(String(splitTarget))
                       setShipperAmount('0')
                     }}
                   />
-                  Pay the company (full amount)
+                  Full release to company — company gets {splitTarget.toLocaleString()}, platform keeps {commission.toLocaleString()} commission
                 </label>
                 <label className="flex items-center gap-2 text-sm text-stone-800">
                   <input
@@ -283,7 +285,7 @@ export default function AdminDisputes() {
                       setShipperAmount(String(escrowTotal))
                     }}
                   />
-                  Refund the shipper (full amount)
+                  Full refund to shipper — shipper gets {escrowTotal.toLocaleString()} in full, platform earns 0
                 </label>
                 <label className="flex items-center gap-2 text-sm text-stone-800">
                   <input
@@ -320,11 +322,11 @@ export default function AdminDisputes() {
                     />
                   </div>
                   <p className="text-xs text-stone-500">
-                    Total must equal {escrowTotal.toLocaleString()} {currentDispute.currency}.
+                    Must add up to {splitTarget.toLocaleString()} {currentDispute.currency} — that is the escrow of {escrowTotal.toLocaleString()} minus our {commission.toLocaleString()} commission.
                   </p>
                   {!splitValid && (
                     <p className="text-xs text-red-600">
-                      Company + shipper amounts must add up exactly to the total held payment.
+                      Company + shipper must add up to exactly {splitTarget.toLocaleString()} {currentDispute.currency}.
                     </p>
                   )}
                 </div>

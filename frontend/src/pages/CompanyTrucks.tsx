@@ -24,6 +24,7 @@ export default function CompanyTrucks() {
   const [plateNumber, setPlateNumber] = useState('')
   const [truckType, setTruckType] = useState('Flatbed')
   const [availability, setAvailability] = useState<'AVAILABLE' | 'RESERVED' | 'IN_TRANSIT' | 'UNAVAILABLE'>('AVAILABLE')
+  const [insuranceCertFile, setInsuranceCertFile] = useState<File | null>(null)
   const [apiTrucks, setApiTrucks] = useState<CompanyTruck[]>([])
   const [state, setState] = useState<'idle' | 'loading' | 'error' | 'success'>('idle')
   const [error, setError] = useState<string | null>(null)
@@ -87,12 +88,14 @@ export default function CompanyTrucks() {
           truck_type: truckType,
           declared_capacity: Number(capacity),
           reg_card_path: 'uploaded/placeholder.pdf',
+          insurance_cert_path: insuranceCertFile?.name ?? '',
         })
         setCapacity('')
         setLocation('')
         setPlateNumber('')
         setTruckType('Flatbed')
         setAvailability('AVAILABLE')
+        setInsuranceCertFile(null)
         setShowForm(false)
         setRefresh((v) => v + 1)
       } catch (e) {
@@ -237,16 +240,42 @@ export default function CompanyTrucks() {
                 className="w-full px-4 py-3 rounded-xl bg-stone-50 border border-stone-200 text-stone-800 placeholder:text-stone-400 focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
               />
             </div>
+            <div>
+              <label htmlFor="insuranceCert" className="block text-sm font-semibold text-stone-700 mb-2">
+                Insurance certificate <span className="text-red-500">*</span>
+              </label>
+              <label
+                htmlFor="insuranceCert"
+                className="flex items-center gap-3 w-full px-4 py-3 rounded-xl bg-stone-50 border border-stone-200 text-stone-800 cursor-pointer hover:bg-stone-100 focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/20 transition-all"
+              >
+                <svg className="w-4 h-4 text-stone-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                </svg>
+                <span className={`text-sm truncate ${insuranceCertFile ? 'text-stone-800' : 'text-stone-400'}`}>
+                  {insuranceCertFile ? insuranceCertFile.name : 'Upload insurance certificate (PDF or image)'}
+                </span>
+                <input
+                  id="insuranceCert"
+                  type="file"
+                  accept=".pdf,.jpg,.jpeg,.png"
+                  className="sr-only"
+                  onChange={(e) => setInsuranceCertFile(e.target.files?.[0] ?? null)}
+                />
+              </label>
+              <p className="text-xs text-stone-400 mt-1.5">
+                This truck will be pending admin verification before it can be used for shipments.
+              </p>
+            </div>
             <div className="flex gap-3 pt-2">
               <button
                 type="submit"
                 className="px-5 py-2.5 bg-accent text-white font-semibold rounded-xl hover:bg-accent-hover"
               >
-                Save truck
+                Submit for verification
               </button>
               <button
                 type="button"
-                onClick={() => { setShowForm(false); setCapacity(''); setLocation(''); setPlateNumber('') }}
+                onClick={() => { setShowForm(false); setCapacity(''); setLocation(''); setPlateNumber(''); setInsuranceCertFile(null) }}
                 className="px-5 py-2.5 bg-stone-100 text-stone-700 font-semibold rounded-xl hover:bg-stone-200"
               >
                 Cancel
@@ -297,6 +326,20 @@ export default function CompanyTrucks() {
                   <p className="text-stone-500 text-sm">
                     Plate: {apiToken ? (truck.plate_number ?? truck.plateNumber ?? '—') : (truck.plateNumber ?? '—')}
                   </p>
+                  {apiToken && (() => {
+                    const vs = truck.verification_status ?? truck.verificationStatus ?? 'PENDING'
+                    const vsMap: Record<string, { label: string; cls: string }> = {
+                      PENDING:  { label: 'Pending verification', cls: 'bg-amber-50 text-amber-700 border-amber-200' },
+                      VERIFIED: { label: 'Verified',             cls: 'bg-green-50 text-green-700 border-green-200' },
+                      REJECTED: { label: 'Rejected',             cls: 'bg-red-50 text-red-700 border-red-200' },
+                    }
+                    const info = vsMap[vs] ?? vsMap.PENDING
+                    return (
+                      <span className={`mt-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ${info.cls}`}>
+                        {info.label}
+                      </span>
+                    )
+                  })()}
                   {apiToken && (
                     <div className="mt-3">
                       <p className="text-xs font-semibold text-stone-600">Availability</p>

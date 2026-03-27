@@ -747,6 +747,247 @@ export function resolveDispute(
   ])
 }
 
+
+// ── Company demo seed ───────────────────────────────────────────────────────
+// Seeds three active shipments for the demo company so CompanyActiveShipments
+// has data to visualise across all three statuses.
+
+const COMPANY_SEED_KEY = 'll_company_active_seed_v2'
+
+export interface CompanyActiveShipment {
+  id: string
+  pickup: string
+  dropoff: string
+  weightTons: number
+  priceRwf: number
+  status: 'AWAITING_ESCROW' | 'ESCROW_FUNDED' | 'IN_TRANSIT' | 'AWAITING_CONFIRMATION' | 'COMPLETED' | 'COMPLETED'
+  completedAt?: string
+  shipperName: string
+  shipperPhone: string
+  truckPlate: string
+  createdAt: string
+}
+
+function getCompanyActiveShipments(): CompanyActiveShipment[] {
+  try {
+    return safeParseJson<CompanyActiveShipment[]>(localStorage.getItem(COMPANY_SEED_KEY), [])
+  } catch {
+    return []
+  }
+}
+
+function saveCompanyActiveShipments(items: CompanyActiveShipment[]): void {
+  safeSetItem(COMPANY_SEED_KEY, items)
+}
+
+export function ensureSeedCompanyData(): void {
+  const existing = getCompanyActiveShipments()
+  if (existing.length > 0) return
+
+  const now = Date.now()
+  const seed: CompanyActiveShipment[] = [
+    {
+      id: 'CA-000',
+      pickup: 'Kigali',
+      dropoff: 'Nyamata',
+      weightTons: 6,
+      priceRwf: 120_000,
+      status: 'AWAITING_ESCROW',
+      shipperName: 'Pearl Logistics',
+      shipperPhone: '+250 788 000 111',
+      truckPlate: 'RAE 321 D',
+      createdAt: new Date(now - 0.5 * 24 * 60 * 60 * 1000).toISOString(),
+    },
+    {
+      id: 'CA-001',
+      pickup: 'Kigali',
+      dropoff: 'Musanze',
+      weightTons: 8,
+      priceRwf: 180_000,
+      status: 'ESCROW_FUNDED',
+      shipperName: 'ACME Manufacturing',
+      shipperPhone: '+250 788 111 222',
+      truckPlate: 'RAB 123 A',
+      createdAt: new Date(now - 1 * 24 * 60 * 60 * 1000).toISOString(),
+    },
+    {
+      id: 'CA-002',
+      pickup: 'Butare',
+      dropoff: 'Kigali',
+      weightTons: 15,
+      priceRwf: 320_000,
+      status: 'IN_TRANSIT',
+      shipperName: 'Green Farms Ltd',
+      shipperPhone: '+250 722 333 444',
+      truckPlate: 'RAC 456 B',
+      createdAt: new Date(now - 3 * 24 * 60 * 60 * 1000).toISOString(),
+    },
+    {
+      id: 'CA-003',
+      pickup: 'Gisenyi',
+      dropoff: 'Kigali',
+      weightTons: 5,
+      priceRwf: 95_000,
+      status: 'AWAITING_CONFIRMATION',
+      shipperName: 'Tech Supplies Rwanda',
+      shipperPhone: '+250 733 555 666',
+      truckPlate: 'RAD 789 C',
+      createdAt: new Date(now - 5 * 24 * 60 * 60 * 1000).toISOString(),
+    },
+    {
+      id: 'CA-004',
+      pickup: 'Kigali',
+      dropoff: 'Rwamagana',
+      weightTons: 10,
+      priceRwf: 210_000,
+      status: 'COMPLETED',
+      shipperName: 'Rwanda Beverages Co',
+      shipperPhone: '+250 788 777 888',
+      truckPlate: 'RAB 123 A',
+      createdAt: new Date(now - 8 * 24 * 60 * 60 * 1000).toISOString(),
+    },
+    {
+      id: 'CA-005',
+      pickup: 'Musanze',
+      dropoff: 'Huye',
+      weightTons: 20,
+      priceRwf: 450_000,
+      status: 'COMPLETED',
+      shipperName: 'East Africa Imports',
+      shipperPhone: '+250 722 999 000',
+      truckPlate: 'RAC 456 B',
+      createdAt: new Date(now - 14 * 24 * 60 * 60 * 1000).toISOString(),
+    },
+  ]
+  saveCompanyActiveShipments(seed)
+}
+
+const COMPANY_COMPLETED_KEY = 'll_company_completed_seed'
+
+export interface CompanyCompletedShipment {
+  id: string
+  pickup: string
+  dropoff: string
+  weightTons: number
+  priceRwf: number
+  platformFee: number
+  payoutRwf: number
+  shipperName: string
+  truckPlate: string
+  completedAt: string
+}
+
+function getCompanyCompletedStorage(): CompanyCompletedShipment[] {
+  try {
+    return safeParseJson<CompanyCompletedShipment[]>(localStorage.getItem(COMPANY_COMPLETED_KEY), [])
+  } catch {
+    return []
+  }
+}
+
+function saveCompanyCompleted(items: CompanyCompletedShipment[]): void {
+  safeSetItem(COMPANY_COMPLETED_KEY, items)
+}
+
+export function ensureSeedCompanyCompleted(): void {
+  if (getCompanyCompletedStorage().length > 0) return
+  const now = Date.now()
+  const seed: CompanyCompletedShipment[] = [
+    {
+      id: 'CC-001',
+      pickup: 'Kigali',
+      dropoff: 'Rwamagana',
+      weightTons: 10,
+      priceRwf: 200_000,
+      platformFee: 10_000,
+      payoutRwf: 190_000,
+      shipperName: 'Horizon Foods',
+      truckPlate: 'RAB 123 A',
+      completedAt: new Date(now - 7 * 24 * 60 * 60 * 1000).toISOString(),
+    },
+    {
+      id: 'CC-002',
+      pickup: 'Musanze',
+      dropoff: 'Butare',
+      weightTons: 6,
+      priceRwf: 140_000,
+      platformFee: 7_000,
+      payoutRwf: 133_000,
+      shipperName: 'Rwanda Timber Co',
+      truckPlate: 'RAC 456 B',
+      completedAt: new Date(now - 14 * 24 * 60 * 60 * 1000).toISOString(),
+    },
+    {
+      id: 'CC-003',
+      pickup: 'Gisenyi',
+      dropoff: 'Kigali',
+      weightTons: 12,
+      priceRwf: 280_000,
+      platformFee: 14_000,
+      payoutRwf: 266_000,
+      shipperName: 'ACME Manufacturing',
+      truckPlate: 'RAD 789 C',
+      completedAt: new Date(now - 21 * 24 * 60 * 60 * 1000).toISOString(),
+    },
+  ]
+  saveCompanyCompleted(seed)
+}
+
+export function getCompanyCompletedDemoShipments(): CompanyCompletedShipment[] {
+  ensureSeedCompanyCompleted()
+  return getCompanyCompletedStorage()
+    .slice()
+    .sort((a, b) => b.completedAt.localeCompare(a.completedAt))
+}
+
+export function completeCompanyDemoShipment(id: string): void {
+  // Move from active to completed
+  const active = getCompanyActiveShipments()
+  const idx = active.findIndex((s) => s.id === id)
+  if (idx === -1) return
+  const s = active[idx]
+  const platformFee = Math.round(s.priceRwf * 0.05)
+  const completed: CompanyCompletedShipment = {
+    id: s.id,
+    pickup: s.pickup,
+    dropoff: s.dropoff,
+    weightTons: s.weightTons,
+    priceRwf: s.priceRwf,
+    platformFee,
+    payoutRwf: s.priceRwf - platformFee,
+    shipperName: s.shipperName,
+    truckPlate: s.truckPlate,
+    completedAt: new Date().toISOString(),
+  }
+  // Remove from active
+  active.splice(idx, 1)
+  saveCompanyActiveShipments(active)
+  // Add to completed
+  ensureSeedCompanyCompleted()
+  saveCompanyCompleted([completed, ...getCompanyCompletedStorage()])
+}
+
+export function getCompanyActiveDemoShipments(): CompanyActiveShipment[] {
+  ensureSeedCompanyData()
+  return getCompanyActiveShipments()
+    .slice()
+    .sort((a, b) => {
+      const order = { AWAITING_ESCROW: 0, ESCROW_FUNDED: 1, IN_TRANSIT: 2, AWAITING_CONFIRMATION: 3, COMPLETED: 4 }
+      return (order[a.status] ?? 9) - (order[b.status] ?? 9)
+    })
+}
+
+export function updateCompanyDemoShipmentStatus(
+  id: string,
+  status: 'IN_TRANSIT' | 'AWAITING_CONFIRMATION',
+): void {
+  const items = getCompanyActiveShipments()
+  const idx = items.findIndex((s) => s.id === id)
+  if (idx === -1) return
+  items[idx] = { ...items[idx], status }
+  saveCompanyActiveShipments(items)
+}
+
 export function getAuditLogs(): AuditLogEntry[] {
   ensureSeedAdminData()
   return getAllAuditLogs().slice().sort((a, b) => b.createdAt.localeCompare(a.createdAt))
