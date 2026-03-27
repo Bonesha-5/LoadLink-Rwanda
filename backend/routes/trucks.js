@@ -4,15 +4,13 @@ import { verifyToken, requiredRole } from "../middleware/auth.js";
 
 const router = express.Router();
 
-// Middleware to protect all truck routes for companies
+router.get("/:id/ratings", trucksController.getTruckRatings);
+
 router.use(verifyToken);
 router.use(requiredRole("COMPANY"));
 
-
 router.get("/my", trucksController.getMyTrucks);
-
 router.patch("/:id/status", trucksController.updateTruckStatus);
-
 router.post("/register", trucksController.registerTruck);
 
 export default router;

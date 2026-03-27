@@ -1,7 +1,6 @@
 import * as trucksService from "../service/trucks.js";
 import { catchAsync } from "../utils/catchAsync.js";
 
-// Handle fetching all trucks for the logged-in company
 export const getMyTrucks = catchAsync(async (req, res) => {
   const { company_id } = req.user;
 
@@ -13,7 +12,6 @@ export const getMyTrucks = catchAsync(async (req, res) => {
   });
 });
 
-// Update truck availability status
 export const updateTruckStatus = catchAsync(async (req, res) => {
   const { id } = req.params;
   const { availability_status } = req.body;
@@ -35,7 +33,6 @@ export const updateTruckStatus = catchAsync(async (req, res) => {
   });
 });
 
-// Register a new truck
 export const registerTruck = catchAsync(async (req, res) => {
   const { plate_number, truck_type, declared_capacity, reg_card_path } = req.body;
   const { company_id } = req.user;
@@ -58,5 +55,16 @@ export const registerTruck = catchAsync(async (req, res) => {
     success: true,
     message: "Truck registered successfully",
     data: truck,
+  });
+});
+
+export const getTruckRatings = catchAsync(async (req, res) => {
+  const { id } = req.params;
+
+  const ratings = await trucksService.getTruckRatings(id);
+
+  res.status(200).json({
+    success: true,
+    data: ratings,
   });
 });
