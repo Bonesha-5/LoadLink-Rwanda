@@ -93,13 +93,13 @@ export default function ShipperLayout() {
   }
 
   return (
-    <div className="flex min-h-screen bg-cream">
+    <div className="flex min-h-screen bg-sand">
       {/* Sidebar */}
-      <aside className="w-[240px] hidden md:flex flex-col flex-shrink-0 bg-sidebar text-white">
+      <aside className="w-[252px] hidden md:flex flex-col flex-shrink-0 bg-gradient-to-b from-slate-950 via-slate-900 to-slate-800 text-white shadow-2xl">
         {/* Logo */}
         <div className="px-5 py-5 border-b border-white/10">
           <Link to="/" className="flex items-center gap-2.5 group">
-            <div className="w-8 h-8 rounded-lg bg-accent flex items-center justify-center flex-shrink-0">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-300 to-amber-500 text-slate-900 shadow-md flex items-center justify-center flex-shrink-0">
               <TruckIcon />
             </div>
             <span className="text-sm font-bold tracking-tight text-white group-hover:text-white/90">
@@ -110,7 +110,7 @@ export default function ShipperLayout() {
 
         {/* Dashboard label */}
         <div className="px-5 pt-5 pb-2">
-          <p className="text-xs font-bold uppercase tracking-widest text-white/50">
+          <p className="text-[11px] font-bold uppercase tracking-widest text-white/60">
             Shipper Dashboard
           </p>
         </div>
@@ -125,10 +125,10 @@ export default function ShipperLayout() {
               <Link
                 key={item.path}
                 to={item.path}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl font-semibold text-sm transition-all ${
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl font-semibold text-sm border transition-all ${
                   isActive
-                    ? 'bg-accent text-sidebar'
-                    : 'text-white/80 hover:bg-white/10 hover:text-white'
+                    ? 'bg-white/95 text-slate-900 border-white shadow-lg'
+                    : 'text-white/80 border-transparent hover:bg-white/10 hover:text-white'
                 }`}
               >
                 <Icon />
@@ -145,7 +145,7 @@ export default function ShipperLayout() {
           </p>
           <button
             type="button"
-            className="flex items-center gap-2 w-full px-3 py-2 rounded-xl bg-accent text-sidebar text-xs font-bold mb-1"
+            className="flex items-center gap-2 w-full px-3 py-2 rounded-xl bg-gradient-to-r from-amber-300 to-amber-500 text-slate-900 text-xs font-bold mb-1 shadow"
           >
             <UserIcon /> Shipper
           </button>
@@ -167,9 +167,9 @@ export default function ShipperLayout() {
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 overflow-y-auto">
+      <main className="flex-1 overflow-y-auto bg-gradient-to-b from-slate-50 to-white">
         {/* Top bar */}
-        <header className="bg-white border-b border-stone-200 px-6 py-3 flex items-center justify-between gap-3 sticky top-0 z-10">
+        <header className="bg-white/90 backdrop-blur border-b border-stone-200 px-6 py-3 flex items-center justify-between gap-3 sticky top-0 z-10">
           {/* Mobile logo */}
           <Link to="/" className="md:hidden text-base font-bold text-sidebar tracking-tight">
             LoadLink Rwanda
@@ -179,14 +179,14 @@ export default function ShipperLayout() {
 
           <div className="flex items-center gap-3">
             {/* Bell */}
-            <button type="button" className="w-9 h-9 rounded-full border border-stone-200 flex items-center justify-center text-stone-500 hover:bg-stone-50 transition-colors relative">
+            <button type="button" className="w-9 h-9 rounded-full border border-stone-200 flex items-center justify-center text-stone-500 hover:bg-slate-50 transition-colors relative">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
               </svg>
             </button>
             {/* User badge */}
-            <div className="flex items-center gap-2 rounded-full border border-stone-200 bg-stone-50 px-3 py-1.5">
-              <div className="w-6 h-6 rounded-full bg-sidebar flex items-center justify-center text-white text-[10px] font-bold">
+            <div className="flex items-center gap-2 rounded-full border border-stone-200 bg-slate-50 px-3 py-1.5 shadow-sm">
+              <div className="w-6 h-6 rounded-full bg-gradient-to-br from-slate-900 to-slate-700 flex items-center justify-center text-white text-[10px] font-bold">
                 {(user?.name?.[0] ?? 'S').toUpperCase()}
               </div>
               <span className="text-sm font-semibold text-stone-800 hidden sm:block">
@@ -197,7 +197,7 @@ export default function ShipperLayout() {
             <button
               type="button"
               onClick={handleLogout}
-              className="text-xs text-stone-400 hover:text-stone-700 font-semibold transition-colors"
+              className="text-xs text-stone-500 hover:text-stone-900 font-semibold transition-colors"
             >
               Logout
             </button>

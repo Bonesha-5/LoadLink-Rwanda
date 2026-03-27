@@ -2,25 +2,28 @@ import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 
 const navItems = [
-  { path: '/company/dashboard', label: 'Available Shipments', icon: DashboardIcon },
-  { path: '/company/trucks', label: 'My Trucks', icon: TruckIcon },
-  { path: '/company/active-shipments', label: 'Active Shipments', icon: ListIcon },
+  { path: '/admin/overview', label: 'Dashboard', icon: DashboardIcon },
+  { path: '/admin/companies', label: 'Company checks', icon: BuildingIcon },
+  { path: '/admin/shipments', label: 'All shipments', icon: ShipmentIcon },
+  { path: '/admin/disputes', label: 'Disputes', icon: DisputeIcon },
+  { path: '/admin/audit-log', label: 'Activity log', icon: ListIcon },
 ]
 
-function DashboardIcon() {
+function BuildingIcon() {
   return (
-    <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="3" y="3" width="7" height="9" rx="1" />
-      <rect x="14" y="3" width="7" height="5" rx="1" />
-      <rect x="14" y="12" width="7" height="9" rx="1" />
-      <rect x="3" y="16" width="7" height="5" rx="1" />
+    <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+      strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="7" height="18" rx="1" />
+      <rect x="14" y="7" width="7" height="14" rx="1" />
+      <path d="M9 9h1M9 13h1M9 17h1M18 11h1M18 15h1" />
     </svg>
   )
 }
 
-function TruckIcon() {
+function ShipmentIcon() {
   return (
-    <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+      strokeLinecap="round" strokeLinejoin="round">
       <rect x="1" y="3" width="15" height="13" />
       <polygon points="16 8 20 8 23 11 23 16 16 16 16 8" />
       <circle cx="5.5" cy="18.5" r="2.5" />
@@ -29,9 +32,20 @@ function TruckIcon() {
   )
 }
 
+function DisputeIcon() {
+  return (
+    <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+      strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 4h16v12H5.17L4 17.17V4z" />
+      <path d="M12 8v4M12 14h.01" />
+    </svg>
+  )
+}
+
 function ListIcon() {
   return (
-    <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+      strokeLinecap="round" strokeLinejoin="round">
       <line x1="8" y1="6" x2="21" y2="6" />
       <line x1="8" y1="12" x2="21" y2="12" />
       <line x1="8" y1="18" x2="21" y2="18" />
@@ -42,9 +56,29 @@ function ListIcon() {
   )
 }
 
+function DashboardIcon() {
+  return (
+    <svg
+      className="w-5 h-5 shrink-0"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M3 13h8V3H3z" />
+      <path d="M13 21h8V11h-8z" />
+      <path d="M13 3v4h8V3z" />
+      <path d="M3 17v4h8v-4z" />
+    </svg>
+  )
+}
+
 function LogoutIcon() {
   return (
-    <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+      strokeLinecap="round" strokeLinejoin="round">
       <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
       <polyline points="16 17 21 12 16 7" />
       <line x1="21" y1="12" x2="9" y2="12" />
@@ -52,12 +86,10 @@ function LogoutIcon() {
   )
 }
 
-export default function CompanyLayout() {
+export default function AdminLayout() {
   const location = useLocation()
   const navigate = useNavigate()
   const { logout, user } = useAuth()
-  const status = String(user?.status ?? '').toUpperCase()
-  const isVerified = status === 'VERIFIED'
 
   const handleLogout = () => {
     logout()
@@ -68,17 +100,17 @@ export default function CompanyLayout() {
     <div className="flex min-h-screen">
       <aside className="w-[280px] hidden md:flex flex-col flex-shrink-0 bg-white border-r border-stone-200">
         <div className="px-6 py-6">
-          <Link to="/" className="block">
+          <div>
             <h1 className="text-lg font-bold tracking-tight text-stone-900">
               LoadLink Rwanda
             </h1>
-            <span className="text-sm text-stone-500 mt-1 block">Company portal</span>
-          </Link>
+            <span className="text-sm text-stone-500 mt-1 block">Admin portal</span>
+          </div>
         </div>
 
         <nav className="flex-1 flex flex-col px-4 pb-4">
           <p className="px-3 text-[11px] font-semibold uppercase tracking-wide text-stone-400 mb-2">
-            Menu
+            Admin
           </p>
           {navItems.map((item) => {
             const isActive = location.pathname === item.path
@@ -116,7 +148,7 @@ export default function CompanyLayout() {
               <Link to="/" className="text-lg font-bold tracking-tight text-stone-900">
                 LoadLink Rwanda
               </Link>
-              <p className="text-xs text-stone-500">Company portal</p>
+              <p className="text-xs text-stone-500">Admin portal</p>
             </div>
 
             <div className="flex-1 flex items-center justify-end md:justify-between gap-3">
@@ -128,7 +160,7 @@ export default function CompanyLayout() {
                     </svg>
                   </span>
                   <input
-                    placeholder="Search shipments, routes, trucks…"
+                    placeholder="Search companies, shipments, disputes…"
                     className="w-full pl-10 pr-4 py-2.5 rounded-2xl bg-white border border-stone-200 text-sm text-stone-800 placeholder:text-stone-400 focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
                   />
                 </div>
@@ -137,22 +169,15 @@ export default function CompanyLayout() {
               <div className="flex items-center gap-2">
                 <span className="hidden sm:inline-flex items-center gap-2 rounded-2xl bg-white border border-stone-200 px-3 py-2">
                   <span className="w-7 h-7 rounded-xl bg-accent/10 text-accent flex items-center justify-center text-xs font-bold">
-                    {(user?.name?.[0] ?? 'C').toUpperCase()}
+                    {(user?.name?.[0] ?? 'A').toUpperCase()}
                   </span>
                   <span className="text-sm font-semibold text-stone-800">
-                    {user?.name || 'Company'}
+                    {user?.name || 'Admin'}
                   </span>
                 </span>
-                <span
-                  className={[
-                    'inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold border',
-                    isVerified
-                      ? 'bg-cream text-sidebar border-stone-200'
-                      : 'bg-amber-50 text-amber-800 border-amber-200',
-                  ].join(' ')}
-                >
-                  <span className={`w-1.5 h-1.5 rounded-full ${isVerified ? 'bg-accent' : 'bg-amber-500'}`} />
-                  {isVerified ? 'Verified' : 'Pending approval'}
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-cream text-sidebar px-3 py-1 text-xs font-semibold border border-stone-200">
+                  <span className="w-1.5 h-1.5 rounded-full bg-accent" />
+                  Oversight
                 </span>
               </div>
             </div>

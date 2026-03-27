@@ -3,11 +3,22 @@ import { createContext, useContext, useState, type ReactNode } from 'react'
 
 export type Role = 'shipper' | 'company' | 'admin'
 
-export type User = { role: Role; name: string; token: string } | null
+export type User = {
+  role: Role
+  name: string
+  token?: string | null
+  email?: string | null
+  status?: string | null
+} | null
 
 type AuthContextType = {
   user: User
-  login: (name: string, role: Role, token: string) => void
+  login: (
+    name: string,
+    role: Role,
+    optsOrToken?: string | { token?: string | null; email?: string | null; status?: string | null },
+  ) => void
+  updateUser: (patch: Partial<NonNullable<User>>) => void
   logout: () => void
   getToken: () => string
   isShipper: boolean
@@ -29,7 +40,15 @@ function readStoredUser(): User {
       const stored = localStorage.getItem(STORAGE_KEYS[role])
       if (!stored) continue
       const data = JSON.parse(stored)
-      if (data.role === role && data.name && data.token) return { role, name: data.name, token: data.token }
+      if (data.role === role && data.name) {
+        return {
+          role,
+          name: data.name,
+          token: data.token ?? null,
+          email: data.email ?? null,
+          status: data.status ?? null,
+        }
+      }
     } catch {
       localStorage.removeItem(STORAGE_KEYS[role])
     }
@@ -40,9 +59,14 @@ function readStoredUser(): User {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User>(readStoredUser)
 
-  const login = (name: string, role: Role, token: string) => {
+  const login = (
+    name: string,
+    role: Role,
+    optsOrToken?: string | { token?: string | null; email?: string | null; status?: string | null },
+  ) => {
     Object.values(STORAGE_KEYS).forEach((key) => localStorage.removeItem(key))
-    const u = { role, name, token }
+    const opts = typeof optsOrToken === 'string' ? { token: optsOrToken } : (optsOrToken ?? {})
+    const u = { role, name, token: opts.token ?? null, email: opts.email ?? null, status: opts.status ?? null }
     setUser(u)
     localStorage.setItem(STORAGE_KEYS[role], JSON.stringify(u))
   }
@@ -54,11 +78,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null)
   }
 
+  const updateUser = (patch: Partial<NonNullable<User>>) => {
+    setUser((prev) => {
+      if (!prev) return prev
+      const next = { ...prev, ...patch }
+      localStorage.setItem(STORAGE_KEYS[next.role], JSON.stringify(next))
+      return next
+    })
+  }
+
   return (
     <AuthContext.Provider
       value={{
         user,
         login,
+        updateUser,
         logout,
         getToken,
         isShipper: user?.role === 'shipper',

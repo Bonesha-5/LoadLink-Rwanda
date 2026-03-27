@@ -25,6 +25,7 @@ const STAGE_COLORS: Record<ShipStage, string> = {
   AWAITING_CONFIRMATION: '#6B7280',
   COMPLETED:             '#10B981',
   DISPUTED:              '#EF4444',
+  CANCELLED:             '#374151',
 }
 
 const STAGE_LABELS: Record<ShipStage, string> = {
@@ -34,6 +35,7 @@ const STAGE_LABELS: Record<ShipStage, string> = {
   AWAITING_CONFIRMATION: 'Awaiting Confirm',
   COMPLETED:             'Completed',
   DISPUTED:              'Disputed',
+  CANCELLED:             'Cancelled',
 }
 
 const DEMO_CHART = [
@@ -100,9 +102,9 @@ export default function Profile() {
 
   return (
     <div className="space-y-6 ll-animate-in">
-      <div>
-        <h1 className="text-2xl font-bold text-stone-900">Dashboard</h1>
-        <p className="text-sm text-stone-600 mt-1">Welcome back, {user?.name || 'Shipper'}</p>
+      <div className="rounded-3xl border border-stone-200 bg-gradient-to-r from-white via-slate-50 to-amber-50 p-6 shadow-sm">
+        <h1 className="text-3xl font-bold text-stone-900">Dashboard</h1>
+        <p className="text-sm text-stone-600 mt-1">Welcome back, {user?.name || 'Shipper'}. Here is your live shipment overview.</p>
       </div>
 
       {/* Stats */}
@@ -115,7 +117,7 @@ export default function Profile() {
 
       {/* Chart + Map */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white rounded-3xl border border-stone-200 p-6 shadow-sm">
+        <div className="bg-white rounded-3xl border border-stone-200 p-6 shadow-sm hover:shadow-md transition-shadow">
           <p className="text-sm font-semibold text-stone-700 mb-1">Shipments by Status</p>
           <p className="text-xs text-stone-400 mb-4">
             {myLoads.length === 0 ? 'Demo data — post shipments to see real chart' : `${myLoads.length} total shipments`}
@@ -148,7 +150,7 @@ export default function Profile() {
           </ResponsiveContainer>
         </div>
 
-        <div className="bg-white rounded-3xl border border-stone-200 p-6 shadow-sm">
+        <div className="bg-white rounded-3xl border border-stone-200 p-6 shadow-sm hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between mb-1">
             <p className="text-sm font-semibold text-stone-700">Live Shipment Map</p>
             <span className="text-xs text-stone-400">
@@ -186,7 +188,7 @@ export default function Profile() {
 
 function StatCard({ label, value, accent }: { label: string; value: number; accent: string }) {
   return (
-    <div className="bg-white rounded-3xl border border-stone-200 p-5 shadow-sm">
+    <div className="bg-white rounded-3xl border border-stone-200 p-5 shadow-sm hover:shadow-md transition-shadow">
       <p className="text-[11px] font-semibold text-stone-500 uppercase tracking-wide">{label}</p>
       <p className={`text-3xl font-bold mt-2 ${accent}`}>{value}</p>
     </div>
