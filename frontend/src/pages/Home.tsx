@@ -36,76 +36,85 @@ export default function Home() {
     : 'font-semibold text-white hover:text-accent transition-colors'
 
   return (
-    <div id="top" className="min-h-screen ll-animate-in relative overflow-hidden ll-snap-page">
-      {/* Original hero background — solid + gold glows + dot grid */}
-      <div className="absolute left-0 right-0 top-0 min-h-[720px] md:min-h-[820px] -z-10 bg-sidebar" />
-      {/* Background video */}
-      <div
-        className="absolute left-0 right-0 top-0 min-h-[720px] md:min-h-[820px] -z-10 pointer-events-none"
-        style={{
-          WebkitMaskImage:
-            'linear-gradient(180deg, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.55) 55%, rgba(0,0,0,0) 100%)',
-          maskImage:
-            'linear-gradient(180deg, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.55) 55%, rgba(0,0,0,0) 100%)',
-        }}
-        aria-hidden
-      >
-        <video
-          className="h-full w-full object-cover opacity-[0.22]"
-          autoPlay
-          muted
-          loop
-          playsInline
-          preload="metadata"
+    <div id="top" className="min-h-screen ll-animate-in relative overflow-x-hidden ll-snap-page">
+      <div className="relative">
+        {/* Hero background (stretches with hero height) */}
+        <div className="absolute inset-0 -z-10 bg-sidebar" aria-hidden />
+        <div
+          className="absolute inset-0 -z-10 pointer-events-none"
+          style={{
+            WebkitMaskImage:
+              'linear-gradient(180deg, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.55) 55%, rgba(0,0,0,0) 100%)',
+            maskImage:
+              'linear-gradient(180deg, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.55) 55%, rgba(0,0,0,0) 100%)',
+          }}
+          aria-hidden
         >
-          <source src="/hero.mp4" type="video/mp4" />
-        </video>
-      </div>
-      {/* Keep text readable */}
-      <div className="absolute left-0 right-0 top-0 min-h-[720px] md:min-h-[820px] -z-10 bg-sidebar/25" aria-hidden />
-      <div className="absolute left-0 right-0 top-0 min-h-[720px] md:min-h-[820px] -z-10 bg-[radial-gradient(circle_at_20%_10%,rgba(245,197,24,0.25)_0%,transparent_45%),radial-gradient(circle_at_80%_20%,rgba(245,197,24,0.18)_0%,transparent_45%)]" />
-      <div className="absolute left-0 right-0 top-0 min-h-[720px] md:min-h-[820px] -z-10 opacity-[0.12] bg-[radial-gradient(circle_at_center,white_1px,transparent_1px)] [background-size:18px_18px]" />
+          <video
+            className="h-full w-full object-cover opacity-[0.22]"
+            autoPlay
+            muted
+            loop
+            playsInline
+            preload="metadata"
+          >
+            <source src="/hero.mp4" type="video/mp4" />
+          </video>
+        </div>
+        <div className="absolute inset-0 -z-10 bg-sidebar/25" aria-hidden />
+        <div
+          className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_20%_10%,rgba(245,197,24,0.25)_0%,transparent_45%),radial-gradient(circle_at_80%_20%,rgba(245,197,24,0.18)_0%,transparent_45%)]"
+          aria-hidden
+        />
+        <div
+          className="absolute inset-0 -z-10 opacity-[0.12] bg-[radial-gradient(circle_at_center,white_1px,transparent_1px)] [background-size:18px_18px]"
+          aria-hidden
+        />
 
-      <header
-        className={`sticky top-0 z-50 transition-[background-color,box-shadow,border-color] duration-300 ${
-          scrolled ? 'bg-white/75 backdrop-blur-md border-b border-stone-200/60 shadow-sm' : 'bg-transparent'
-        }`}
-      >
-        <nav className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-3">
-          <Link to="/" className="shrink-0 group transition-opacity hover:opacity-95" aria-label="LoadLink Home">
-            <span className={`text-lg font-extrabold tracking-tight leading-none transition-colors ${scrolled ? 'text-sidebar' : ''}`}>
-              <span className="text-accent">Load</span>
-              <span className={scrolled ? 'text-stone-900' : 'text-white/90'}>Link</span>
-            </span>
-          </Link>
-          <div className="flex flex-wrap items-center justify-end gap-x-2 gap-y-1.5 text-[12px] max-[360px]:text-[11px] sm:text-sm">
-            <a href="#trucks" className={`hidden md:inline ${navLinkClass}`}>
-              Trucks
-            </a>
-            <a href="#how-it-works" className={`hidden sm:inline ${navLinkClass}`}>
-              How it works
-            </a>
-            <a href="#why" className={`hidden md:inline ${navLinkClass}`}>
-              Why us
-            </a>
-            <a href="#partners" className={`hidden md:inline ${navLinkClass}`}>
-              Partners
-            </a>
-            <Link to="/login/shipper" className={navLinkClass}>
-              Shipper
+        <header
+          className={`sticky top-0 z-50 transition-[background-color,box-shadow,border-color] duration-300 ${
+            scrolled ? 'bg-white/75 backdrop-blur-md border-b border-stone-200/60 shadow-sm' : 'bg-transparent'
+          }`}
+        >
+          <nav className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-3">
+            <Link to="/" className="shrink-0 group transition-opacity hover:opacity-95" aria-label="LoadLink Home">
+              <span
+                className={`text-lg font-extrabold tracking-tight leading-none transition-colors ${
+                  scrolled ? 'text-sidebar' : ''
+                }`}
+              >
+                <span className="text-accent">Load</span>
+                <span className={scrolled ? 'text-stone-900' : 'text-white/90'}>Link</span>
+              </span>
             </Link>
-            <Link to="/login/company" className={navLinkClass}>
-              Company
-            </Link>
-            <Link to="/login/admin" className={navLinkClass}>
-              Admin
-            </Link>
-          </div>
-        </nav>
-      </header>
+            <div className="flex flex-wrap items-center justify-end gap-x-2 gap-y-1.5 text-[12px] max-[360px]:text-[11px] sm:text-sm">
+              <a href="#trucks" className={`hidden md:inline ${navLinkClass}`}>
+                Trucks
+              </a>
+              <a href="#how-it-works" className={`hidden sm:inline ${navLinkClass}`}>
+                How it works
+              </a>
+              <a href="#why" className={`hidden md:inline ${navLinkClass}`}>
+                Why us
+              </a>
+              <a href="#partners" className={`hidden md:inline ${navLinkClass}`}>
+                Partners
+              </a>
+              <Link to="/login/shipper" className={navLinkClass}>
+                Shipper
+              </Link>
+              <Link to="/login/company" className={navLinkClass}>
+                Company
+              </Link>
+              <Link to="/login/admin" className={navLinkClass}>
+                Admin
+              </Link>
+            </div>
+          </nav>
+        </header>
 
-      {/* Hero */}
-      <section className="relative max-w-6xl mx-auto px-4 sm:px-6 pt-10 pb-12 md:py-16 lg:py-20">
+        {/* Hero */}
+        <section className="relative max-w-6xl mx-auto px-4 sm:px-6 pt-10 pb-16 sm:pb-20 md:py-16 lg:py-20">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 md:gap-10 lg:gap-12 items-center">
           <div className="lg:col-span-7 relative z-10">
             <div className="inline-flex items-center gap-2 rounded-full bg-white/10 text-white px-3 py-1 text-xs font-semibold border border-white/10">
@@ -193,7 +202,8 @@ export default function Home() {
             </div>
           </div>
         </div>
-      </section>
+        </section>
+      </div>
 
       <section id="trucks" className="bg-gradient-to-b from-slate-50 to-white border-y border-stone-200/80 ll-snap-section">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-16 md:py-20 lg:min-h-[82vh] flex flex-col justify-center">
