@@ -123,7 +123,7 @@ export default function ShipperPayments() {
         paidAt: new Date().toISOString(),
         status: 'CONFIRMED',
       })
-      setStageForLoad(selected.loadId, 'AWAITING_CONFIRMATION')
+      setStageForLoad(selected.loadId, 'ESCROW_FUNDED')
       setBusy(false)
       setPayStatus('confirmed')
       window.setTimeout(() => navigate('/loads'), 2000)

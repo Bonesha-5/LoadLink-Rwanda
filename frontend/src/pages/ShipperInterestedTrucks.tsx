@@ -13,7 +13,7 @@ import {
 const STAGES_KEY         = 'll_shipper_stages'
 const SELECTED_TRUCK_KEY = 'll_selected_truck_by_load'
 
-type ShipStage = 'POSTED' | 'AWAITING_ESCROW' | 'IN_TRANSIT' | 'AWAITING_CONFIRMATION' | 'COMPLETED' | 'DISPUTED'
+type ShipStage = 'POSTED' | 'AWAITING_ESCROW' | 'ESCROW_FUNDED' | 'IN_TRANSIT' | 'AWAITING_CONFIRMATION' | 'COMPLETED' | 'DISPUTED'
 
 function getStageMap(): Record<string, ShipStage> {
   try { return JSON.parse(localStorage.getItem(STAGES_KEY) ?? '{}') as Record<string, ShipStage> }

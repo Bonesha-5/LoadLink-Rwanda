@@ -43,6 +43,7 @@ export type Rating = {
 export type ShipStage =
   | 'POSTED'
   | 'AWAITING_ESCROW'
+  | 'ESCROW_FUNDED'
   | 'IN_TRANSIT'
   | 'AWAITING_CONFIRMATION'
   | 'COMPLETED'

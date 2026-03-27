@@ -5,7 +5,8 @@ import { ensureSeedLoads, getAllLoads, getAllRatings, getStageMap, type Load, ty
 
 const statusClass: Record<ShipStage, string> = {
   POSTED:                'bg-accent text-sidebar border-accent',
-  AWAITING_ESCROW:       'bg-teal-600 text-white border-teal-600',
+  AWAITING_ESCROW:       'bg-amber-500 text-white border-amber-500',
+  ESCROW_FUNDED:         'bg-teal-600 text-white border-teal-600',
   IN_TRANSIT:            'bg-blue-500 text-white border-blue-500',
   AWAITING_CONFIRMATION: 'bg-stone-700 text-white border-stone-700',
   COMPLETED:             'bg-emerald-600 text-white border-emerald-600',
@@ -15,7 +16,8 @@ const statusClass: Record<ShipStage, string> = {
 
 const statusLabel: Record<ShipStage, string> = {
   POSTED:                'POSTED',
-  AWAITING_ESCROW:       'ESCROW FUNDED',
+  AWAITING_ESCROW:       'AWAITING PAYMENT',
+  ESCROW_FUNDED:         'ESCROW FUNDED',
   IN_TRANSIT:            'IN TRANSIT',
   AWAITING_CONFIRMATION: 'AWAITING CONFIRMATION',
   COMPLETED:             'COMPLETED',
