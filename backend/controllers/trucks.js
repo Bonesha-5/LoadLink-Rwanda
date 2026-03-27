@@ -37,7 +37,7 @@ export const updateTruckStatus = catchAsync(async (req, res) => {
 
 // Register a new truck
 export const registerTruck = catchAsync(async (req, res) => {
-  const { plate_number, truck_type, declared_capacity, reg_card_path } = req.body;
+  const { plate_number, truck_type, declared_capacity } = req.body;
   const { company_id } = req.user;
 
   if (!plate_number || !truck_type || !declared_capacity) {
@@ -47,11 +47,23 @@ export const registerTruck = catchAsync(async (req, res) => {
     });
   }
 
+  // Extract file paths from req.files
+  const reg_card_path = req.files?.["reg_card"]?.[0]?.path;
+  const insurance_cert_path = req.files?.["insurance_cert"]?.[0]?.path;
+
+  if (!reg_card_path || !insurance_cert_path) {
+    return res.status(400).json({
+      success: false,
+      message: "Both registration card and insurance certificate are required",
+    });
+  }
+
   const truck = await trucksService.registerTruck(company_id, {
     plate_number,
     truck_type,
     declared_capacity,
     reg_card_path,
+    insurance_cert_path,
   });
 
   res.status(201).json({

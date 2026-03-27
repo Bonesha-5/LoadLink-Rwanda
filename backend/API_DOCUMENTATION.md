@@ -152,25 +152,44 @@ Register a new truck for the company.
 - **Method:** `POST`
 - **Path:** `/api/trucks/register`
 - **Auth Required:** Yes (Company Role)
-- **Body (JSON):**
-```json
-{
-  "plate_number": "RAB 123 A",
-  "truck_type": "Flatbed",
-  "declared_capacity": 15.5,
-  "reg_card_path": "path/to/reg_card.pdf"
-}
-```
+- **Content-Type:** `multipart/form-data`
+- **Body (Form Data):**
+  - `plate_number`: string (e.g., "RAB 123 A")
+  - `truck_type`: string (e.g., "Flatbed")
+  - `declared_capacity`: number (e.g., 15.5)
+  - `reg_card`: file (Registration Card)
+  - `insurance_cert`: file (Insurance Certificate)
 - **Responses:**
   - `201 Created`: Truck registered successfully.
+  - `400 Bad Request`: Missing fields or files, or invalid file size (> 5MB).
 
 ### Get My Trucks
 List all trucks belonging to the authenticated company.
 - **Method:** `GET`
 - **Path:** `/api/trucks/my`
 - **Auth Required:** Yes (Company Role)
+- **Description:** Returns a list of trucks including their `verification_status` (`PENDING`, `VERIFIED`, `REJECTED`).
 - **Responses:**
-  - `200 OK`: List of trucks.
+  - `200 OK`: 
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "1",
+      "plate_number": "RAB 123 A",
+      "truck_type": "Flatbed",
+      "declared_capacity": 15.5,
+      "availability_status": "AVAILABLE",
+      "verification_status": "PENDING",
+      "reg_card_path": "uploads/reg_card-1711571234567.pdf",
+      "insurance_cert_path": "uploads/insurance_cert-1711571234568.jpg",
+      "rating_average": 4.5,
+      "created_at": "2024-03-27T12:00:00Z"
+    }
+  ]
+}
+```
 
 ### Update Truck Status
 Update the availability status of a truck.
@@ -213,3 +232,90 @@ List all interests expressed by the company.
 - **Auth Required:** Yes (Company Role)
 - **Responses:**
   - `200 OK`: List of interests.
+ 
+ ---
+ 
+ ## 6. Payments API
+ 
+ ### Initiate Payment
+ Initiate a new escrow payment for a shipment.
+ - **Method:** `POST`
+ - **Path:** `/api/payments/initiate`
+ - **Auth Required:** Yes (Shipper Role)
+ - **Body (JSON):**
+ ```json
+ {
+   "shipment_id": "1",
+   "provider": "MTN",
+   "phone_number": "+250780000000"
+ }
+ ```
+ - **Responses:**
+   - `202 Accepted`: Payment initiated, returns `reference_id` and `status: PENDING`.
+ 
+ ### Check Payment Status
+ Poll this endpoint to check if a payment has been completed.
+ - **Method:** `GET`
+ - **Path:** `/api/payments/status/:reference_id`
+ - **Auth Required:** Yes (Shipper/Company Role)
+ - **Responses:**
+   - `200 OK`: Returns current `status` (e.g., `ESCROW_FUNDED`, `PENDING`).
+ 
+ ### Admin: Resolve Dispute
+ Manually resolve a disputed shipment.
+ - **Method:** `POST`
+ - **Path:** `/api/payments/disputes/resolve`
+ - **Auth Required:** Yes (Admin Role)
+ - **Body (JSON):**
+ ```json
+ {
+   "shipment_id": "1",
+   "resolution_type": "PARTIAL_REFUND",
+   "shipper_amount": 5000,
+   "company_amount": 5000
+ }
+ ```
+ - **Responses:**
+   - `200 OK`: Dispute resolved.
+ 
+ ---
+ 
+ ## 7. MOMO Simulator (Internal/Dev)
+ *Used by the backend and for testing to simulate mobile money behavior.*
+ 
+ ### Simulate Payment Success
+ - **Method:** `POST`
+ - **Path:** `/api/momo-simulator/pay`
+ - **Body (JSON):**
+ ```json
+ {
+   "reference_id": "REF-123",
+   "amount": 10000,
+   "phone_number": "+25078...",
+   "webhook_url": "http://localhost:3000/api/payments/webhook"
+ }
+ ```
+ 
+ ### Simulate Payment Failure
+ - **Method:** `POST`
+ - **Path:** `/api/momo-simulator/fail`
+ - **Body (JSON):**
+ ```json
+ {
+   "reference_id": "REF-123",
+   "webhook_url": "http://localhost:3000/api/payments/webhook"
+ }
+ ```
+ 
+ ### Simulate Payout
+ - **Method:** `POST`
+ - **Path:** `/api/momo-simulator/payout`
+ - **Body (JSON):**
+ ```json
+ {
+   "company_phone": "+25078...",
+   "amount": 10000,
+   "reference_id": "REF-123",
+   "webhook_url": "http://localhost:3000/api/payments/payout-webhook"
+ }
+ ```
