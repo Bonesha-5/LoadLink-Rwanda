@@ -1,4 +1,6 @@
 import * as interestsService from "../service/interests.js";
+import { getShipmentInterestsService } from "../service/interests.js";
+
 import { catchAsync } from "../utils/catchAsync.js";
 
 // Handle creating a new interest
@@ -33,3 +35,14 @@ export const getMyInterests = catchAsync(async (req, res) => {
     data: interests,
   });
 });
+
+// Fetch all interests for a shipment
+export const getShipmentInterests = catchAsync(async (req, res) => {
+  const { id } = req.params;
+  const shipper_id = req.user.id;
+
+  const interests = await getShipmentInterestsService(id, shipper_id);
+
+  res.status(200).json(interests);
+});
+

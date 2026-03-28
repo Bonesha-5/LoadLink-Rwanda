@@ -1,4 +1,12 @@
 import * as shipmentsService from "../service/shipments.js";
+import {
+  createShipmentService,
+  getMyShipmentsService,
+  selectTruckService,
+  confirmShipmentService,
+  disputeShipmentService,
+} from "../service/shipments.js";
+
 import { catchAsync } from "../utils/catchAsync.js";
 
 // Fetch available shipments 
@@ -19,6 +27,44 @@ export const getAvailableShipments = catchAsync(async (req, res) => {
     data: shipments,
   });
 });
+
+// Create a new shipment (Shipper)
+export const createShipment = catchAsync(async (req, res) => {
+  const {
+    pickup_district,
+    dropoff_district,
+    pickup_description,
+    cargo_description,
+    weight,
+    offered_price,
+    pickup_date
+  } = req.body;
+
+  const shipper_id = req.user.id;
+
+  const shipment = await createShipmentService(
+    shipper_id,
+    pickup_district,
+    dropoff_district,
+    pickup_description,
+    cargo_description,
+    weight,
+    offered_price,
+    pickup_date
+  );
+
+  res.status(201).json(shipment);
+});
+
+// Get shipments for the logged-in shipper
+export const getMyShipments = catchAsync(async (req, res) => {
+  const shipper_id = req.user.id;
+
+  const shipments = await getMyShipmentsService(shipper_id);
+
+  res.status(200).json(shipments);
+});
+
 
 // Pickup a shipment
 export const pickupShipment = catchAsync(async (req, res) => {
@@ -99,3 +145,35 @@ export const getActiveShipments = catchAsync(async (req, res) => {
     data: shipments,
   });
 });
+
+// Select a truck for a shipment
+export const selectTruck = catchAsync(async (req, res) => {
+  const { id } = req.params;
+  const { truck_id } = req.body;
+  const shipper_id = req.user.id;
+
+  const shipment = await selectTruckService(id, truck_id, shipper_id);
+
+  res.status(200).json(shipment);
+});
+
+// Confirm a shipment as delivered (Shipper)
+export const confirmShipment = catchAsync(async (req, res) => {
+  const { id } = req.params;
+  const shipper_id = req.user.id;
+
+  const shipment = await confirmShipmentService(id, shipper_id);
+
+  res.status(200).json(shipment);
+});
+
+// Dispute a shipment (Shipper)
+export const disputeShipment = catchAsync(async (req, res) => {
+  const { id } = req.params;
+  const shipper_id = req.user.id;
+
+  const shipment = await disputeShipmentService(id, shipper_id);
+
+  res.status(200).json(shipment);
+});
+

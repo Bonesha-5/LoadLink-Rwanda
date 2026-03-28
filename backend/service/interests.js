@@ -58,3 +58,37 @@ export const getMyInterests = async (companyId) => {
   const result = await pool.query(query, [companyId]);
   return result.rows;
 };
+
+// Fetch all interests for a shipment (for the Shipper to see who is interested)
+export const getShipmentInterestsService = async (shipment_id, shipper_id) => {
+  const ownerCheck = await pool.query(
+    `SELECT id FROM shipments WHERE id = $1 AND shipper_id = $2`,
+    [shipment_id, shipper_id],
+  );
+
+  if (ownerCheck.rows.length === 0) {
+    const err = new Error("Shipment not found");
+    err.status = 404;
+    throw err;
+  }
+
+  const query = `
+    SELECT 
+      t.id,
+      t.plate_number,
+      t.truck_type,
+      t.declared_capacity,
+      t.rating_average,
+      c.name AS company_name,
+      c.contact_person
+    FROM shipment_interests si
+    JOIN trucks t ON si.truck_id = t.id
+    JOIN companies c ON t.company_id = c.id
+    WHERE si.shipment_id = $1
+    ORDER BY t.rating_average DESC, si.created_at ASC;
+  `;
+
+  const result = await pool.query(query, [shipment_id]);
+  return result.rows;
+};
+

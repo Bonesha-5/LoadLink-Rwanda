@@ -3,12 +3,13 @@ import cors from "cors";
 import dotenv from "dotenv";
 
 import authRoutes from './routes/auth.js';
-import shipmentRoutes from './routes/shipment_route.js';
+import shipmentRoutes from './routes/shipments.js';
 import paymentRoutes from './routes/payments.js';
 import companyRoutes from "./routes/company.js";
 import shippersRoutes from "./routes/shippers.js";
-import shipmentsRoutes from "./routes/shipments.js";
+import ratingsRoutes from "./routes/ratings.js";
 import interestsRoutes from "./routes/interests.js";
+
 import trucksRoutes from "./routes/trucks.js";
 import simulatedMomoRoutes from './routes/simulatedMomo.js';
 import requestLogger from "./middleware/logger.js";
@@ -26,14 +27,15 @@ app.use("/uploads", express.static("uploads"));
 app.use(requestLogger);
 
 app.use('/auth', authRoutes);
-app.use('/api', shipmentRoutes);
-app.use('/api', paymentRoutes);
+app.use('/api/payments', paymentRoutes);
 app.use('/api/company', companyRoutes);
 app.use('/api/momo-simulator', simulatedMomoRoutes);
 app.use("/api/shippers", shippersRoutes);
-app.use("/api/shipments", shipmentsRoutes);
+app.use("/api/shipments", shipmentRoutes);
 app.use("/api/interests", interestsRoutes);
 app.use("/api/trucks", trucksRoutes);
+app.use("/api/ratings", ratingsRoutes);
+
 
 app.use(errorMiddleware);
 

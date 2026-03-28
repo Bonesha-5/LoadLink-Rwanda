@@ -343,19 +343,22 @@ npm run dev
 |--------|----------|-------------|
 | POST | `/api/shipments` | Post a new shipment |
 | GET | `/api/shipments/my` | Get own shipments |
+| GET | `/api/interests/shipment/:id` | View interests for a shipment |
 | PATCH | `/api/shipments/:id/select` | Select a truck |
 | PATCH | `/api/shipments/:id/confirm` | Confirm delivery |
 | PATCH | `/api/shipments/:id/dispute` | Report an issue |
 
-### Interests — Company
+### Interests & Ratings — Shipper/Company
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/api/shipments` | Browse all POSTED shipments |
-| POST | `/api/interests` | Express interest using a truck |
-| GET | `/api/interests` | View own expressed interests |
-| PATCH | `/api/company/shipments/:id/pickup` | Mark pickup |
-| PATCH | `/api/company/shipments/:id/deliver` | Mark delivery |
+| GET | `/api/shipments` | Browse all POSTED shipments (Company) |
+| POST | `/api/interests` | Express interest using a truck (Company) |
+| GET | `/api/interests` | View own expressed interests (Company) |
+| PATCH | `/api/shipments/:id/pickup` | Mark pickup (Company) |
+| PATCH | `/api/shipments/:id/deliver` | Mark delivery (Company) |
+| POST | `/api/ratings` | Submit a rating (Shipper) |
+
 
 ### Admin
 

@@ -1,4 +1,6 @@
 import pool from "../config/db.js";
+import { releasePayment } from "../controllers/payments.js";
+
 
 // Fetch available shipments for a company based on truck capacity
 export const getAvailableShipmentsForCompany = async (companyId) => {
@@ -18,6 +20,62 @@ export const getAvailableShipmentsForCompany = async (companyId) => {
   const result = await pool.query(query, [companyId]);
   return result.rows;
 };
+
+// Create a new shipment (Shipper)
+export const createShipmentService = async (
+  shipper_id,
+  pickup_district,
+  dropoff_district,
+  pickup_description,
+  cargo_description,
+  weight,
+  offered_price,
+  pickup_date
+) => {
+  const query = `
+    INSERT INTO shipments (
+      shipper_id,
+      pickup_district,
+      dropoff_district,
+      pickup_description,
+      cargo_description,
+      weight,
+      offered_price,
+      pickup_date,
+      status
+    )
+    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'POSTED')
+    RETURNING *;
+  `;
+
+  const values = [
+    shipper_id,
+    pickup_district,
+    dropoff_district,
+    pickup_description,
+    cargo_description,
+    weight,
+    offered_price,
+    pickup_date
+  ];
+
+  const result = await pool.query(query, values);
+  return result.rows[0];
+};
+
+// Get shipments for a specific shipper
+export const getMyShipmentsService = async (shipper_id) => {
+  const query = `
+    SELECT *
+    FROM shipments
+    WHERE shipper_id = $1
+    ORDER BY created_at DESC;
+  `;
+
+  const result = await pool.query(query, [shipper_id]);
+  return result.rows;
+};
+
 
 // Pickup a shipment
 export const pickupShipment = async (shipmentId, companyId, truckId) => {
@@ -91,3 +149,139 @@ export const getActiveShipments = async (companyId) => {
   const result = await pool.query(query, [companyId]);
   return result.rows;
 };
+
+// Select a truck for a shipment
+export const selectTruckService = async (shipmentId, truckId, shipperId) => {
+  const shipmentResult = await pool.query(
+    `SELECT * FROM shipments WHERE id = $1 AND shipper_id = $2`,
+    [shipmentId, shipperId]
+  );
+
+  const shipment = shipmentResult.rows[0];
+
+  if (!shipment) {
+    const err = new Error("Shipment not found");
+    err.status = 404;
+    throw err;
+  }
+
+  if (shipment.status !== "POSTED") {
+    const err = new Error("Shipment must be in POSTED status to select a truck");
+    err.status = 400;
+    throw err;
+  }
+
+  const interestResult = await pool.query(
+    `SELECT * FROM shipment_interests WHERE shipment_id = $1 AND truck_id = $2`,
+    [shipmentId, truckId]
+  );
+
+  if (interestResult.rows.length === 0) {
+    const err = new Error("This truck has not expressed interest in this shipment");
+    err.status = 400;
+    throw err;
+  }
+
+  const truckResult = await pool.query(
+    `SELECT * FROM trucks WHERE id = $1`,
+    [truckId]
+  );
+
+  const truck = truckResult.rows[0];
+
+  if (!truck) {
+    const err = new Error("Truck not found");
+    err.status = 404;
+    throw err;
+  }
+
+  if (truck.availability_status !== "AVAILABLE") {
+    const err = new Error("Truck is not available");
+    err.status = 400;
+    throw err;
+  }
+
+  const updatedShipment = await pool.query(
+    `UPDATE shipments
+     SET status = 'AWAITING_ESCROW', selected_truck_id = $1
+     WHERE id = $2
+     RETURNING *`,
+    [truckId, shipmentId]
+  );
+
+  await pool.query(
+    `UPDATE trucks SET availability_status = 'RESERVED' WHERE id = $1`,
+    [truckId]
+  );
+
+  return updatedShipment.rows[0];
+};
+
+// Confirm a shipment as delivered
+export const confirmShipmentService = async (shipmentId, shipperId) => {
+  const shipmentResult = await pool.query(
+    `SELECT * FROM shipments WHERE id = $1 AND shipper_id = $2`,
+    [shipmentId, shipperId]
+  );
+
+  const shipment = shipmentResult.rows[0];
+
+  if (!shipment) {
+    const err = new Error("Shipment not found");
+    err.status = 404;
+    throw err;
+  }
+
+  if (shipment.status !== "AWAITING_CONFIRMATION") {
+    const err = new Error("Shipment must be in AWAITING_CONFIRMATION status to confirm");
+    err.status = 400;
+    throw err;
+  }
+
+  // Update shipment → COMPLETED
+  const updatedShipment = await pool.query(
+    `UPDATE shipments
+     SET status = 'COMPLETED'
+     WHERE id = $1
+     RETURNING *`,
+    [shipmentId]
+  );
+
+  // Trigger payment release
+  await releasePayment(shipmentId);
+
+  return updatedShipment.rows[0];
+};
+
+// Dispute a shipment
+export const disputeShipmentService = async (shipmentId, shipperId) => {
+  const shipmentResult = await pool.query(
+    `SELECT * FROM shipments WHERE id = $1 AND shipper_id = $2`,
+    [shipmentId, shipperId]
+  );
+
+  const shipment = shipmentResult.rows[0];
+
+  if (!shipment) {
+    const err = new Error("Shipment not found");
+    err.status = 404;
+    throw err;
+  }
+
+  if (shipment.status !== "AWAITING_CONFIRMATION") {
+    const err = new Error("Shipment must be in AWAITING_CONFIRMATION status to dispute");
+    err.status = 400;
+    throw err;
+  }
+
+  const updatedShipment = await pool.query(
+    `UPDATE shipments
+     SET status = 'DISPUTED'
+     WHERE id = $1
+     RETURNING *`,
+    [shipmentId]
+  );
+
+  return updatedShipment.rows[0];
+};
+

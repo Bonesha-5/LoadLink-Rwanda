@@ -6,9 +6,11 @@ const router = express.Router();
 
 // Middleware to protect all interest routes for companies
 router.use(verifyToken);
-router.use(requiredRole("COMPANY"));
 
-router.post("/", interestsController.createInterest);
-router.get("/my", interestsController.getMyInterests);
+router.post("/", requiredRole("COMPANY"), interestsController.createInterest);
+router.get("/my", requiredRole("COMPANY"), interestsController.getMyInterests);
+
+router.get("/shipment/:id", interestsController.getShipmentInterests);
 
 export default router;
+

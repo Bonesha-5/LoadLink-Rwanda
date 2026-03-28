@@ -89,7 +89,7 @@ Most endpoints require a **Bearer Token** in the `Authorization` header.
 
 ---
 
-## 3. Shipper Flow API
+## 3. Shipments API
 
 ### Create Shipment
 - **Method:** `POST`
@@ -110,50 +110,77 @@ Most endpoints require a **Bearer Token** in the `Authorization` header.
 - **Responses:**
   - `201 Created`: Returns new shipment object.
 
-### Get My Shipments
+### Get My Shipments (Shipper)
 - **Method:** `GET`
 - **Path:** `/api/shipments/my`
 - **Auth Required:** Yes (Shipper Role)
 - **Responses:**
-  - `200 OK`: Returns list of shipments ordered by newest first.
+  - `200 OK`: Returns list of shipments created by the logged-in shipper.
 
-### Get Shipment Interests
+### List Available Shipments (Company)
 - **Method:** `GET`
-- **Path:** `/api/shipments/:id/interests`
+- **Path:** `/api/shipments`
+- **Auth Required:** Yes (Company Role)
+- **Responses:**
+  - `200 OK`: Returns list of POSTED shipments available for the company's trucks.
+
+### Get Active Shipments (Company)
+- **Method:** `GET`
+- **Path:** `/api/shipments/active`
+- **Auth Required:** Yes (Company Role)
+- **Responses:**
+  - `200 OK`: Returns shipments currently being handled by the company (ESCROW_FUNDED, IN_TRANSIT, etc.).
+
+### Pickup Shipment (Company)
+- **Method:** `PATCH`
+- **Path:** `/api/shipments/:id/pickup`
+- **Auth Required:** Yes (Company Role)
+- **Body (JSON):** `{"truckId": "123"}`
+- **Responses:**
+  - `200 OK`: Shipment status updated to IN_TRANSIT.
+
+### Deliver Shipment (Company)
+- **Method:** `PATCH`
+- **Path:** `/api/shipments/:id/deliver`
+- **Auth Required:** Yes (Company Role)
+- **Body (JSON):** `{"truckId": "123"}`
+- **Responses:**
+  - `200 OK`: Shipment status updated to AWAITING_CONFIRMATION.
+
+### Get Shipment Interests (Shipper)
+- **Method:** `GET`
+- **Path:** `/api/interests/shipment/:id`
 - **Auth Required:** Yes (Shipper Role)
 - **Responses:**
-  - `200 OK`: Returns list of trucks that expressed interest, sorted by rating.
+  - `200 OK`: Returns list of trucks that expressed interest in this shipment, sorted by rating.
 
-### Select Truck
+### Select Truck (Shipper)
+
 - **Method:** `PATCH`
 - **Path:** `/api/shipments/:id/select`
 - **Auth Required:** Yes (Shipper Role)
-- **Body (JSON):**
-```json
-{
-  "truck_id": "123"
-}
-```
+- **Body (JSON):** `{"truck_id": "123"}`
 - **Responses:**
-  - `200 OK`: Shipment updated to AWAITING_ESCROW, truck set to RESERVED.
-  - `400 Bad Request`: Shipment not in POSTED status or truck not available.
-  - `404 Not Found`: Shipment or truck not found.
+  - `200 OK`: Truck selected, shipment status updated.
 
-### Confirm Delivery
+### Confirm Delivery (Shipper)
 - **Method:** `PATCH`
 - **Path:** `/api/shipments/:id/confirm`
 - **Auth Required:** Yes (Shipper Role)
 - **Responses:**
-  - `200 OK`: Shipment set to COMPLETED, escrow released to company.
-  - `400 Bad Request`: Shipment not in AWAITING_CONFIRMATION status.
+  - `200 OK`: Shipment set to COMPLETED, payment released.
 
-### Dispute Delivery
+### Dispute Delivery (Shipper)
 - **Method:** `PATCH`
 - **Path:** `/api/shipments/:id/dispute`
 - **Auth Required:** Yes (Shipper Role)
 - **Responses:**
-  - `200 OK`: Shipment set to DISPUTED.
-  - `400 Bad Request`: Shipment not in AWAITING_CONFIRMATION status.
+  - `200 OK`: Shipment set to DISPUTED for admin resolution.
+
+
+---
+
+## 4. Ratings API
 
 ### Rate a Truck
 - **Method:** `POST`
@@ -174,51 +201,8 @@ Most endpoints require a **Bearer Token** in the `Authorization` header.
 
 ---
 
-## 4. Company Shipments API
-
-### Get Available Shipments
-- **Method:** `GET`
-- **Path:** `/api/shipments/`
-- **Auth Required:** Yes (Company Role)
-- **Responses:**
-  - `200 OK`: Returns list of POSTED shipments.
-
-### Get Active Shipments
-- **Method:** `GET`
-- **Path:** `/api/shipments/active`
-- **Auth Required:** Yes (Company Role)
-- **Responses:**
-  - `200 OK`: Returns shipments in ESCROW_FUNDED, IN_TRANSIT, or AWAITING_CONFIRMATION.
-
-### Pickup Shipment
-- **Method:** `PATCH`
-- **Path:** `/api/shipments/:id/pickup`
-- **Auth Required:** Yes (Company Role)
-- **Body (JSON):**
-```json
-{
-  "truckId": "123"
-}
-```
-- **Responses:**
-  - `200 OK`: Status changed to IN_TRANSIT.
-
-### Deliver Shipment
-- **Method:** `PATCH`
-- **Path:** `/api/shipments/:id/deliver`
-- **Auth Required:** Yes (Company Role)
-- **Body (JSON):**
-```json
-{
-  "truckId": "123"
-}
-```
-- **Responses:**
-  - `200 OK`: Status changed to AWAITING_CONFIRMATION.
-
----
-
 ## 5. Trucks API
+
 
 ### Register Truck
 - **Method:** `POST`
@@ -267,6 +251,8 @@ Most endpoints require a **Bearer Token** in the `Authorization` header.
 
 ## 6. Interests API
 
+
+
 ### Express Interest
 - **Method:** `POST`
 - **Path:** `/api/interests`
@@ -291,6 +277,8 @@ Most endpoints require a **Bearer Token** in the `Authorization` header.
 ---
 
 ## 7. Payments API
+
+
 
 ### Initiate Payment
 - **Method:** `POST`
@@ -333,6 +321,8 @@ Most endpoints require a **Bearer Token** in the `Authorization` header.
 ---
 
 ## 8. MOMO Simulator (Dev Only)
+
+
 
 ### Simulate Payment Success
 - **Method:** `POST`
