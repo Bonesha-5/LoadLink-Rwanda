@@ -2,6 +2,11 @@ import { useState, useEffect } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import type { Role } from '../context/AuthContext'
+import { companyLogin } from '../api/companyApi'
+import { adminLogin } from '../api/adminApi'
+import type { ApiError } from '../api/http'
+import { createMockJwt, isMockAuthMode } from '../auth/mockJwt'
+import { getCompanyByEmailDemo } from '../data/storage'
 
 const ROLES: Role[] = ['shipper', 'company', 'admin']
 
@@ -12,9 +17,9 @@ const ROLE_LABELS: Record<Role, string> = {
 }
 
 const ROLE_DASHBOARDS: Record<Role, string> = {
-  shipper: '/loads',
+  shipper: '/profile',
   company: '/company/dashboard',
-  admin: '/admin/dashboard',
+  admin: '/admin/companies',
 }
 
 const PANEL_CONTENT: Partial<Record<Role, { heading: string; description: string; footer: string; benefits: string[] }>> = {
@@ -35,15 +40,25 @@ const PANEL_CONTENT: Partial<Record<Role, { heading: string; description: string
 export default function Login() {
   const { role: urlRole } = useParams<{ role: string }>()
   const role = (ROLES.includes(urlRole as Role) ? urlRole : 'shipper') as Role
-  const [email, setEmail] = useState('')
+  const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
-  const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const navigate = useNavigate()
   const location = useLocation()
   const { login, user } = useAuth()
+  const from =
+    (location.state as { from?: { pathname: string } })?.from?.pathname ??
+    ROLE_DASHBOARDS[role]
+  const regState = location.state as { registered?: boolean; registeredMessage?: string } | null
+  const registeredNotice = Boolean(regState?.registered) || Boolean(regState?.registeredMessage?.trim())
+  const registeredBannerText = regState?.registeredMessage?.trim()
+    ? String(regState.registeredMessage)
+    : 'Registration complete. Sign in below.'
+
+  const hasToken = Boolean(user?.token)
+  const isLoggedInForThisRole = user?.role === role && (role === 'shipper' || hasToken)
   const dashboard = ROLE_DASHBOARDS[role]
-  const isLoggedInForThisRole = user?.role === role
   const panel = PANEL_CONTENT[role]
 
   useEffect(() => {
@@ -53,32 +68,109 @@ export default function Login() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!email.trim() || !password.trim()) return
-    setLoading(true)
-    setError('')
-    try {
-      const endpoint = role === 'company' ? '/api/company/login' : '/api/shipper/login'
-      const res = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email.trim(), password }),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.message ?? 'Login failed')
-      login(data.user.name, role, data.token)
-      navigate(dashboard, { replace: true })
-    } catch {
-      const demoName = email.split('@')[0] || 'User'
-      login(demoName, role, 'demo-token')
-      navigate(dashboard, { replace: true })
-    } finally {
-      setLoading(false)
+    setError(null)
+
+    // Company login: use real backend endpoint when an email is provided.
+    if (role === 'company') {
+      const emailOrName = username.trim()
+      if (!emailOrName) {
+        setError('Enter your company email.')
+        return
+      }
+      if (!emailOrName.includes('@')) {
+        setError('Use a valid company email address (include @).')
+        return
+      }
+      if (!password.trim()) {
+        setError('Enter your password.')
+        return
+      }
+
+      setBusy(true)
+      try {
+        if (isMockAuthMode()) {
+          const company = getCompanyByEmailDemo(emailOrName)
+          const name = emailOrName.split('@')[0] || 'Company'
+          const status = company?.status ?? 'PENDING_VERIFICATION'
+          login(name, 'company', {
+            token: createMockJwt({ role: 'COMPANY', email: emailOrName, name, status }),
+            email: emailOrName,
+            status,
+          })
+          navigate(from, { replace: true })
+        } else {
+          const res = await companyLogin(emailOrName, password)
+          const name = res.user?.name || 'Company'
+          login(name, 'company', {
+            token: res.token,
+            email: res.user?.email ?? emailOrName,
+            status: res.user?.status ?? null,
+          })
+          navigate(from, { replace: true })
+        }
+      } catch (e) {
+        const err = e as ApiError
+        setError(err.message || 'Could not sign in.')
+      } finally {
+        setBusy(false)
+      }
+      return
     }
+
+    if (role === 'admin') {
+      const email = username.trim()
+      if (!email) {
+        setError('Enter your admin email.')
+        return
+      }
+      if (!email.includes('@')) {
+        setError('Use a valid admin email address (include @).')
+        return
+      }
+      if (!password.trim()) {
+        setError('Enter your password.')
+        return
+      }
+
+      setBusy(true)
+      try {
+        if (isMockAuthMode()) {
+          const name = email.split('@')[0] || 'Admin'
+          login(name, 'admin', {
+            token: createMockJwt({ role: 'ADMIN', email, name }),
+            email,
+          })
+          navigate(from, { replace: true })
+        } else {
+          const res = await adminLogin(email, password)
+          const name = res.user?.name || 'Admin'
+          login(name, 'admin', {
+            token: res.token,
+            email: res.user?.email ?? email,
+          })
+          navigate(from, { replace: true })
+        }
+      } catch (e) {
+        const err = e as ApiError
+        setError(err.message || 'Could not sign in.')
+      } finally {
+        setBusy(false)
+      }
+      return
+    }
+
+    // Demo fallback (shipper / admin without API email flow)
+    if (!username.trim()) {
+      setError('Enter a username or email.')
+      return
+    }
+    login(username.trim(), role)
+    navigate(from, { replace: true })
   }
 
   const formCard = (
-    <div className="w-full max-w-md mx-auto">
-      <div className="bg-white rounded-2xl shadow-xl shadow-stone-200/50 border border-stone-100 p-8 sm:p-10">
+    <div className="w-full max-w-md mx-auto ll-animate-in">
+      <div className="bg-white rounded-3xl shadow-xl shadow-stone-200/50 border border-stone-100 p-8 sm:p-10 transition-shadow duration-200 hover:shadow-2xl">
         <div className="flex items-center gap-3 mb-6">
           <div className="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center">
             <svg className="w-6 h-6 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -94,34 +186,29 @@ export default function Login() {
             </p>
           </div>
         </div>
-
-        <div className="flex gap-2 mb-6">
-          {(['shipper', 'company'] as Role[]).map((r) => (
-            <Link
-              key={r}
-              to={`/login/${r}`}
-              className={`flex-1 py-2 rounded-xl text-sm font-semibold text-center transition-all border ${
-                role === r
-                  ? 'bg-accent text-white border-accent'
-                  : 'bg-stone-50 text-stone-600 border-stone-200 hover:bg-stone-100'
-              }`}
-            >
-              {ROLE_LABELS[r]}
-            </Link>
-          ))}
-        </div>
-
+        {registeredNotice && (
+          <p className="mb-4 text-sm text-emerald-800 bg-emerald-50 border border-emerald-100 rounded-xl px-4 py-3">
+            {registeredBannerText}
+          </p>
+        )}
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <label htmlFor="email" className="block text-sm font-semibold text-stone-700 mb-2">
-              Email address
+            <label htmlFor="username" className="block text-sm font-semibold text-stone-700 mb-2">
+              {role === 'company' ? 'Company email' : role === 'admin' ? 'Admin email' : 'Username'}
             </label>
             <input
-              id="email"
-              type="email"
-              placeholder="you@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              id="username"
+              type="text"
+              autoComplete="username"
+              placeholder={
+                role === 'company'
+                  ? 'e.g. company@example.com'
+                  : role === 'admin'
+                    ? 'e.g. admin@loadlink.rw'
+                    : 'e.g. alice'
+              }
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
               className="w-full px-4 py-3.5 rounded-xl bg-stone-50 border border-stone-200 text-stone-800 placeholder:text-stone-400 focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 transition-all"
             />
           </div>
@@ -132,6 +219,7 @@ export default function Login() {
             <input
               id="password"
               type="password"
+              autoComplete="current-password"
               placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -141,12 +229,17 @@ export default function Login() {
           {error && <p className="text-red-500 text-sm">{error}</p>}
           <button
             type="submit"
-            disabled={loading}
-            className="w-full py-3.5 bg-accent text-white font-semibold rounded-xl hover:bg-accent-hover transition-all shadow-lg shadow-accent/25 hover:shadow-xl hover:shadow-accent/30 hover:-translate-y-0.5 active:scale-[0.99] disabled:opacity-60"
+            disabled={busy}
+            className="w-full py-3.5 bg-accent text-white font-semibold rounded-xl hover:bg-accent-hover transition-all shadow-lg shadow-accent/25 hover:shadow-xl hover:shadow-accent/30 hover:-translate-y-0.5 active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            {loading ? 'Signing in...' : 'Sign in'}
+            {busy ? 'Signing in…' : 'Sign in'}
           </button>
         </form>
+        {error && (
+          <p className="mt-4 text-sm text-red-600 bg-red-50 border border-red-100 rounded-xl px-4 py-3">
+            {error}
+          </p>
+        )}
         <p className="mt-6 text-center text-stone-500 text-sm">
           Don&apos;t have an account?{' '}
           <Link to={`/register/${role}`} className="text-accent font-semibold hover:underline">
@@ -184,10 +277,15 @@ export default function Login() {
               ))}
             </ul>
           </div>
-          <p className="relative z-10 text-sm text-white/70">{panel.footer}</p>
+          <p className="relative z-10 text-sm text-white/70">
+            After sign in you&apos;ll go to the home page (demo shipper).
+          </p>
         </div>
-        <div className="flex-1 flex flex-col items-center justify-center p-6 sm:p-10 bg-sand min-h-screen">
-          <Link to="/" className="lg:hidden absolute top-6 left-6 text-sidebar font-bold text-xl tracking-tight z-20 hover:opacity-80">
+        <div className="flex-1 flex flex-col items-center justify-center p-6 sm:p-10 bg-[#F6F7FB] min-h-screen">
+          <Link
+            to="/"
+            className="lg:hidden absolute top-6 left-6 text-sidebar font-bold text-xl tracking-tight z-20 hover:opacity-80"
+          >
             LoadLink Rwanda
           </Link>
           {formCard}
@@ -197,15 +295,17 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center relative overflow-hidden bg-sand py-12 px-6">
+    <div className="min-h-screen flex flex-col items-center justify-center relative overflow-hidden bg-[#F6F7FB] py-12 px-6">
       <div
-        className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-[0.06]"
+        className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-[0.06] pointer-events-none"
         style={{ backgroundImage: 'url(/cargo.jpg)' }}
       />
       <Link to="/" className="absolute top-6 left-6 text-sidebar font-bold text-xl tracking-tight z-20 hover:opacity-80">
         LoadLink Rwanda
       </Link>
-      {formCard}
+      <div className="w-full max-w-md relative z-10">
+        {formCard}
+      </div>
     </div>
   )
 }
