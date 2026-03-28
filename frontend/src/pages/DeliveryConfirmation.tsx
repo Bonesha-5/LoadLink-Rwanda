@@ -69,23 +69,25 @@ export default function DeliveryConfirmation() {
 
   // Try API then fall back to localStorage
   useEffect(() => {
-    fetch(`/api/shipments?id=${id}`, {
+    fetch('/api/shipments/my', {
       headers: { Authorization: `Bearer ${getToken()}` },
     })
       .then((r) => { if (!r.ok) throw new Error(); return r.json() })
-      .then((data) => {
+      .then((data: { id: string | number; pickup_district: string; dropoff_district: string; cargo_description?: string; delivery_timestamp?: string }[]) => {
+        const shipment = data.find((s) => String(s.id) === id)
+        if (!shipment) throw new Error('not found')
         const sel: Selected | null = (() => {
           try { return JSON.parse(localStorage.getItem(SELECTED_TRUCK_KEY) ?? 'null') }
           catch { return null }
         })()
         setInfo({
-          id:                String(data.id),
-          pickupLocation:    data.pickup_district,
-          dropoffLocation:   data.dropoff_district,
-          cargoDescription:  data.cargo_description,
+          id:                String(shipment.id),
+          pickupLocation:    shipment.pickup_district,
+          dropoffLocation:   shipment.dropoff_district,
+          cargoDescription:  shipment.cargo_description ?? 'No description',
           truckPlate:        sel?.plate ?? 'N/A',
           transportCompany:  sel?.companyName ?? 'N/A',
-          deliveryTimestamp: data.delivery_timestamp ?? new Date().toISOString(),
+          deliveryTimestamp: shipment.delivery_timestamp ?? new Date().toISOString(),
         })
       })
       .catch(() => {

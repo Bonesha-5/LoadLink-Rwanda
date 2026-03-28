@@ -135,16 +135,12 @@ export function ensureSeedLoads(userName = 'Shipper') {
       })
       saveLoads(loads)
     }
-    // Always enforce correct stages for seed loads
+    // Set default stages only if not already defined — don't overwrite user progress
     const stageMap = getStageMap()
-    stageMap['s1'] = 'AWAITING_ESCROW'
-    stageMap['s2'] = 'AWAITING_CONFIRMATION'
-    stageMap['s3'] = 'POSTED'
+    if (!stageMap['s1']) stageMap['s1'] = 'AWAITING_ESCROW'
+    if (!stageMap['s2']) stageMap['s2'] = 'AWAITING_CONFIRMATION'
+    if (!stageMap['s3']) stageMap['s3'] = 'POSTED'
     localStorage.setItem(STAGES_KEY, JSON.stringify(stageMap))
-
-    // Clear any stale ratings for seed loads so the rating UI always shows fresh
-    const ratings = getAllRatings().filter((r) => !['s1', 's2', 's3'].includes(r.shipmentId))
-    localStorage.setItem(RATINGS_KEY, JSON.stringify(ratings))
     return
   }
 

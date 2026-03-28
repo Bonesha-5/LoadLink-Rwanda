@@ -1,7 +1,19 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { ensureSeedLoads, getAllLoads, getAllRatings, getStageMap, type Load, type ShipStage } from '../data/storage'
+import { ensureSeedLoads, getAllLoads, getAllRatings, getStageMap, setStageForLoad, type Load, type ShipStage } from '../data/storage'
+
+type ApiShipment = {
+  id: string | number
+  pickup_district: string
+  dropoff_district: string
+  cargo_description?: string
+  pickup_description?: string
+  weight: number | string
+  offered_price?: number | string
+  pickup_date: string
+  status: string
+}
 
 const statusClass: Record<ShipStage, string> = {
   POSTED:                'bg-accent text-sidebar border-accent',
@@ -26,14 +38,49 @@ const statusLabel: Record<ShipStage, string> = {
 }
 
 export default function Loads() {
-  const { user } = useAuth()
+  const { user, getToken } = useAuth()
   const [modalLoad, setModalLoad] = useState<{ load: Load; stage: ShipStage } | null>(null)
+  const [apiLoads, setApiLoads] = useState<Load[] | null>(null)
   const stageMap = getStageMap()
 
+  useEffect(() => {
+    let cancelled = false
+    fetch('/api/shipments/my', {
+      headers: { Authorization: `Bearer ${getToken()}` },
+    })
+      .then((r) => r.ok ? r.json() : Promise.reject())
+      .then((data: ApiShipment[]) => {
+        if (cancelled) return
+        const mapped: Load[] = data.map((s) => ({
+          id:            String(s.id),
+          origin:        s.pickup_district,
+          destination:   s.dropoff_district,
+          date:          s.pickup_date,
+          weight:        `${s.weight} tons`,
+          description:   s.cargo_description,
+          pickupAddress: s.pickup_description,
+          price:         s.offered_price != null
+                           ? `RWF ${Number(s.offered_price).toLocaleString()}`
+                           : undefined,
+          createdBy:     user?.name || 'Shipper',
+          status:        (s.status === 'COMPLETED' || s.status === 'DISPUTED') ? 'closed' : 'open',
+          offers:        [],
+        }))
+        // Sync local stage map with real statuses from the backend
+        for (const s of data) {
+          setStageForLoad(String(s.id), s.status as ShipStage)
+        }
+        setApiLoads(mapped)
+      })
+      .catch(() => { /* API unavailable — localStorage fallback stays */ })
+    return () => { cancelled = true }
+  }, [getToken, user?.name])
+
   const myLoads = useMemo(() => {
+    if (apiLoads !== null) return apiLoads
     ensureSeedLoads(user?.name || 'Shipper')
     return getAllLoads().filter((l) => l.createdBy === (user?.name || 'Shipper'))
-  }, [user?.name])
+  }, [apiLoads, user?.name])
 
   return (
     <div className="space-y-5 ll-animate-in">

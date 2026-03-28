@@ -50,6 +50,7 @@ const DEMO_ROUTE: [number, number][] = [
 const STAGE_COLORS: Record<ShipStage, string> = {
   POSTED:                '#3B82F6',
   AWAITING_ESCROW:       '#F59E0B',
+  ESCROW_FUNDED:         '#0D9488',
   IN_TRANSIT:            '#8B5CF6',
   AWAITING_CONFIRMATION: '#44403c',
   COMPLETED:             '#10B981',
@@ -60,6 +61,7 @@ const STAGE_COLORS: Record<ShipStage, string> = {
 const STAGE_LABELS: Record<ShipStage, string> = {
   POSTED:                'Posted',
   AWAITING_ESCROW:       'Awaiting Escrow',
+  ESCROW_FUNDED:         'Escrow Funded',
   IN_TRANSIT:            'In Transit',
   AWAITING_CONFIRMATION: 'Awaiting Confirm',
   COMPLETED:             'Completed',
