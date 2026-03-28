@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { font-family: 'Inter', Arial, sans-serif; color: #333; line-height: 1.6; background-color: #f9f9f9; padding: 20px; }
+        .card { max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+        .header { text-align: center; border-bottom: 2px solid #eee; padding-bottom: 20px; margin-bottom: 20px; }
+        .summary { background: #fcfcfc; padding: 20px; border-radius: 8px; border: 1px solid #f0f0f0; }
+        .summary p { margin: 8px 0; font-size: 14px; }
+        .amount { font-size: 24px; font-weight: bold; color: #28a745; text-align: center; margin: 20px 0; }
+        .footer { font-size: 12px; color: #777; text-align: center; margin-top: 30px; }
+        .badge { background: #e8f5e9; color: #2e7d32; padding: 4px 12px; border-radius: 16px; font-size: 12px; font-weight: bold; }
+        h1 { color: #222; font-size: 22px; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="header">
+            <span class="badge">COMPLETED</span>
+            <h1>Shipment Delivery Receipt</h1>
+        </div>
+        <div class="content">
+            <p>Your shipment has been successfully delivered and confirmed.</p>
+            <div class="summary">
+                <p><strong>Shipment ID:</strong> #{{shipment_id}}</p>
+                <p><strong>Cargo:</strong> {{cargo_description}}</p>
+                <p><strong>Route:</strong> {{pickup_district}} &rarr; {{dropoff_district}}</p>
+                <p><strong>Weight:</strong> {{weight}} kg</p>
+            </div>
+            
+            <div class="amount">
+                {{amount}} RWF
+            </div>
+            
+            <p style="text-align: center; font-size: 14px;">The payment has been released to <strong>{{company_name}}</strong>.</p>
+        </div>
+        <div class="footer">
+            <p>Thank you for using LoadLink Rwanda.</p>
+            <p>&copy; 2026 LoadLink Rwanda. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>

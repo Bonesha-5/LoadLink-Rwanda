@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { font-family: 'Inter', Arial, sans-serif; color: #333; line-height: 1.6; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 12px; }
+        .header { text-align: center; padding-bottom: 20px; border-bottom: 2px solid #f0f0f0; }
+        .content { padding: 20px 0; }
+        .cta { display: block; width: 220px; margin: 20px auto; padding: 12px; background: #007bff; color: white; text-align: center; text-decoration: none; border-radius: 8px; font-weight: bold; }
+        .footer { font-size: 12px; color: #777; text-align: center; border-top: 1px solid #f0f0f0; padding-top: 20px; }
+        h1 { color: #222; font-size: 24px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Action needed — confirm your delivery</h1>
+        </div>
+        <div class="content">
+            <p>Hello <strong>{{shipper_name}}</strong>,</p>
+            <p>Your shipment (<strong>ID: {{shipment_id}}</strong>) from <strong>{{pickup_district}}</strong> to <strong>{{dropoff_district}}</strong> has been marked as delivered by the carrier for over 20 hours.</p>
+            <p>Please log in to the <strong>LoadLink Rwanda</strong> platform to confirm the delivery and release the payment to the carrier, or raise a dispute if there were any issues.</p>
+            <a href="{{login_url}}" class="cta">Confirm Delivery</a>
+            <p>If no action is taken within the next 4 hours, the system will automatically confirm the delivery.</p>
+        </div>
+        <div class="footer">
+            <p>&copy; 2026 LoadLink Rwanda. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>

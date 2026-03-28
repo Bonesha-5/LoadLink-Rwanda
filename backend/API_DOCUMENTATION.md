@@ -360,3 +360,19 @@ Most endpoints require a **Bearer Token** in the `Authorization` header.
   "webhook_url": "http://localhost:3000/api/payments/payout-webhook"
 }
 ```
+
+---
+
+## 9. Email Notification Service
+
+LoadLink-Rwanda provides automated email notifications for key shipment events.
+
+### 1. Shipment Confirmation Reminder
+- **Recipient:** Shipper
+- **Trigger:** Sent automatically when a shipment has been in `AWAITING_CONFIRMATION` status for **20 hours**.
+- **Purpose:** Reminds the shipper to confirm delivery or raise a dispute before the system auto-confirms.
+
+### 2. Shipment Completion Receipt
+- **Recipients:** Shipper and Company
+- **Trigger:** Sent immediately when a shipment is marked as `COMPLETED**.
+- **Purpose:** Provides a professional summary of the shipment (cargo, route, weight) and confirms that the payment has been released to the carrier.

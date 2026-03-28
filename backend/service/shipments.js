@@ -1,5 +1,6 @@
 import pool from "../config/db.js";
 import { releasePayment } from "../controllers/payments.js";
+import { sendEmail } from "../utils/emailService.js";
 
 
 // Fetch available shipments for a company based on truck capacity
@@ -239,7 +240,7 @@ export const confirmShipmentService = async (shipmentId, shipperId) => {
   }
 
   // Update shipment → COMPLETED
-  const updatedShipment = await pool.query(
+  const updatedShipmentResult = await pool.query(
     `UPDATE shipments
      SET status = 'COMPLETED'
      WHERE id = $1
@@ -247,10 +248,48 @@ export const confirmShipmentService = async (shipmentId, shipperId) => {
     [shipmentId]
   );
 
+  const updatedShipment = updatedShipmentResult.rows[0];
+
   // Trigger payment release
   await releasePayment(shipmentId);
 
-  return updatedShipment.rows[0];
+  // Send completion email to both shipper and company
+  try {
+    const detailsQuery = `
+      SELECT s.*, 
+             u.email as shipper_email, u.name as shipper_name,
+             c.name as company_name, cu.email as company_email
+      FROM shipments s
+      JOIN users u ON s.shipper_id = u.id
+      JOIN trucks t ON s.selected_truck_id = t.id
+      JOIN companies c ON t.company_id = c.id
+      JOIN users cu ON c.user_id = cu.id
+      WHERE s.id = $1
+    `;
+    const detailsResult = await pool.query(detailsQuery, [shipmentId]);
+    const d = detailsResult.rows[0];
+
+    if (d) {
+        const emailData = {
+            shipment_id: d.id,
+            cargo_description: d.cargo_description,
+            pickup_district: d.pickup_district,
+            dropoff_district: d.dropoff_district,
+            weight: d.weight,
+            amount: d.offered_price,
+            company_name: d.company_name
+        };
+
+        // Send to shipper
+        await sendEmail(d.shipper_email, `Shipment #${d.id} Completed`, 'completion_receipt', emailData);
+        // Send to company
+        await sendEmail(d.company_email, `Shipment #${d.id} Completed`, 'completion_receipt', emailData);
+    }
+  } catch (emailError) {
+    console.error('[ShipmentService] Failed to send completion emails:', emailError.message);
+  }
+
+  return updatedShipment;
 };
 
 // Dispute a shipment

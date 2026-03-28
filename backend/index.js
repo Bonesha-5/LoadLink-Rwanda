@@ -12,6 +12,7 @@ import interestsRoutes from "./routes/interests.js";
 
 import trucksRoutes from "./routes/trucks.js";
 import simulatedMomoRoutes from './routes/simulatedMomo.js';
+import { initShipmentReminders } from "./cron/shipmentReminders.js";
 import requestLogger from "./middleware/logger.js";
 import errorMiddleware from "./middleware/errorMiddleware.js";
 
@@ -35,6 +36,9 @@ app.use("/api/shipments", shipmentRoutes);
 app.use("/api/interests", interestsRoutes);
 app.use("/api/trucks", trucksRoutes);
 app.use("/api/ratings", ratingsRoutes);
+
+// Initialize Cron actions
+initShipmentReminders();
 
 
 app.use(errorMiddleware);
