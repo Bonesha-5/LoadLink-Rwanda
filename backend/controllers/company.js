@@ -1,7 +1,7 @@
 import jwt from "jsonwebtoken";
 import * as companyService from "../service/company.js";
 import { catchAsync } from "../utils/catchAsync.js";
-
+import pool from '../config/db.js';
 const JWT_SECRET = process.env.JWT_SECRET;
 
 // Register a new company
@@ -106,3 +106,56 @@ export const CompanyLogin = catchAsync(async (req, res) => {
     throw error;
   }
 });
+export const getCompanyAnalytics = async (req, res) => {
+  const { company_id } = req.user;
+  try {
+    // Shipments active today (any status except POSTED/CANCELLED)
+const todayResult = await pool.query(`
+  SELECT COUNT(*) AS count
+  FROM shipments s
+  JOIN trucks t ON t.id = s.selected_truck_id
+  WHERE t.company_id = $1
+  AND s.status IN ('ESCROW_FUNDED', 'IN_TRANSIT', 'AWAITING_CONFIRMATION', 'COMPLETED')
+  AND s.created_at >= NOW() - INTERVAL '7 days'
+`, [company_id]);
+
+    // Weekly shipments (last 7 days)
+  const weeklyResult = await pool.query(`
+  SELECT TO_CHAR(s.created_at, 'Dy') AS name,
+         COUNT(*) AS shipments
+  FROM shipments s
+  JOIN trucks t ON t.id = s.selected_truck_id
+  WHERE t.company_id = $1
+  AND s.created_at >= NOW() - INTERVAL '7 days'
+  GROUP BY DATE(s.created_at), TO_CHAR(s.created_at, 'Dy')
+  ORDER BY DATE(s.created_at) ASC
+`, [company_id]);
+
+    // On-time rate (delivered before or on pickup_date)
+   const onTimeResult = await pool.query(`
+  SELECT
+    COUNT(*) FILTER (
+      WHERE s.pickup_date IS NOT NULL
+      AND s.delivered_at <= s.pickup_date + INTERVAL '1 day'
+    ) AS on_time,
+    COUNT(*) FILTER (WHERE s.pickup_date IS NOT NULL) AS total
+  FROM shipments s
+  JOIN trucks t ON t.id = s.selected_truck_id
+  WHERE t.company_id = $1
+  AND s.status = 'COMPLETED'
+  AND s.delivered_at IS NOT NULL
+`, [company_id]);
+
+    const { on_time, total } = onTimeResult.rows[0];
+    const on_time_rate = total > 0 ? Math.round((on_time / total) * 100) : null;
+
+    res.status(200).json({
+      shipments_today: Number(todayResult.rows[0].count),
+      weekly: weeklyResult.rows.map(r => ({ name: r.name, shipments: Number(r.shipments) })),
+      on_time_rate,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};

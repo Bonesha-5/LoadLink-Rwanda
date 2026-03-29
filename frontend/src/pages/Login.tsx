@@ -2,172 +2,145 @@ import { useState, useEffect } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import type { Role } from '../context/AuthContext'
-import { companyLogin } from '../api/companyApi'
-import { adminLogin } from '../api/adminApi'
 import type { ApiError } from '../api/http'
-import { createMockJwt, isMockAuthMode } from '../auth/mockJwt'
-import { getCompanyByEmailDemo } from '../data/storage'
+import { apiRequest } from '../api/http'
+import { companyLogin } from '../api/companyApi'
+import { shipperLogin } from '../api/shipperApi'
 
 const ROLES: Role[] = ['shipper', 'company', 'admin']
 
 const ROLE_LABELS: Record<Role, string> = {
   shipper: 'Shipper',
   company: 'Company',
-  admin: 'Admin',
+  admin:   'Admin',
 }
 
 const ROLE_DASHBOARDS: Record<Role, string> = {
   shipper: '/profile',
   company: '/company/dashboard',
-  admin: '/admin/companies',
+  admin:   '/admin/companies',
 }
 
 const PANEL_CONTENT: Partial<Record<Role, { heading: string; description: string; footer: string; benefits: string[] }>> = {
   shipper: {
-    heading: "Welcome back, Shipper",
+    heading:     'Welcome back, Shipper',
     description: 'Sign in to manage your shipments, track deliveries, and pay securely with escrow.',
-    footer: "You'll be taken to your shipper dashboard.",
-    benefits: ['Post loads in minutes', 'Get offers from verified transport companies', 'Track shipments in one place'],
+    footer:      "You'll be taken to your shipper dashboard.",
+    benefits:    ['Post loads in minutes', 'Get offers from verified transport companies', 'Track shipments in one place'],
   },
   company: {
-    heading: 'Welcome back, Transport Company',
+    heading:     'Welcome back, Transport Company',
     description: 'Sign in to view shipment requests, manage your trucks, and grow your business.',
-    footer: "You'll be taken to your company dashboard.",
-    benefits: ['Browse available shipment requests', 'Submit offers and win loads', 'Manage your fleet in one place'],
+    footer:      "You'll be taken to your company dashboard.",
+    benefits:    ['Browse available shipment requests', 'Submit offers and win loads', 'Manage your fleet in one place'],
   },
 }
 
 export default function Login() {
   const { role: urlRole } = useParams<{ role: string }>()
   const role = (ROLES.includes(urlRole as Role) ? urlRole : 'shipper') as Role
-  const [username, setUsername] = useState('')
+
+  const [email,    setEmail]    = useState('')
   const [password, setPassword] = useState('')
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [busy,     setBusy]     = useState(false)
+  const [error,    setError]    = useState<string | null>(null)
+
   const navigate = useNavigate()
   const location = useLocation()
   const { login, user } = useAuth()
-  const from =
-    (location.state as { from?: { pathname: string } })?.from?.pathname ??
-    ROLE_DASHBOARDS[role]
-  const regState = location.state as { registered?: boolean; registeredMessage?: string } | null
+
+  const from = (location.state as { from?: { pathname: string } })?.from?.pathname ?? ROLE_DASHBOARDS[role]
+  const regState         = location.state as { registered?: boolean; registeredMessage?: string } | null
   const registeredNotice = Boolean(regState?.registered) || Boolean(regState?.registeredMessage?.trim())
   const registeredBannerText = regState?.registeredMessage?.trim()
     ? String(regState.registeredMessage)
     : 'Registration complete. Sign in below.'
 
-  const hasToken = Boolean(user?.token)
-  const isLoggedInForThisRole = user?.role === role && (role === 'shipper' || hasToken)
-  const dashboard = ROLE_DASHBOARDS[role]
-  const panel = PANEL_CONTENT[role]
+  const hasToken            = Boolean(user?.token)
+  const isLoggedInForRole   = user?.role === role && (role === 'shipper' || hasToken)
+  const dashboard           = ROLE_DASHBOARDS[role]
+  const panel               = PANEL_CONTENT[role]
 
   useEffect(() => {
-    if (!isLoggedInForThisRole) return
+    if (!isLoggedInForRole) return
     if (location.pathname !== dashboard) navigate(dashboard, { replace: true })
-  }, [isLoggedInForThisRole, navigate, dashboard, location.pathname])
+  }, [isLoggedInForRole, navigate, dashboard, location.pathname])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
 
-    // Company login: use real backend endpoint when an email is provided.
+    const emailVal = email.trim()
+
+    // ── SHIPPER ────────────────────────────────────────────────
+    if (role === 'shipper') {
+      if (!emailVal || !emailVal.includes('@')) { setError('Enter a valid email address.'); return }
+      if (!password.trim())                     { setError('Enter your password.'); return }
+
+      setBusy(true)
+      try {
+        const res = await shipperLogin(emailVal, password.trim())
+          login(res.user.name, 'shipper', {
+            token: res.token,
+            email: res.user.email,
+          })
+          navigate(from, { replace: true })
+      } catch (e) {
+        setError((e as ApiError).message || 'Could not sign in.')
+      } finally {
+        setBusy(false)
+      }
+      return
+    }
+
+    // ── COMPANY ────────────────────────────────────────────────
     if (role === 'company') {
-      const emailOrName = username.trim()
-      if (!emailOrName) {
-        setError('Enter your company email.')
-        return
-      }
-      if (!emailOrName.includes('@')) {
-        setError('Use a valid company email address (include @).')
-        return
-      }
-      if (!password.trim()) {
-        setError('Enter your password.')
-        return
-      }
+      if (!emailVal || !emailVal.includes('@')) { setError('Enter your company email.'); return }
+      if (!password.trim())                     { setError('Enter your password.'); return }
 
       setBusy(true)
       try {
-        if (isMockAuthMode()) {
-          const company = getCompanyByEmailDemo(emailOrName)
-          // Use the actual registered company name, not the email prefix
-          const name = company?.name || emailOrName.split('@')[0] || 'Company'
-          const status = company?.status ?? 'PENDING_VERIFICATION'
-          login(name, 'company', {
-            token: createMockJwt({ role: 'COMPANY', email: emailOrName, name, status }),
-            email: emailOrName,
-            status,
+        const res = await companyLogin(emailVal, password.trim())
+          login(res.user.company_name ?? emailVal.split('@')[0], 'company', {
+            token:  res.token,
+            email:  res.user.email,
+            status: res.user.status,
           })
           navigate(from, { replace: true })
-        } else {
-          const res = await companyLogin(emailOrName, password)
-          const name = res.user?.name || 'Company'
-          login(name, 'company', {
-            token: res.token,
-            email: res.user?.email ?? emailOrName,
-            status: res.user?.status ?? null,
-          })
-          navigate(from, { replace: true })
-        }
       } catch (e) {
-        const err = e as ApiError
-        setError(err.message || 'Could not sign in.')
+        setError((e as ApiError).message || 'Could not sign in.')
       } finally {
         setBusy(false)
       }
       return
     }
 
+    // ── ADMIN ──────────────────────────────────────────────────
     if (role === 'admin') {
-      const email = username.trim()
-      if (!email) {
-        setError('Enter your admin email.')
-        return
-      }
-      if (!email.includes('@')) {
-        setError('Use a valid admin email address (include @).')
-        return
-      }
-      if (!password.trim()) {
-        setError('Enter your password.')
-        return
-      }
+      if (!emailVal || !emailVal.includes('@')) { setError('Enter your admin email.'); return }
+      if (!password.trim())                     { setError('Enter your password.'); return }
 
       setBusy(true)
       try {
-        if (isMockAuthMode()) {
-          const name = email.split('@')[0] || 'Admin'
-          login(name, 'admin', {
-            token: createMockJwt({ role: 'ADMIN', email, name }),
-            email,
-          })
-          navigate(from, { replace: true })
-        } else {
-          const res = await adminLogin(email, password)
-          const name = res.user?.name || 'Admin'
-          login(name, 'admin', {
+        const res = await apiRequest<{ success: boolean; token: string; user: { name: string; email: string } }>(
+            '/auth/admin/login',
+            { method: 'POST', body: { email: emailVal, password: password.trim() } }
+          )
+          login(res.user?.name || emailVal.split('@')[0], 'admin', {
             token: res.token,
-            email: res.user?.email ?? email,
+            email: res.user?.email ?? emailVal,
           })
           navigate(from, { replace: true })
-        }
       } catch (e) {
-        const err = e as ApiError
-        setError(err.message || 'Could not sign in.')
+        setError((e as ApiError).message || 'Could not sign in.')
       } finally {
         setBusy(false)
       }
       return
     }
-
-    // Demo fallback (shipper / admin without API email flow)
-    if (!username.trim()) {
-      setError('Enter a username or email.')
-      return
-    }
-    login(username.trim(), role)
-    navigate(from, { replace: true })
   }
+
+  const inputCls = 'w-full px-4 py-3.5 rounded-xl bg-stone-50 border border-stone-200 text-stone-800 placeholder:text-stone-400 focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 transition-all'
 
   const formCard = (
     <div className="w-full max-w-md mx-auto ll-animate-in">
@@ -179,44 +152,38 @@ export default function Login() {
             </svg>
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-stone-800 tracking-tight">
-              Sign in as {ROLE_LABELS[role]}
-            </h1>
-            <p className="text-stone-500 text-sm mt-0.5">
-              Enter your credentials to access your dashboard
-            </p>
+            <h1 className="text-2xl font-bold text-stone-800 tracking-tight">Sign in as {ROLE_LABELS[role]}</h1>
+            <p className="text-stone-500 text-sm mt-0.5">Enter your credentials to access your dashboard</p>
           </div>
         </div>
+
         {registeredNotice && (
           <p className="mb-4 text-sm text-emerald-800 bg-emerald-50 border border-emerald-100 rounded-xl px-4 py-3">
             {registeredBannerText}
           </p>
         )}
+
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <label htmlFor="username" className="block text-sm font-semibold text-stone-700 mb-2">
-              {role === 'company' ? 'Company email' : role === 'admin' ? 'Admin email' : 'Username'}
+            <label htmlFor="email" className="block text-sm font-semibold text-stone-700 mb-2">
+              {role === 'company' ? 'Company email' : role === 'admin' ? 'Admin email' : 'Email address'}
             </label>
             <input
-              id="username"
-              type="text"
-              autoComplete="username"
+              id="email"
+              type="email"
+              autoComplete="email"
               placeholder={
-                role === 'company'
-                  ? 'e.g. company@example.com'
-                  : role === 'admin'
-                    ? 'e.g. admin@loadlink.rw'
-                    : 'e.g. alice'
+                role === 'company' ? 'e.g. company@example.com'
+                : role === 'admin' ? 'e.g. admin@loadlink.rw'
+                : 'e.g. alice@example.com'
               }
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              className="w-full px-4 py-3.5 rounded-xl bg-stone-50 border border-stone-200 text-stone-800 placeholder:text-stone-400 focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 transition-all"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className={inputCls}
             />
           </div>
           <div>
-            <label htmlFor="password" className="block text-sm font-semibold text-stone-700 mb-2">
-              Password
-            </label>
+            <label htmlFor="password" className="block text-sm font-semibold text-stone-700 mb-2">Password</label>
             <input
               id="password"
               type="password"
@@ -224,7 +191,7 @@ export default function Login() {
               placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-3.5 rounded-xl bg-stone-50 border border-stone-200 text-stone-800 placeholder:text-stone-400 focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 transition-all"
+              className={inputCls}
             />
           </div>
           {error && <p className="text-red-500 text-sm">{error}</p>}
@@ -236,16 +203,10 @@ export default function Login() {
             {busy ? 'Signing in…' : 'Sign in'}
           </button>
         </form>
-        {error && (
-          <p className="mt-4 text-sm text-red-600 bg-red-50 border border-red-100 rounded-xl px-4 py-3">
-            {error}
-          </p>
-        )}
+
         <p className="mt-6 text-center text-stone-500 text-sm">
           Don&apos;t have an account?{' '}
-          <Link to={`/register/${role}`} className="text-accent font-semibold hover:underline">
-            Create one
-          </Link>
+          <Link to={`/register/${role}`} className="text-accent font-semibold hover:underline">Create one</Link>
         </p>
       </div>
     </div>
@@ -278,15 +239,10 @@ export default function Login() {
               ))}
             </ul>
           </div>
-          <p className="relative z-10 text-sm text-white/70">
-            After sign in you&apos;ll go to the home page (demo shipper).
-          </p>
+          <p className="relative z-10 text-sm text-white/70">{panel.footer}</p>
         </div>
         <div className="flex-1 flex flex-col items-center justify-center p-6 sm:p-10 bg-[#F6F7FB] min-h-screen">
-          <Link
-            to="/"
-            className="lg:hidden absolute top-6 left-6 text-sidebar font-bold text-xl tracking-tight z-20 hover:opacity-80"
-          >
+          <Link to="/" className="lg:hidden absolute top-6 left-6 text-sidebar font-bold text-xl tracking-tight z-20 hover:opacity-80">
             LoadLink Rwanda
           </Link>
           {formCard}
@@ -297,16 +253,9 @@ export default function Login() {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center relative overflow-hidden bg-[#F6F7FB] py-12 px-6">
-      <div
-        className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-[0.06] pointer-events-none"
-        style={{ backgroundImage: 'url(/cargo.jpg)' }}
-      />
-      <Link to="/" className="absolute top-6 left-6 text-sidebar font-bold text-xl tracking-tight z-20 hover:opacity-80">
-        LoadLink Rwanda
-      </Link>
-      <div className="w-full max-w-md relative z-10">
-        {formCard}
-      </div>
+      <div className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-[0.06] pointer-events-none" style={{ backgroundImage: 'url(/cargo.jpg)' }} />
+      <Link to="/" className="absolute top-6 left-6 text-sidebar font-bold text-xl tracking-tight z-20 hover:opacity-80">LoadLink Rwanda</Link>
+      <div className="w-full max-w-md relative z-10">{formCard}</div>
     </div>
   )
 }

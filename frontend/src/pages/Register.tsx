@@ -3,9 +3,8 @@ import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import type { Role } from '../context/AuthContext'
 import { companyRegister } from '../api/companyApi'
+import { shipperRegister } from '../api/shipperApi'
 import type { ApiError } from '../api/http'
-import { isMockAuthMode } from '../auth/mockJwt'
-import { registerCompanyDemo } from '../data/storage'
 
 const ROLES: Role[] = ['shipper', 'company', 'admin']
 
@@ -46,6 +45,7 @@ export default function Register() {
   const { role: urlRole } = useParams<{ role: string }>()
   const role = (ROLES.includes(urlRole as Role) ? urlRole : 'shipper') as Role
   const [fullName, setFullName] = useState('')
+  const [phone, setPhone] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [busy, setBusy] = useState(false)
@@ -55,7 +55,6 @@ export default function Register() {
   const [companyName, setCompanyName] = useState('')
   const [rdbNumber, setRdbNumber] = useState('')
   const [contactPerson, setContactPerson] = useState('')
-  const [phone, setPhone] = useState('')
   const [baseDistrict, setBaseDistrict] = useState('')
   const [businessCertPath, setBusinessCertPath] = useState('')
   const [insuranceDocPath, setInsuranceDocPath] = useState('')
@@ -112,24 +111,7 @@ export default function Register() {
       }
       setBusy(true)
       try {
-        if (isMockAuthMode()) {
-          registerCompanyDemo({
-            email,
-            name,
-            rdbNumber: rdbNumber.trim(),
-            contactPerson: contactPerson.trim(),
-            baseDistrict: baseDistrict.trim(),
-          })
-          navigate('/login/company', {
-            replace: true,
-            state: {
-              registered: true,
-              registeredMessage:
-                'Demo company registered and queued for approval. You can sign in now; the admin can approve you in “Company checks”.',
-            },
-          })
-        } else {
-          await companyRegister({
+        await companyRegister({
             email,
             password,
             name,
@@ -137,18 +119,16 @@ export default function Register() {
             contact_person: contactPerson.trim(),
             phone: phone.trim(),
             base_district: baseDistrict.trim(),
-            business_cert_url: businessCertPath.trim(),
-            insurance_doc_url: insuranceDocPath.trim(),
+            business_cert_path: businessCertPath.trim(),
+            insurance_doc_path: insuranceDocPath.trim(),
           })
           navigate('/login/company', {
             replace: true,
             state: {
               registered: true,
-              registeredMessage:
-                'Company registered. You can sign in after an admin approves your account.',
+              registeredMessage: 'Company registered. You can sign in after an admin approves your account.',
             },
           })
-        }
       } catch (err) {
         const e = err as ApiError
         setError(e.message || 'Could not register company.')
@@ -158,20 +138,26 @@ export default function Register() {
       return
     }
 
-    if (!fullName.trim()) {
-      setError('Enter your full name.')
-      return
+    if (!fullName.trim()) { setError('Enter your full name.'); return }
+    if (!email.trim() || !email.includes('@')) { setError('Enter a valid email address.'); return }
+    if (!password.trim()) { setError('Choose a password.'); return }
+
+    setBusy(true)
+    try {
+      const res = await shipperRegister({
+          name: fullName.trim(),
+          phone: phone.trim(),
+          email: email.trim(),
+          password: password.trim(),
+        })
+        login(res.user.name, 'shipper', { token: res.token, email: res.user.email })
+        navigate(dashboard, { replace: true })
+    } catch (err) {
+      const e = err as ApiError
+      setError(e.message || 'Could not create account.')
+    } finally {
+      setBusy(false)
     }
-    if (!email.trim() || !email.includes('@')) {
-      setError('Enter a valid email address.')
-      return
-    }
-    if (!password.trim()) {
-      setError('Choose a password.')
-      return
-    }
-    login(fullName.trim(), role, { email: email.trim() })
-    navigate(dashboard, { replace: true })
   }
 
   const formCard = (
@@ -220,6 +206,20 @@ export default function Register() {
                   placeholder="e.g. alice@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  className="w-full px-4 py-3.5 rounded-xl bg-stone-50 border border-stone-200 text-stone-800 placeholder:text-stone-400 focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 transition-all"
+                />
+              </div>
+              <div>
+                <label htmlFor="phone" className="block text-sm font-semibold text-stone-700 mb-2">
+                  Phone <span className="text-stone-400 font-normal">(optional)</span>
+                </label>
+                <input
+                  id="phone"
+                  type="tel"
+                  autoComplete="tel"
+                  placeholder="e.g. +250 788 123 456"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
                   className="w-full px-4 py-3.5 rounded-xl bg-stone-50 border border-stone-200 text-stone-800 placeholder:text-stone-400 focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 transition-all"
                 />
               </div>

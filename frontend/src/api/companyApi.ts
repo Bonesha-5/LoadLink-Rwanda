@@ -1,12 +1,15 @@
 import { apiRequest } from './http'
 
 export type CompanyLoginResponse = {
+  success: boolean
   token: string
   user: {
-    id?: string
-    name?: string
+    id?: number
     email?: string
     role?: string
+    company_id?: number
+    company_name?: string
+    contact_person?: string
     status?: string
   }
 }
@@ -26,11 +29,8 @@ export async function companyRegister(payload: {
   contact_person: string
   phone: string
   base_district: string
-  /** URL or storage path for business certificate (matches backend field name). */
-  business_cert_url: string
-  /** URL or storage path for insurance document (matches backend field name). */
-  insurance_doc_url: string
-}): Promise<{ message?: string; token?: string; user?: unknown }> {
+  business_cert_path: string
+  insurance_doc_path: string
+}): Promise<{ success: boolean; message?: string }> {
   return apiRequest('/api/company/register', { method: 'POST', body: payload })
 }
-

@@ -1,190 +1,86 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 import {
-  getAllLoads,
-  getAllTrucks,
-  addOfferToLoad,
-  ensureSeedLoads,
-  getTrucksByCompany,
-  getMyInterestsDemo,
-  recordInterestDemo,
-  getCompanyByEmailDemo,
-} from '../data/storage'
-import { expressInterest, getAvailableShipments, getMyTrucks, type CompanyShipment, type CompanyTruck } from '../api/companyOpsApi'
+  getAvailableShipments,
+  getMyTrucks,
+  getMyInterestsList,
+  expressInterest,
+  type CompanyShipment,
+  type CompanyTruck,
+} from '../api/companyOpsApi'
 import type { ApiError } from '../api/http'
-import { getMyInterestsList, type CompanyInterest } from '../api/companyOpsApi'
-import { getApiToken } from '../auth/mockJwt'
 
 export default function CompanyShipments() {
   const { user } = useAuth()
-  const companyName = user?.name ?? ''
-  const rawToken = user?.token ?? null
-  const apiToken = getApiToken(rawToken)
-  // Sync verification status live from storage (so admin approval takes effect without re-login)
-  const companyEmail = user?.email ?? ''
-  const liveStatus = (() => {
-    if (!companyEmail) return user?.status ?? ''
-    try {
-      const c = getCompanyByEmailDemo(companyEmail)
-      return c?.status ?? user?.status ?? ''
-    } catch { return user?.status ?? '' }
-  })()
-  const isVerified = String(liveStatus).toUpperCase() === 'VERIFIED'
-  const [refresh, setRefresh] = useState(0)
-  const [offerLoadId, setOfferLoadId] = useState<string | null>(null)
-  const [offerMessage, setOfferMessage] = useState('')
-  const [selectedTruckId, setSelectedTruckId] = useState<string>('')
-  const [apiShipments, setApiShipments] = useState<CompanyShipment[]>([])
-  const [apiTrucks, setApiTrucks] = useState<CompanyTruck[]>([])
-  const [apiInterests, setApiInterests] = useState<CompanyInterest[]>([])
-  const [state, setState] = useState<'idle' | 'loading' | 'error' | 'success'>('idle')
+  const token = user?.token ?? ''
+  const isVerified = String(user?.status ?? '').toUpperCase() === 'VERIFIED'
+
+  const [shipments, setShipments] = useState<CompanyShipment[]>([])
+  const [trucks, setTrucks] = useState<CompanyTruck[]>([])
+  const [myInterestIds, setMyInterestIds] = useState<Set<number>>(new Set())
+  const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [expandedId, setExpandedId] = useState<number | null>(null)
 
-  const formatRwf = (value: unknown): string => {
-    if (typeof value === 'number' && Number.isFinite(value)) return `${value.toLocaleString()} RWF`
-    if (typeof value === 'string' && value.trim()) return value.trim()
-    return 'Price not set'
-  }
+  // Modal state
+  const [offerShipment, setOfferShipment] = useState<CompanyShipment | null>(null)
+  const [selectedTruckId, setSelectedTruckId] = useState<string>('')
+  const [submitting, setSubmitting] = useState(false)
+  const [offerError, setOfferError] = useState<string | null>(null)
 
-  const loads = useMemo(() => {
-    void refresh
-    if (apiToken) return [] as any[]
-    ensureSeedLoads()
-    // Show ALL open loads — any verified company can see and express interest
-    return getAllLoads().filter((l) => l.status === 'open')
-  }, [refresh, apiToken])
-
-  const fleetCount = useMemo(() => {
-    void refresh
-    if (apiToken) return apiTrucks.length
-    return getTrucksByCompany(companyName).length || getAllTrucks().length
-  }, [companyName, refresh, apiToken, apiTrucks.length])
-
-  useEffect(() => {
-    const t = apiToken
-    if (!t) return
-    const tokenStr: string = t
-    let cancelled = false
-    async function load() {
-      setState('loading')
-      setError(null)
-      try {
-        const [shipments, trucks, interests] = await Promise.all([
-          getAvailableShipments(tokenStr),
-          getMyTrucks(tokenStr),
-          getMyInterestsList(tokenStr),
-        ])
-        if (cancelled) return
-        setApiShipments(shipments)
-        setApiTrucks(trucks)
-        setApiInterests(interests)
-        setState('success')
-      } catch (e) {
-        if (cancelled) return
-        const err = e as ApiError
-        setError(err.message || 'Could not load available shipments.')
-        setApiShipments([])
-        setApiTrucks([])
-        setApiInterests([])
-        setState('error')
-      }
-    }
-    void load()
-    return () => {
-      cancelled = true
-    }
-  }, [apiToken, refresh])
-
-  const myInterestShipmentIds = useMemo(() => {
-    const set = new Set<string>()
-    for (const i of apiInterests) {
-      const id = String(i.shipmentId ?? i.shipment_id ?? '')
-      if (id) set.add(id)
-    }
-    return set
-  }, [apiInterests])
-
-  const availableApiTrucks = useMemo(() => {
-    return apiTrucks.filter((t) => (t.availability_status ?? t.availabilityStatus ?? 'AVAILABLE') === 'AVAILABLE')
-  }, [apiTrucks])
-
-  const capacityMax = useMemo(() => {
-    const caps = availableApiTrucks
-      .map((t) => t.declared_capacity ?? t.declaredCapacity ?? null)
-      .filter((v): v is number => typeof v === 'number' && Number.isFinite(v))
-    return caps.length ? Math.max(...caps) : null
-  }, [availableApiTrucks])
-
-  const filteredApiShipments = useMemo(() => {
-    // filter open shipments to match max available capacity (simple and understandable)
-    if (!apiToken) return [] as CompanyShipment[]
-    if (capacityMax == null) return apiShipments
-    return apiShipments.filter((s) => {
-      const w = s.weightTons ?? s.weight_tons
-      if (typeof w !== 'number') return true
-      return w <= capacityMax
-    })
-  }, [apiShipments, capacityMax, apiToken])
-
-  function openOfferModal(loadId: string) {
-    setOfferLoadId(loadId)
-    setOfferMessage('')
-    setSelectedTruckId('')
-  }
-
-  function closeOfferModal() {
-    setOfferLoadId(null)
-    setOfferMessage('')
-    setSelectedTruckId('')
-  }
-
-  async function handleSubmitOffer(e: React.FormEvent) {
-    e.preventDefault()
+  async function load() {
+    setLoading(true)
     setError(null)
-
-    if (apiToken) {
-      const t = apiToken
-      if (!isVerified) {
-        setError('Your company is waiting for admin approval. You cannot accept shipments yet.')
-        return
-      }
-      if (!offerLoadId) return
-      if (myInterestShipmentIds.has(String(offerLoadId))) {
-        setError('You already showed interest in this shipment.')
-        return
-      }
-      if (!selectedTruckId) {
-        setError('Please choose a truck for this shipment.')
-        return
-      }
-      try {
-        await expressInterest(t, { shipment_id: offerLoadId, truck_id: selectedTruckId })
-        closeOfferModal()
-        setRefresh((v) => v + 1)
-      } catch (e) {
-        const err = e as ApiError
-        setError(err.message || 'Could not express interest.')
-      }
-      return
+    try {
+      const [s, t, i] = await Promise.all([
+        getAvailableShipments(token),
+        getMyTrucks(token),
+        getMyInterestsList(token),
+      ])
+      setShipments(s)
+      setTrucks(t)
+      setMyInterestIds(new Set(i.map((x: any) => Number(x.shipment_id ?? x.shipmentId))))
+    } catch (e) {
+      setError((e as ApiError).message || 'Could not load shipments.')
+    } finally {
+      setLoading(false)
     }
-
-    if (!offerLoadId || !offerLoad) return
-    // Prevent duplicate interest
-    if (getMyInterestsDemo(companyName).includes(offerLoadId)) {
-      setError('You already expressed interest in this shipment.')
-      closeOfferModal()
-      return
-    }
-    const amount = offerLoad.price ?? 'ACCEPTED'
-    addOfferToLoad(offerLoadId, companyName, amount, offerMessage.trim() || undefined)
-    recordInterestDemo(companyName, offerLoadId)
-    closeOfferModal()
-    setRefresh((v) => v + 1)
   }
 
-  const offerLoad = offerLoadId ? loads.find((l) => l.id === offerLoadId) : null
-  const offerShipment = offerLoadId ? filteredApiShipments.find((s) => String(s.id) === String(offerLoadId)) : null
+  useEffect(() => { void load() }, [])
+
+  const availableTrucks = trucks.filter(t => t.availability_status === 'AVAILABLE')
+
+  async function handleExpressInterest(e: React.FormEvent) {
+    e.preventDefault()
+    if (!offerShipment?.id || !selectedTruckId) {
+      setOfferError('Please select a truck.')
+      return
+    }
+    setSubmitting(true)
+    setOfferError(null)
+    try {
+      await expressInterest(token, {
+        shipment_id: String(offerShipment.id),
+        truck_id: selectedTruckId,
+      })
+      setMyInterestIds(prev => new Set([...prev, offerShipment.id!]))
+      setOfferShipment(null)
+      setSelectedTruckId('')
+    } catch (e) {
+      setOfferError((e as ApiError).message || 'Could not express interest.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-24">
+        <div className="w-7 h-7 rounded-full border-2 border-sidebar border-t-transparent animate-spin" />
+      </div>
+    )
+  }
 
   return (
     <div className="max-w-5xl">
@@ -197,7 +93,7 @@ export default function CompanyShipments() {
         </div>
         <button
           type="button"
-          onClick={() => setRefresh((v) => v + 1)}
+          onClick={load}
           className="inline-flex items-center gap-1.5 text-sm font-semibold text-stone-600 hover:text-stone-900 hover:underline"
         >
           <span className="inline-block h-1.5 w-1.5 rounded-full bg-accent" />
@@ -208,26 +104,17 @@ export default function CompanyShipments() {
       <div className="mb-4 flex flex-wrap items-center gap-3 text-xs text-stone-600">
         <span className="inline-flex items-center gap-2 rounded-full bg-cream px-3 py-1 border border-stone-200">
           <span className="inline-block h-2 w-2 rounded-full bg-accent" />
-          <span className="font-semibold text-stone-900">{apiToken ? filteredApiShipments.length : loads.length}</span>
-          <span>load{(apiToken ? filteredApiShipments.length : loads.length) === 1 ? '' : 's'} available</span>
+          <span className="font-semibold text-stone-900">{shipments.length}</span>
+          <span>load{shipments.length === 1 ? '' : 's'} available</span>
         </span>
         <span className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1 border border-stone-200">
           <span className="inline-block h-2 w-2 rounded-full bg-sidebar" />
-          <span className="font-semibold text-stone-900">{fleetCount}</span>
-          <span>truck{fleetCount === 1 ? '' : 's'} in fleet</span>
-        </span>
-        <span className="hidden sm:inline text-stone-500">
-          Add at least one truck first to express interest.
+          <span className="font-semibold text-stone-900">{trucks.length}</span>
+          <span>truck{trucks.length === 1 ? '' : 's'} in fleet</span>
         </span>
       </div>
 
-      {error && (
-        <p className="mb-4 text-sm text-red-600 bg-red-50 border border-red-100 rounded-xl px-4 py-3">
-          {error}
-        </p>
-      )}
-
-      {rawToken && !isVerified && (
+      {!isVerified && (
         <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3">
           <p className="text-sm font-semibold text-amber-900">Waiting for admin approval</p>
           <p className="text-sm text-amber-800 mt-1">
@@ -236,228 +123,170 @@ export default function CompanyShipments() {
         </div>
       )}
 
-      {apiToken && state === 'loading' ? (
-        <p className="text-stone-500 text-sm">Loading shipments…</p>
-      ) : null}
+      {error && (
+        <p className="mb-4 text-sm text-red-600 bg-red-50 border border-red-100 rounded-xl px-4 py-3">
+          {error}
+        </p>
+      )}
 
-      {(apiToken ? apiShipments.length === 0 : loads.length === 0) ? (
+      {shipments.length === 0 ? (
         <div className="bg-white rounded-2xl border border-stone-200 p-10 text-center">
           <p className="text-stone-800 font-semibold">No shipments available</p>
           <p className="text-stone-600 text-sm mt-1">
-            {fleetCount === 0
+            {trucks.length === 0
               ? 'Add a truck to your fleet to start seeing loads that match your capacity.'
               : 'Check back soon for new loads.'}
           </p>
         </div>
       ) : (
         <ul className="space-y-4">
-          {(apiToken ? filteredApiShipments : loads).map((load: any) => {
-            const id = String(load.id)
-            const expressed = apiToken
-              ? myInterestShipmentIds.has(id)
-              : getMyInterestsDemo(companyName).includes(id)
+          {shipments.map((s) => {
+            const id = s.id!
+            const expressed = myInterestIds.has(id)
             const isExpanded = expandedId === id
             return (
-            <li
-              key={load.id}
-              className="bg-white rounded-2xl border border-stone-200 shadow-sm p-6 hover:shadow-md transition-shadow"
-            >
-              <div className="flex flex-wrap items-start justify-between gap-4">
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <p className="font-bold text-stone-800 text-lg">
-                      {(load.origin ?? load.pickupDistrict ?? load.pickup_district ?? '—')} →{' '}
-                      {(load.destination ?? load.dropoffDistrict ?? load.dropoff_district ?? '—')}
-                    </p>
-                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-accent/10 text-accent border border-accent/20">
-                      {apiToken ? formatRwf(load.offeredPriceRwf ?? load.offered_price_rwf) : formatRwf(load.price)}
-                    </span>
-                    {expressed && (
-                      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-stone-100 text-stone-700 border border-stone-200">
-                        Interest expressed
+              <li
+                key={id}
+                className="bg-white rounded-2xl border border-stone-200 shadow-sm p-6 hover:shadow-md transition-shadow"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="font-bold text-stone-800 text-lg">
+                        {s.pickup_district} → {s.dropoff_district}
+                      </p>
+                      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-accent/10 text-accent border border-accent/20">
+                        {Number(s.offered_price).toLocaleString()} RWF
                       </span>
-                    )}
-                  </div>
-                  <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-stone-600">
-                    <span>
-                      Date{' '}
-                      <span className="font-semibold text-stone-800">
-                        {new Date(load.date ?? load.createdAt ?? load.created_at ?? Date.now()).toLocaleDateString()}
-                      </span>
-                    </span>
-                    <span>
-                      Weight{' '}
-                      <span className="font-semibold text-stone-800">
-                        {apiToken ? `${load.weightTons ?? load.weight_tons ?? '—'} tons` : load.weight}
-                      </span>
-                    </span>
-                    {!apiToken && (
-                      <span className="text-stone-500">
-                        Shipper <span className="font-semibold text-stone-700">{load.createdBy}</span>
-                      </span>
-                    )}
-                    <span className="text-stone-500">
-                      {apiToken ? (
-                        <span className="font-semibold text-stone-700">{formatStatusLabel(load.status)}</span>
-                      ) : (
-                        <>
-                          Offers <span className="font-semibold text-stone-700">{load.offers?.length ?? 0}</span>
-                        </>
+                      {expressed && (
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-stone-100 text-stone-700 border border-stone-200">
+                          Interest expressed
+                        </span>
                       )}
-                    </span>
+                    </div>
+                    <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-stone-600">
+                      <span>
+                        Pickup date{' '}
+                        <span className="font-semibold text-stone-800">
+                          {new Date(s.pickup_date).toLocaleDateString()}
+                        </span>
+                      </span>
+                      <span>
+                        Weight{' '}
+                        <span className="font-semibold text-stone-800">{s.weight} kg</span>
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setExpandedId(prev => prev === id ? null : id)}
+                      className="mt-3 text-sm font-semibold text-stone-700 hover:text-accent hover:underline underline-offset-2"
+                    >
+                      {isExpanded ? 'Hide details' : 'View details'}
+                    </button>
+                    {isExpanded && (
+                      <div className="mt-4 rounded-2xl border border-stone-200 bg-stone-50 p-4 text-sm space-y-2">
+                        <div className="flex justify-between gap-3">
+                          <span className="text-stone-500">Pickup</span>
+                          <span className="font-semibold text-stone-800">{s.pickup_district}</span>
+                        </div>
+                        <div className="flex justify-between gap-3">
+                          <span className="text-stone-500">Dropoff</span>
+                          <span className="font-semibold text-stone-800">{s.dropoff_district}</span>
+                        </div>
+                        <div className="flex justify-between gap-3">
+                          <span className="text-stone-500">Pickup date</span>
+                          <span className="font-semibold text-stone-800">{new Date(s.pickup_date).toLocaleDateString()}</span>
+                        </div>
+                        <div className="flex justify-between gap-3">
+                          <span className="text-stone-500">Price</span>
+                          <span className="font-semibold text-stone-800">{Number(s.offered_price).toLocaleString()} RWF</span>
+                        </div>
+                        {s.cargo_description && (
+                          <div className="pt-2">
+                            <p className="text-stone-500 text-xs font-semibold uppercase tracking-wide">Cargo</p>
+                            <p className="mt-1 text-stone-700">{s.cargo_description}</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                   <button
                     type="button"
-                    onClick={() => setExpandedId((prev) => (prev === id ? null : id))}
-                    className="mt-3 text-sm font-semibold text-stone-700 hover:text-accent hover:underline underline-offset-2"
+                    onClick={() => { setOfferShipment(s); setSelectedTruckId(''); setOfferError(null) }}
+                    disabled={expressed || !isVerified}
+                    className="px-5 py-2.5 bg-accent text-white font-semibold rounded-xl hover:bg-accent-hover transition-colors shrink-0 disabled:opacity-60 disabled:cursor-not-allowed"
                   >
-                    {isExpanded ? 'Hide details' : 'View details'}
+                    {expressed ? 'Interest expressed' : 'Express interest'}
                   </button>
-                  {isExpanded && (
-                    <div className="mt-4 rounded-2xl border border-stone-200 bg-sand p-4 text-sm text-stone-700 space-y-2">
-                      <div className="flex items-center justify-between gap-3">
-                        <span className="text-stone-500">Pickup district</span>
-                        <span className="font-semibold text-stone-800">{load.pickupDistrict ?? load.pickup_district ?? load.origin ?? '—'}</span>
-                      </div>
-                      <div className="flex items-center justify-between gap-3">
-                        <span className="text-stone-500">Dropoff district</span>
-                        <span className="font-semibold text-stone-800">{load.dropoffDistrict ?? load.dropoff_district ?? load.destination ?? '—'}</span>
-                      </div>
-                      <div className="flex items-center justify-between gap-3">
-                        <span className="text-stone-500">Pickup date</span>
-                        <span className="font-semibold text-stone-800">{new Date(load.date ?? load.createdAt ?? load.created_at ?? Date.now()).toLocaleDateString()}</span>
-                      </div>
-                      <div className="flex items-center justify-between gap-3">
-                        <span className="text-stone-500">Offered price</span>
-                        <span className="font-semibold text-stone-800">
-                          {apiToken ? `${(load.offeredPriceRwf ?? load.offered_price_rwf ?? 0).toLocaleString()} RWF` : (load.price ?? '—')}
-                        </span>
-                      </div>
-                      <div className="pt-2">
-                        <p className="text-stone-500 text-xs font-semibold uppercase tracking-wide">Cargo</p>
-                        <p className="mt-1 text-stone-700">
-                          {load.description ?? 'Cargo details not provided.'}
-                        </p>
-                      </div>
-                    </div>
-                  )}
                 </div>
-                <button
-                  type="button"
-                  onClick={() => openOfferModal(load.id)}
-                  disabled={expressed || (apiToken ? !isVerified : false)}
-                  className="px-5 py-2.5 bg-accent text-white font-semibold rounded-xl hover:bg-accent-hover transition-colors shrink-0 disabled:opacity-60 disabled:cursor-not-allowed"
-                >
-                  {expressed ? 'Interest expressed' : 'Express interest'}
-                </button>
-              </div>
-            </li>
-          )})}
+              </li>
+            )
+          })}
         </ul>
       )}
 
-      {(apiToken ? offerShipment : offerLoad) && (
+      {/* Express interest modal */}
+      {offerShipment && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/50 backdrop-blur-sm"
-          onClick={closeOfferModal}
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="offer-modal-title"
+          onClick={() => setOfferShipment(null)}
         >
           <div
             className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6"
-            onClick={(e) => e.stopPropagation()}
+            onClick={e => e.stopPropagation()}
           >
-            <h2 id="offer-modal-title" className="text-lg font-bold text-stone-800">
-              Show interest
-            </h2>
+            <h2 className="text-lg font-bold text-stone-800">Show interest</h2>
             <p className="text-sm text-stone-600 mt-1">
-              {apiToken
-                ? `${offerShipment?.pickupDistrict ?? offerShipment?.pickup_district ?? '—'} → ${offerShipment?.dropoffDistrict ?? offerShipment?.dropoff_district ?? '—'} · ${offerShipment?.weightTons ?? offerShipment?.weight_tons ?? '—'} tons`
-                : `${offerLoad?.origin} → ${offerLoad?.destination} · ${offerLoad?.weight}`}
+              {offerShipment.pickup_district} → {offerShipment.dropoff_district} · {offerShipment.weight} kg
             </p>
-            <div className="mt-4 rounded-2xl border border-stone-200 bg-sand p-4">
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-xs text-stone-500">Price</p>
-                <p className="text-sm font-semibold text-accent">
-                  {apiToken
-                    ? formatRwf(offerShipment?.offeredPriceRwf ?? offerShipment?.offered_price_rwf)
-                    : formatRwf(offerLoad?.price)}
-                </p>
+            <div className="mt-4 rounded-2xl border border-stone-200 bg-stone-50 p-4 text-sm">
+              <div className="flex justify-between gap-3">
+                <span className="text-stone-500">Price</span>
+                <span className="font-semibold text-accent">{Number(offerShipment.offered_price).toLocaleString()} RWF</span>
               </div>
-              <div className="mt-2 flex items-center justify-between gap-3">
-                <p className="text-xs text-stone-500">{apiToken ? 'Status' : 'Pickup date'}</p>
-                <p className="text-xs font-semibold text-stone-800">
-                  {apiToken
-                    ? formatStatusLabel(offerShipment?.status ?? 'POSTED')
-                    : new Date(offerLoad?.date ?? Date.now()).toLocaleDateString()}
-                </p>
+              <div className="flex justify-between gap-3 mt-2">
+                <span className="text-stone-500">Pickup date</span>
+                <span className="font-semibold text-stone-800">{new Date(offerShipment.pickup_date).toLocaleDateString()}</span>
               </div>
             </div>
-            <form onSubmit={handleSubmitOffer} className="space-y-4">
-              {/* Truck selector — always shown so company can pick which truck */}
+            <form onSubmit={handleExpressInterest} className="space-y-4 mt-4">
               <div>
                 <label htmlFor="truck" className="block text-sm font-semibold text-stone-700 mb-2">
                   Choose a truck
                 </label>
-                {apiToken ? (
-                  <select
-                    id="truck"
-                    value={selectedTruckId}
-                    onChange={(e) => setSelectedTruckId(e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl bg-stone-50 border border-stone-200 text-stone-800 focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
-                  >
-                    <option value="">Select a truck…</option>
-                    {availableApiTrucks.map((t) => (
-                      <option key={t.id} value={t.id}>
-                        {(t.plate_number ?? t.plateNumber ?? 'Plate')} · {(t.declared_capacity ?? t.declaredCapacity ?? '—')}t
-                      </option>
-                    ))}
-                  </select>
-                ) : (
-                  <select
-                    id="truck"
-                    value={selectedTruckId}
-                    onChange={(e) => setSelectedTruckId(e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl bg-stone-50 border border-stone-200 text-stone-800 focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
-                  >
-                    <option value="">Select a truck…</option>
-                    {getTrucksByCompany(companyName).map((t) => (
-                      <option key={t.id} value={t.id}>
-                        {t.plateNumber ?? 'Plate'} · {t.capacity}
-                      </option>
-                    ))}
-                  </select>
-                )}
-                {!apiToken && getTrucksByCompany(companyName).length === 0 && (
+                <select
+                  id="truck"
+                  value={selectedTruckId}
+                  onChange={e => setSelectedTruckId(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl bg-stone-50 border border-stone-200 text-stone-800 focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
+                >
+                  <option value="">Select a truck…</option>
+                  {availableTrucks.map(t => (
+                    <option key={t.id} value={String(t.id)}>
+                      {t.plate_number} · {t.declared_capacity} kg · {t.truck_type}
+                    </option>
+                  ))}
+                </select>
+                {availableTrucks.length === 0 && (
                   <p className="mt-2 text-xs text-amber-700 bg-amber-50 rounded-lg px-3 py-2 border border-amber-200">
-                    No approved trucks yet. Add a truck and wait for admin approval.
+                    No available trucks. Add a truck or make one available first.
                   </p>
                 )}
               </div>
-              <div>
-                <label htmlFor="offer-message" className="block text-sm font-semibold text-stone-700 mb-2">
-                  Message to shipper (optional)
-                </label>
-                <textarea
-                  id="offer-message"
-                  rows={2}
-                  placeholder="e.g. Available from Monday"
-                  value={offerMessage}
-                  onChange={(e) => setOfferMessage(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl bg-stone-50 border border-stone-200 text-stone-800 placeholder:text-stone-400 focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 resize-none"
-                />
-              </div>
+              {offerError && (
+                <p className="text-sm text-red-600">{offerError}</p>
+              )}
               <div className="flex gap-3 pt-2">
                 <button
                   type="submit"
-                  className="px-5 py-2.5 bg-accent text-white font-semibold rounded-xl hover:bg-accent-hover"
+                  disabled={submitting || !selectedTruckId}
+                  className="px-5 py-2.5 bg-accent text-white font-semibold rounded-xl hover:bg-accent-hover disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                  Confirm
+                  {submitting ? 'Submitting…' : 'Confirm'}
                 </button>
                 <button
                   type="button"
-                  onClick={closeOfferModal}
+                  onClick={() => setOfferShipment(null)}
                   className="px-5 py-2.5 bg-stone-100 text-stone-700 font-semibold rounded-xl hover:bg-stone-200"
                 >
                   Cancel
@@ -469,18 +298,4 @@ export default function CompanyShipments() {
       )}
     </div>
   )
-}
-
-function formatStatusLabel(status: string): string {
-  const map: Record<string, string> = {
-    POSTED: 'Posted',
-    AWAITING_ESCROW: 'Waiting for payment',
-    ESCROW_FUNDED: 'Payment received',
-    IN_TRANSIT: 'On the way',
-    AWAITING_CONFIRMATION: 'Waiting for confirmation',
-    COMPLETED: 'Completed',
-    CANCELLED: 'Cancelled',
-    DISPUTED: 'Disputed',
-  }
-  return map[status] ?? status
 }

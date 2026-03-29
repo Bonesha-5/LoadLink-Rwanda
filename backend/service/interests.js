@@ -4,7 +4,7 @@ import pool from "../config/db.js";
 export const createInterest = async (shipmentId, truckId, companyId) => {
   // 1. Verify truck belongs to company and is AVAILABLE
   const truckCheck = await pool.query(
-    "SELECT id FROM trucks WHERE id = $1 AND company_id = $2 AND status = 'AVAILABLE'",
+    "SELECT id FROM trucks WHERE id = $1 AND company_id = $2 AND availability_status = 'AVAILABLE'",
     [truckId, companyId],
   );
 
@@ -24,12 +24,12 @@ export const createInterest = async (shipmentId, truckId, companyId) => {
 
   try {
     // 3. Insert into shipment_interests
-    const result = await pool.query(
-      `INSERT INTO shipment_interests (shipment_id, truck_id, company_id)
-       VALUES ($1, $2, $3)
-       RETURNING *`,
-      [shipmentId, truckId, companyId],
-    );
+   const result = await pool.query(
+  `INSERT INTO shipment_interests (shipment_id, truck_id)
+   VALUES ($1, $2)
+   RETURNING *`,
+  [shipmentId, truckId],
+);
 
     return result.rows[0];
   } catch (error) {
@@ -43,17 +43,17 @@ export const createInterest = async (shipmentId, truckId, companyId) => {
 // Fetch all interests for a company
 export const getMyInterests = async (companyId) => {
   const query = `
-    SELECT i.id AS interest_id, i.created_at AS interest_date,
-           s.id AS shipment_id, s.pickup_district, s.dropoff_district, 
-           s.cargo_description, s.weight, s.offered_price, s.pickup_date,
-           s.status AS shipment_status,
-           t.id AS truck_id, t.plate_number, t.declared_capacity
-    FROM shipment_interests i
-    JOIN shipments s ON i.shipment_id = s.id
-    JOIN trucks t ON i.truck_id = t.id
-    WHERE i.company_id = $1
-    ORDER BY i.created_at DESC;
-  `;
+  SELECT i.id AS interest_id, i.created_at AS interest_date,
+         s.id AS shipment_id, s.pickup_district, s.dropoff_district,
+         s.cargo_description, s.weight, s.offered_price, s.pickup_date,
+         s.status AS shipment_status,
+         t.id AS truck_id, t.plate_number, t.declared_capacity
+  FROM shipment_interests i
+  JOIN shipments s ON i.shipment_id = s.id
+  JOIN trucks t ON i.truck_id = t.id
+  WHERE t.company_id = $1
+  ORDER BY i.created_at DESC;
+`;
 
   const result = await pool.query(query, [companyId]);
   return result.rows;
@@ -73,7 +73,7 @@ export const getShipmentInterestsService = async (shipment_id, shipper_id) => {
   }
 
   const query = `
-    SELECT 
+    SELECT
       t.id,
       t.plate_number,
       t.truck_type,
@@ -91,4 +91,3 @@ export const getShipmentInterestsService = async (shipment_id, shipper_id) => {
   const result = await pool.query(query, [shipment_id]);
   return result.rows;
 };
-

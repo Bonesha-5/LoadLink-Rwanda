@@ -15,8 +15,9 @@ import simulatedMomoRoutes from './routes/simulatedMomo.js';
 import { initShipmentReminders } from "./cron/shipmentReminders.js";
 import requestLogger from "./middleware/logger.js";
 import errorMiddleware from "./middleware/errorMiddleware.js";
-
+import adminRoutes from './routes/admin.js';
 dotenv.config();
+
 
 const app = express();
 
@@ -36,6 +37,7 @@ app.use("/api/shipments", shipmentRoutes);
 app.use("/api/interests", interestsRoutes);
 app.use("/api/trucks", trucksRoutes);
 app.use("/api/ratings", ratingsRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Initialize Cron actions
 initShipmentReminders();

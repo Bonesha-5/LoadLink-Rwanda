@@ -1,27 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useAuth } from '../context/AuthContext'
-import {
-  getAllLoads,
-  getStageMap,
-  setStageForLoad,
-  getCompanyActiveDemoShipments,
-  updateCompanyDemoShipmentStatus,
-  ensureSeedCompanyData,
-} from '../data/storage'
-import {
-  deliverShipment,
-  getActiveShipments,
-  getMyTrucks,
-  pickupShipment,
-  type CompanyShipment,
-  type CompanyTruck,
-} from '../api/companyOpsApi'
+import { getActiveShipments, getMyTrucks, type CompanyTruck } from '../api/companyOpsApi'
+import { apiRequest } from '../api/http'
 import type { ApiError } from '../api/http'
-import { getApiToken } from '../auth/mockJwt'
 
-// ── Types ─────────────────────────────────────────────────────
-type AllStatus = 'AWAITING_ESCROW' | 'ESCROW_FUNDED' | 'IN_TRANSIT' | 'AWAITING_CONFIRMATION' | 'COMPLETED'
-type Filter    = 'ALL' | 'AWAITING_ESCROW' | 'ESCROW_FUNDED' | 'AWAITING_CONFIRMATION' | 'COMPLETED'
+type AllStatus = 'ESCROW_FUNDED' | 'IN_TRANSIT' | 'AWAITING_CONFIRMATION' | 'COMPLETED'
+type Filter    = 'ALL' | 'ESCROW_FUNDED' | 'AWAITING_CONFIRMATION' | 'COMPLETED'
 
 type Shipment = {
   id: string
@@ -33,10 +17,18 @@ type Shipment = {
   shipperName: string
   shipperPhone: string | null
   truckPlate: string | null
+  truckId: string | null
   createdAt?: string
 }
 
-// ── Status config — one source of truth for colors ────────────
+type ModalState = {
+  shipmentId: string
+  action: 'pickup' | 'deliver'
+  route: string
+  truckPlate: string
+  truckId: string
+} | null
+
 type StatusConfig = {
   label: string
   cardBorder: string
@@ -44,31 +36,15 @@ type StatusConfig = {
   badgeBg: string
   badgeText: string
   dot: string
-  // tab colors when active
   tabBg: string
   tabText: string
   tabBorder: string
-  // action button
   btnBg: string
   btnText: string
   btnHover: string
 }
 
 const STATUS: Record<AllStatus, StatusConfig> = {
-  AWAITING_ESCROW: {
-    label:      'Interest Expressed',
-    cardBorder: 'border-red-300',
-    cardBg:     'bg-red-50',
-    badgeBg:    'bg-red-100',
-    badgeText:  'text-red-700',
-    dot:        'bg-red-500',
-    tabBg:      'bg-red-500',
-    tabText:    'text-white',
-    tabBorder:  'border-red-500',
-    btnBg:      'bg-red-100',
-    btnText:    'text-red-700',
-    btnHover:   'hover:bg-red-200',
-  },
   ESCROW_FUNDED: {
     label:      'Ready for Pickup',
     cardBorder: 'border-green-300',
@@ -127,197 +103,100 @@ const STATUS: Record<AllStatus, StatusConfig> = {
   },
 }
 
-// ── Filters ───────────────────────────────────────────────────
 const FILTERS: { value: Filter; label: string }[] = [
   { value: 'ALL',                   label: 'All' },
-  { value: 'AWAITING_ESCROW',       label: 'Interest Expressed' },
   { value: 'ESCROW_FUNDED',         label: 'Ready for Pickup' },
   { value: 'AWAITING_CONFIRMATION', label: 'In Transit' },
   { value: 'COMPLETED',             label: 'History' },
 ]
 
-type ModalState = {
-  shipmentId: string
-  action: 'pickup' | 'deliver'
-  route: string
-  truckPlate: string
-} | null
-
-// ── Component ─────────────────────────────────────────────────
 export default function CompanyActiveShipments() {
   const { user } = useAuth()
-  const rawToken  = user?.token ?? null
-  const apiToken  = getApiToken(rawToken)
+  const token = user?.token ?? ''
 
-  const [refresh,      setRefresh]      = useState(0)
-  const [apiShipments, setApiShipments] = useState<CompanyShipment[]>([])
-  const [apiTrucks,    setApiTrucks]    = useState<CompanyTruck[]>([])
-  const [loadingState, setLoadingState] = useState<'idle' | 'loading' | 'error' | 'success'>('idle')
+  const [shipments,    setShipments]    = useState<Shipment[]>([])
+  const [trucks,       setTrucks]       = useState<CompanyTruck[]>([])
+  const [loading,      setLoading]      = useState(true)
   const [error,        setError]        = useState<string | null>(null)
   const [actionLoading,setActionLoading]= useState<string | null>(null)
   const [modal,        setModal]        = useState<ModalState>(null)
   const [filter,       setFilter]       = useState<Filter>('ALL')
+  const [refresh,      setRefresh]      = useState(0)
 
-  // ── Load data ───────────────────────────────────────────────
-  useEffect(() => {
-    const t = apiToken
-    if (!t) { ensureSeedCompanyData(); return }
-    // (demo mode uses local data built below)
-    const token: string = t
-    let cancelled = false
-    async function load() {
-      setLoadingState('loading')
-      setError(null)
-      try {
-        const [shipments, trucks] = await Promise.all([
-          getActiveShipments(token),
-          getMyTrucks(token),
-        ])
-        if (cancelled) return
-        setApiShipments(shipments)
-        setApiTrucks(trucks)
-        setLoadingState('success')
-      } catch (e) {
-        if (cancelled) return
-        setError((e as ApiError).message || 'Could not load shipments.')
-        setLoadingState('error')
-      }
+  async function load() {
+    setLoading(true)
+    setError(null)
+    try {
+      const [raw, t] = await Promise.all([
+        getActiveShipments(token),
+        getMyTrucks(token),
+      ])
+      // Map backend field names to our Shipment type
+      const mapped: Shipment[] = (raw as any[]).map(s => ({
+        id:          String(s.shipment_id ?? s.id),
+        pickup:      s.pickup_district ?? '—',
+        dropoff:     s.dropoff_district ?? '—',
+        weight:      Number(s.weight) || 0,
+        price:       Number(s.offered_price) || 0,
+        status:      (s.shipment_status ?? s.status) as AllStatus,
+        shipperName: s.shipper_name ?? '—',
+        shipperPhone:s.shipper_phone ?? null,
+        truckPlate:  s.plate_number ?? null,
+        truckId:     String(s.truck_id ?? ''),
+        createdAt:   s.created_at,
+      }))
+      setShipments(mapped)
+      setTrucks(t)
+    } catch (e) {
+      setError((e as ApiError).message || 'Could not load shipments.')
+    } finally {
+      setLoading(false)
     }
-    void load()
-    return () => { cancelled = true }
-  }, [apiToken, refresh])
-
-  // ── Normalise to flat list ───────────────────────────────────
-  const ORDER: Record<string, number> = {
-    AWAITING_ESCROW: 0, ESCROW_FUNDED: 1, IN_TRANSIT: 2, AWAITING_CONFIRMATION: 3, COMPLETED: 4,
   }
 
-  const allShipments = useMemo((): Shipment[] => {
-    if (apiToken) {
-      return apiShipments
-        .filter((s) => s.status in ORDER)
-        .map((s) => ({
-          id:          String(s.id),
-          pickup:      s.pickup_district  ?? s.pickupDistrict  ?? '—',
-          dropoff:     s.dropoff_district ?? s.dropoffDistrict ?? '—',
-          weight:      s.weight_tons      ?? s.weightTons      ?? 0,
-          price:       s.offered_price_rwf ?? s.offeredPriceRwf ?? 0,
-          status:      s.status as AllStatus,
-          shipperName: s.shipper_name ?? s.shipperName ?? '—',
-          shipperPhone:s.shipper_phone ?? s.shipperPhone ?? null,
-          truckPlate:  s.truck_plate  ?? s.truckPlate  ?? null,
-          createdAt:   s.created_at   ?? s.createdAt,
-        }))
-        .sort((a, b) => (ORDER[a.status] ?? 9) - (ORDER[b.status] ?? 9))
-    }
-    // Merge seeded demo shipments with real loads where this company was selected
-    const companyName = user?.name ?? ''
-    const stageMap = getStageMap()
-    const realActive = getAllLoads()
-      .filter(l => {
-        const stage = stageMap[l.id]
-        const hasOffer = l.offers?.some(o => o.companyName === companyName)
-        // Show once shipper has selected this company's truck (AWAITING_ESCROW and beyond)
-        return hasOffer && stage && stage !== 'POSTED' && stage !== 'CANCELLED' && stage !== 'DISPUTED'
-      })
-      .map(l => ({
-        id: l.id,
-        pickupDistrict: l.origin,
-        dropoffDistrict: l.destination,
-        cargoDescription: l.description ?? '',
-        weightTons: parseFloat(l.weight) || 0,
-        offeredPriceRwf: parseInt((l.price ?? '0').replace(/[^0-9]/g, '')) || 0,
-        pickupDate: l.date,
-        status: (() => {
-          const s = stageMap[l.id] ?? 'AWAITING_ESCROW'
-          // Map shipper stages to company-visible stages
-          if (s === 'AWAITING_ESCROW') return 'AWAITING_ESCROW'      // shipper selected, not paid yet
-          if (s === 'AWAITING_CONFIRMATION') return 'ESCROW_FUNDED'   // shipper paid → ready for pickup
-          if (s === 'IN_TRANSIT') return 'IN_TRANSIT'                  // company confirmed pickup
-          if (s === 'COMPLETED') return 'COMPLETED'
-          return 'AWAITING_ESCROW'
-        })() as AllStatus,
-        companyName,
-        shipperName: l.createdBy,
-        truckPlate: '',
-        createdAt: new Date().toISOString(),
-        currentLat: -1.9536,
-        currentLng: 30.0605,
-      }))
-
-    const seed = getCompanyActiveDemoShipments().map((s) => ({
-      id: s.id, pickup: s.pickup, dropoff: s.dropoff,
-      weight: s.weightTons, price: s.priceRwf, status: s.status,
-      shipperName: s.shipperName, shipperPhone: s.shipperPhone,
-      truckPlate: s.truckPlate, createdAt: s.createdAt,
-    }))
-
-    // Real active loads come first, then seeded demos
-    return [...realActive.map(l => ({
-      id: l.id,
-      pickup: l.pickupDistrict,
-      dropoff: l.dropoffDistrict,
-      weight: l.weightTons,
-      price: l.offeredPriceRwf,
-      status: l.status,
-      shipperName: l.shipperName,
-      shipperPhone: null,
-      truckPlate: l.truckPlate || null,
-      createdAt: l.createdAt,
-    })), ...seed]
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [apiToken, apiShipments, refresh, user?.name])
+  useEffect(() => { void load() }, [refresh])
 
   const filtered = useMemo(() => {
-    if (filter === 'ALL') return allShipments
-    // "In Transit" tab shows both actively in-transit AND delivered-awaiting-confirmation
+    if (filter === 'ALL') return shipments
     if (filter === 'AWAITING_CONFIRMATION') {
-      return allShipments.filter(s => s.status === 'IN_TRANSIT' || s.status === 'AWAITING_CONFIRMATION')
+      return shipments.filter(s => s.status === 'IN_TRANSIT' || s.status === 'AWAITING_CONFIRMATION')
     }
-    return allShipments.filter((s) => s.status === filter)
-  }, [allShipments, filter])
+    return shipments.filter(s => s.status === filter)
+  }, [shipments, filter])
 
   const counts: Record<Filter, number> = {
-    ALL:                   allShipments.length,
-    AWAITING_ESCROW:       allShipments.filter((s) => s.status === 'AWAITING_ESCROW').length,
-    ESCROW_FUNDED:         allShipments.filter((s) => s.status === 'ESCROW_FUNDED').length,
-    AWAITING_CONFIRMATION: allShipments.filter((s) => s.status === 'AWAITING_CONFIRMATION' || s.status === 'IN_TRANSIT').length,
-    COMPLETED:             allShipments.filter((s) => s.status === 'COMPLETED').length,
+    ALL:                   shipments.length,
+    ESCROW_FUNDED:         shipments.filter(s => s.status === 'ESCROW_FUNDED').length,
+    AWAITING_CONFIRMATION: shipments.filter(s => s.status === 'IN_TRANSIT' || s.status === 'AWAITING_CONFIRMATION').length,
+    COMPLETED:             shipments.filter(s => s.status === 'COMPLETED').length,
   }
 
-  // ── Actions ─────────────────────────────────────────────────
-  function openModal(shipmentId: string, action: 'pickup' | 'deliver', route: string, truckPlate: string | null) {
-    setModal({ shipmentId, action, route, truckPlate: truckPlate ?? '—' })
+  function openModal(s: Shipment, action: 'pickup' | 'deliver') {
+    // Find truck id — use from shipment or look up by plate
+    const truckId = s.truckId ||
+      String(trucks.find(t => t.plate_number === s.truckPlate)?.id ?? '')
+    setModal({
+      shipmentId: s.id,
+      action,
+      route: `${s.pickup} → ${s.dropoff}`,
+      truckPlate: s.truckPlate ?? '—',
+      truckId,
+    })
   }
 
   async function confirmAction() {
     if (!modal) return
-    const { shipmentId, action } = modal
+    const { shipmentId, action, truckId } = modal
     setModal(null)
     setError(null)
     setActionLoading(shipmentId + '-' + action)
     try {
-      if (apiToken) {
-        const shipment  = apiShipments.find((s) => String(s.id) === shipmentId)
-        const plate     = shipment?.truck_plate ?? shipment?.truckPlate ?? ''
-        const truckObj  = apiTrucks.find((t) => (t.plate_number ?? t.plateNumber ?? '') === plate)
-        const truckId   = truckObj?.id ?? plate
-        if (action === 'pickup') await pickupShipment(apiToken, shipmentId, truckId)
-        else                     await deliverShipment(apiToken, shipmentId, truckId)
-      } else {
-        // Check if this is a real shipper load (in ll_loads) or a seeded demo shipment
-        const isRealLoad = getAllLoads().some(l => l.id === shipmentId)
-        if (isRealLoad) {
-          // Update the shipper's stage in ll_shipper_stages
-          if (action === 'pickup') setStageForLoad(shipmentId, 'IN_TRANSIT')
-          else                     setStageForLoad(shipmentId, 'AWAITING_CONFIRMATION')
-        } else {
-          // Update the seeded demo company shipment
-          if (action === 'pickup') updateCompanyDemoShipmentStatus(shipmentId, 'IN_TRANSIT')
-          else                     updateCompanyDemoShipmentStatus(shipmentId, 'AWAITING_CONFIRMATION')
-        }
-      }
-      setRefresh((v) => v + 1)
+      await apiRequest(`/api/shipments/${shipmentId}/${action === 'pickup' ? 'pickup' : 'deliver'}`, {
+        method: 'PATCH',
+        token,
+        body: { truckId },
+      })
+      setRefresh(v => v + 1)
     } catch (e) {
       setError((e as ApiError).message || `Could not confirm ${action}.`)
     } finally {
@@ -325,11 +204,17 @@ export default function CompanyActiveShipments() {
     }
   }
 
-  // ── Render ───────────────────────────────────────────────────
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-24">
+        <div className="w-7 h-7 rounded-full border-2 border-sidebar border-t-transparent animate-spin" />
+      </div>
+    )
+  }
+
   return (
     <div className="max-w-4xl space-y-6 ll-animate-in">
 
-      {/* Header */}
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wider text-stone-400">Company</p>
@@ -338,7 +223,7 @@ export default function CompanyActiveShipments() {
         </div>
         <button
           type="button"
-          onClick={() => setRefresh((v) => v + 1)}
+          onClick={() => setRefresh(v => v + 1)}
           className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-sidebar text-white text-sm font-semibold hover:bg-stone-800 transition-colors"
         >
           <svg className="w-4 h-4 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -348,28 +233,23 @@ export default function CompanyActiveShipments() {
         </button>
       </div>
 
-      {/* Filter tabs — color matches the status */}
+      {/* Filter tabs */}
       <div className="flex flex-wrap gap-2">
         {FILTERS.map((f) => {
           const active = filter === f.value
-          // For ALL tab use sidebar, otherwise use the status color
           const activeCfg = f.value === 'ALL' ? null : STATUS[f.value as AllStatus]
           const activeStyle = activeCfg
             ? `${activeCfg.tabBg} ${activeCfg.tabText} ${activeCfg.tabBorder}`
             : 'bg-sidebar text-white border-sidebar'
-
           return (
             <button
               key={f.value}
               type="button"
               onClick={() => setFilter(f.value)}
               className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold border transition-colors ${
-                active
-                  ? activeStyle
-                  : 'bg-white text-stone-600 border-stone-200 hover:bg-stone-50'
+                active ? activeStyle : 'bg-white text-stone-600 border-stone-200 hover:bg-stone-50'
               }`}
             >
-              {/* Dot — only show on non-ALL tabs */}
               {f.value !== 'ALL' && (
                 <span className={`w-1.5 h-1.5 rounded-full ${active ? 'bg-white' : STATUS[f.value as AllStatus].dot}`} />
               )}
@@ -384,34 +264,27 @@ export default function CompanyActiveShipments() {
         })}
       </div>
 
-      {/* Error / loading */}
       {error && (
         <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-2xl px-4 py-3">{error}</p>
       )}
-      {apiToken && loadingState === 'loading' && (
-        <p className="text-sm text-stone-400">Loading…</p>
-      )}
 
-      {/* Empty state */}
-      {filtered.length === 0 && loadingState !== 'loading' && (
+      {filtered.length === 0 && (
         <div className="bg-white rounded-3xl border border-stone-200 p-12 text-center">
           <p className="text-stone-400 text-sm">
             {filter === 'COMPLETED'             ? 'No completed shipments yet.' :
-             filter === 'AWAITING_ESCROW'       ? 'No pending shipper payments.' :
              filter === 'ESCROW_FUNDED'         ? 'No shipments ready for pickup.' :
              filter === 'AWAITING_CONFIRMATION' ? 'No in-transit shipments.' :
-                                                  'No shipments right now.'}
+                                                  'No active shipments right now.'}
           </p>
         </div>
       )}
 
-      {/* Cards */}
       <div className="space-y-3">
         {filtered.map((s) => {
-          const cfg        = STATUS[s.status]
+          const cfg         = STATUS[s.status] ?? STATUS.COMPLETED
           const isActioning = actionLoading?.startsWith(s.id)
-          const route      = `${s.pickup} → ${s.dropoff}`
           const isCompleted = s.status === 'COMPLETED'
+          const route       = `${s.pickup} → ${s.dropoff}`
 
           return (
             <div
@@ -420,19 +293,15 @@ export default function CompanyActiveShipments() {
             >
               <div className="p-5 space-y-4">
 
-                {/* Top: badge + route + price */}
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="space-y-1 min-w-0">
                     <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${cfg.badgeBg} ${cfg.badgeText}`}>
                       <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
                       {cfg.label}
-                      {s.createdAt && isCompleted && (
-                        <span className="ml-1 text-stone-400">· {new Date(s.createdAt).toLocaleDateString()}</span>
-                      )}
                     </span>
                     <p className={`font-bold text-base mt-1 ${isCompleted ? 'text-stone-600' : 'text-stone-900'}`}>{route}</p>
                     <p className="text-sm text-stone-400">
-                      {s.weight} tons · {s.shipperName}
+                      {s.weight} kg · {s.shipperName}
                       {s.shipperPhone ? ` · ${s.shipperPhone}` : ''}
                     </p>
                   </div>
@@ -441,12 +310,11 @@ export default function CompanyActiveShipments() {
                       {isCompleted ? 'Value' : 'Escrow value'}
                     </p>
                     <p className={`text-lg font-extrabold ${isCompleted ? 'text-stone-400' : 'text-stone-900'}`}>
-                      {s.price.toLocaleString()} RWF
+                      {Number(s.price).toLocaleString()} RWF
                     </p>
                   </div>
                 </div>
 
-                {/* Truck + action */}
                 <div className="flex items-center justify-between gap-4 pt-3 border-t border-black/5">
                   <div className="flex items-center gap-2">
                     <svg className="w-4 h-4 text-stone-300 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
@@ -455,17 +323,11 @@ export default function CompanyActiveShipments() {
                     <span className="text-sm font-semibold text-stone-600">{s.truckPlate ?? '—'}</span>
                   </div>
 
-                  {/* Per-status action */}
-                  {s.status === 'AWAITING_ESCROW' && (
-                    <span className="text-xs font-medium text-red-500 shrink-0">
-                      Waiting for shipper to pay escrow
-                    </span>
-                  )}
                   {s.status === 'ESCROW_FUNDED' && (
                     <button
                       type="button"
-                      disabled={isActioning}
-                      onClick={() => openModal(s.id, 'pickup', route, s.truckPlate)}
+                      disabled={!!isActioning}
+                      onClick={() => openModal(s, 'pickup')}
                       className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors disabled:opacity-50 shrink-0 ${cfg.btnBg} ${cfg.btnText} ${cfg.btnHover}`}
                     >
                       {isActioning ? 'Confirming…' : 'Confirm Pickup'}
@@ -474,8 +336,8 @@ export default function CompanyActiveShipments() {
                   {s.status === 'IN_TRANSIT' && (
                     <button
                       type="button"
-                      disabled={isActioning}
-                      onClick={() => openModal(s.id, 'deliver', route, s.truckPlate)}
+                      disabled={!!isActioning}
+                      onClick={() => openModal(s, 'deliver')}
                       className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors disabled:opacity-50 shrink-0 ${cfg.btnBg} ${cfg.btnText} ${cfg.btnHover}`}
                     >
                       {isActioning ? 'Confirming…' : 'Confirm Delivery'}
@@ -512,7 +374,6 @@ export default function CompanyActiveShipments() {
               </h2>
               <p className="text-sm text-stone-400 mt-1">{modal.route}</p>
             </div>
-
             <div className="rounded-2xl bg-stone-50 border border-stone-200 px-4 py-3 flex items-center gap-3">
               <svg className="w-5 h-5 text-stone-300 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
                 <rect x="1" y="3" width="15" height="13" /><polygon points="16 8 20 8 23 11 23 16 16 16 16 8" /><circle cx="5.5" cy="18.5" r="2.5" /><circle cx="18.5" cy="18.5" r="2.5" />
@@ -522,13 +383,11 @@ export default function CompanyActiveShipments() {
                 <p className="text-sm font-bold text-stone-800">{modal.truckPlate}</p>
               </div>
             </div>
-
             <p className="text-sm text-stone-600">
               {modal.action === 'pickup'
-                ? 'Confirm that your truck has collected the goods and is heading to the destination. The shipment will move to In Transit.'
+                ? 'Confirm that your truck has collected the goods and is heading to the destination.'
                 : 'Confirm that the goods have been delivered. The shipper will be notified to confirm receipt.'}
             </p>
-
             <div className="flex gap-3">
               <button
                 type="button"

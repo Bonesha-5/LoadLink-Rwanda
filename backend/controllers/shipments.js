@@ -9,7 +9,7 @@ import {
 
 import { catchAsync } from "../utils/catchAsync.js";
 
-// Fetch available shipments 
+// Fetch available shipments
 export const getAvailableShipments = catchAsync(async (req, res) => {
   const { company_id } = req.user;
 
@@ -80,17 +80,17 @@ export const pickupShipment = catchAsync(async (req, res) => {
   }
 
   // Validation: Ensure id and truckId are valid integers
-  if (isNaN(id) || parseInt(id).toString() !== id.toString()) {
-    const error = new Error("Invalid shipment ID format");
-    error.statusCode = 400;
-    throw error;
-  }
+  if (!id) {
+  const error = new Error("Invalid shipment ID format");
+  error.statusCode = 400;
+  throw error;
+}
 
-  if (isNaN(truckId) || parseInt(truckId).toString() !== truckId.toString()) {
-    const error = new Error("Invalid truck ID format");
-    error.statusCode = 400;
-    throw error;
-  }
+  if (!truckId) {
+  const error = new Error("Invalid truck ID format");
+  error.statusCode = 400;
+  throw error;
+}
 
   await shipmentsService.pickupShipment(id, company_id, truckId);
 
@@ -114,17 +114,17 @@ export const deliverShipment = catchAsync(async (req, res) => {
   }
 
   // Validation: Ensure id and truckId are valid integers
-  if (isNaN(id) || parseInt(id).toString() !== id.toString()) {
-    const error = new Error("Invalid shipment ID format");
-    error.statusCode = 400;
-    throw error;
-  }
+  if (!id) {
+  const error = new Error("Invalid shipment ID format");
+  error.statusCode = 400;
+  throw error;
+}
 
-  if (isNaN(truckId) || parseInt(truckId).toString() !== truckId.toString()) {
-    const error = new Error("Invalid truck ID format");
-    error.statusCode = 400;
-    throw error;
-  }
+  if (!truckId) {
+  const error = new Error("Invalid truck ID format");
+  error.statusCode = 400;
+  throw error;
+}
 
   await shipmentsService.deliverShipment(id, company_id, truckId);
 
@@ -176,4 +176,3 @@ export const disputeShipment = catchAsync(async (req, res) => {
 
   res.status(200).json(shipment);
 });
-

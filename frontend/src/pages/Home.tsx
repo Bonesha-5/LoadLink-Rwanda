@@ -354,7 +354,7 @@ export default function Home() {
                 Names you’ll see on LoadLink
               </h2>
               <p className="mt-2 text-sm text-white/65 max-w-lg mx-auto md:mx-0 leading-relaxed">
-                Sample businesses in our demo — your team can be on this list next.
+                Trusted businesses on our platform — your team can be on this list next.
               </p>
             </div>
             <a

@@ -24,6 +24,7 @@ import AdminCompanyVerification from './pages/AdminCompanyVerification'
 import AdminShipmentMonitoring from './pages/AdminShipmentMonitoring'
 import AdminDisputes from './pages/AdminDisputes'
 import AdminAuditLog from './pages/AdminAuditLog'
+import AdminUsers from './pages/AdminUsers'
 import AdminAnalytics from './pages/AdminAnalytics'
 
 export default function App() {
@@ -58,6 +59,7 @@ export default function App() {
         <Route path="admin/shipments" element={<AdminShipmentMonitoring />} />
         <Route path="admin/disputes" element={<AdminDisputes />} />
         <Route path="admin/audit-log" element={<AdminAuditLog />} />
+        <Route path="admin/users" element={<AdminUsers />} />
       </Route>
       <Route element={<Layout />}>
         <Route path="about" element={<Navigate to="/" replace />} />

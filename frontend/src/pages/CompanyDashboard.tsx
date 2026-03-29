@@ -1,11 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import {
-  getTrucksByCompany,
-  getAllLoads,
-  ensureSeedLoads,
-} from "../data/storage";
 import CompanyFleetMap from "../components/CompanyFleetMap";
 import type { LatLngExpression } from "leaflet";
 import {
@@ -26,13 +21,11 @@ import {
   getMyTrucks,
 } from "../api/companyOpsApi";
 import type { ApiError } from "../api/http";
-import { getApiToken } from "../auth/mockJwt";
-import { getCompanyByEmailDemo } from "../data/storage";
 
 export default function CompanyDashboard() {
   const { user, updateUser } = useAuth();
   const companyName = user?.name ?? "";
-  const apiToken = getApiToken(user?.token ?? null);
+  const apiToken = user?.token ?? null;
   const companyEmail = user?.email ?? null;
   const [refresh, setRefresh] = useState(0);
   const [showFleetMap, setShowFleetMap] = useState(false);
@@ -48,6 +41,11 @@ export default function CompanyDashboard() {
   });
   const [apiError, setApiError] = useState<string | null>(null);
   const [approvalNotice, setApprovalNotice] = useState<string | null>(null);
+  const [analytics, setAnalytics] = useState<{
+    shipments_today: number;
+    weekly: { name: string; shipments: number }[];
+    on_time_rate: number | null;
+  }>({ shipments_today: 0, weekly: [], on_time_rate: null });
 
   const demoFleet = [
     { id: "T1", position: [-1.95, 30.06] as [number, number] },
@@ -71,26 +69,7 @@ export default function CompanyDashboard() {
     return () => window.clearInterval(id);
   }, []);
 
-  useEffect(() => {
-    // Sync company status from local storage (demo).
-    if (!companyEmail) return;
-    const c = getCompanyByEmailDemo(companyEmail);
-    if (!c) return;
-    const nextStatus = String(c.status ?? "").toUpperCase();
-    const currentStatus = String(user?.status ?? "").toUpperCase();
-    if (nextStatus && nextStatus !== currentStatus) {
-      updateUser({ status: nextStatus });
-    }
 
-    const key = `ll_seen_company_status:${companyEmail.toLowerCase()}`;
-    const seen = String(localStorage.getItem(key) ?? "");
-    if (nextStatus === "VERIFIED" && seen !== "VERIFIED") {
-      setApprovalNotice(
-        "Your company has been approved. You now have full access to shipments and truck actions.",
-      );
-      localStorage.setItem(key, "VERIFIED");
-    }
-  }, [companyEmail, updateUser, user?.status]);
 
   const movingTruckPosition: LatLngExpression =
     demoRoute[tick % demoRoute.length];
@@ -161,77 +140,25 @@ export default function CompanyDashboard() {
       };
     }
 
-    ensureSeedLoads(); // seed demo loads so company sees something on first login
-    const loads = getAllLoads();
-    const openLoads = loads.filter((l) => l.status === "open");
-    const trucks = getTrucksByCompany(companyName);
-    const myBidLoads = loads.filter((l) =>
-      l.offers?.some((o) => o.companyName === companyName),
-    ).length;
-    const openNoBid = openLoads.filter(
-      (l) => !l.offers?.some((o) => o.companyName === companyName),
-    ).length;
-    const closed = loads.filter((l) => l.status === "closed").length;
-    const fleetOnRoute = Math.min(2, trucks.length);
-    const fleetIdle = Math.max(0, trucks.length - 2);
-    const fleetMaintenance = trucks.length > 3 ? 1 : 0;
     return {
-      truckCount: trucks.length,
-      openLoadsCount: openLoads.length,
-      recentOpenLoads: openLoads.slice(0, 4),
-      pieMarketplace: [
-        {
-          name: "Shipments you responded to",
-          value: myBidLoads || 0,
-          fill: "#F5C518",
-        },
-        { name: "Open shipments", value: openNoBid || 0, fill: "#0B0B0F" },
-        { name: "Already taken", value: closed || 0, fill: "#6B7280" },
-      ].map((d) => ({ ...d, value: d.value || 1 })),
-      pieFleet:
-        trucks.length > 0
-          ? [
-              {
-                name: "On the road",
-                value: fleetOnRoute || 1,
-                fill: "#F5C518",
-              },
-              {
-                name: "Available / waiting",
-                value: fleetIdle || 1,
-                fill: "#0B0B0F",
-              },
-              {
-                name: "In maintenance",
-                value: fleetMaintenance || 1,
-                fill: "#C9A227",
-              },
-            ]
-          : [{ name: "No trucks yet", value: 1, fill: "#9CA3AF" }],
+      truckCount: 0,
+      openLoadsCount: 0,
+      recentOpenLoads: [],
+      pieMarketplace: [{ name: "No data", value: 1, fill: "#9CA3AF" }],
+      pieFleet: [{ name: "No trucks yet", value: 1, fill: "#9CA3AF" }],
     };
   }, [companyName, refresh, apiToken, apiSummary]);
 
-  const trend = useMemo(() => {
-    // demo analytics for dashboard visuals
-    return [
-      { name: "Mon", shipments: 8, activity: 40 },
-      { name: "Tue", shipments: 10, activity: 55 },
-      { name: "Wed", shipments: 7, activity: 38 },
-      { name: "Thu", shipments: 12, activity: 70 },
-      { name: "Fri", shipments: 11, activity: 62 },
-      { name: "Sat", shipments: 14, activity: 86 },
-      { name: "Sun", shipments: 9, activity: 48 },
-    ];
-  }, []);
+  const trend = analytics.weekly.map(w => ({ ...w, activity: w.shipments * 5 }));
 
   const kpis = useMemo(() => {
-    const last = trend[trend.length - 1]?.shipments ?? 0;
-    const prev = trend[trend.length - 2]?.shipments ?? 0;
-    const delta = prev === 0 ? 0 : Math.round(((last - prev) / prev) * 100);
-    const onTime = 92; // demo %
-    const utilization = 86; // demo %
-    return { shipmentsToday: last, delta, onTime, utilization };
-  }, [trend]);
+    return {
+      shipmentsToday: analytics.shipments_today,
+      delta: 0,
+      onTime: analytics.on_time_rate,
+      utilization: null,
+    };
+  }, [analytics]);
 
   useEffect(() => {
     const t = apiToken;
@@ -248,6 +175,13 @@ export default function CompanyDashboard() {
         ]);
         if (cancelled) return;
         setApiSummary({ trucks, openShipments, activeShipments });
+        // Load analytics
+        try {
+          const analyticsData = await import('../api/http').then(m =>
+            m.apiRequest('/api/company/analytics', { token: tokenStr })
+          );
+          setAnalytics(analyticsData as any);
+        } catch { /* analytics optional */ }
       } catch (e) {
         if (cancelled) return;
         const err = e as ApiError;
@@ -341,7 +275,7 @@ export default function CompanyDashboard() {
             <div className="pointer-events-none absolute top-4 left-4 flex flex-wrap gap-2">
               <span className="inline-flex items-center gap-2 rounded-2xl bg-white/95 backdrop-blur px-3 py-2 text-xs font-semibold text-stone-800 border border-stone-200 shadow-sm">
                 <span className="inline-block h-2 w-2 rounded-full bg-accent" />
-                Live track (demo)
+                Fleet map
               </span>
               <span className="inline-flex items-center gap-2 rounded-2xl bg-white/95 backdrop-blur px-3 py-2 text-xs font-semibold text-stone-800 border border-stone-200 shadow-sm">
                 {demoFleet.length} trucks
@@ -368,7 +302,7 @@ export default function CompanyDashboard() {
                   />
                 </div>
                 <p className="mt-2 text-[11px] text-stone-500">
-                  Route is simulated for the demo UI.
+                  Truck positions are approximate.
                 </p>
               </div>
             </div>
@@ -399,15 +333,12 @@ export default function CompanyDashboard() {
                   On-time rate
                 </p>
                 <p className="mt-2 text-3xl font-bold text-stone-900">
-                  {kpis.onTime}%
+                  {kpis.onTime !== null ? `${kpis.onTime}%` : 'N/A'}
                 </p>
                 <p className="mt-2 text-xs text-stone-500">
-                  Delivery performance (demo)
+                  {kpis.onTime !== null ? 'Based on completed shipments' : 'No completed shipments yet'}
                 </p>
               </div>
-              <span className="inline-flex items-center gap-1 rounded-full bg-accent/10 text-accent border border-accent/20 px-2.5 py-1 text-xs font-semibold">
-                +3%
-              </span>
             </div>
           </div>
           <div className="bg-white rounded-3xl border border-stone-200 p-5 shadow-sm transition-shadow hover:shadow-md">
@@ -420,20 +351,9 @@ export default function CompanyDashboard() {
                   {kpis.shipmentsToday}
                 </p>
                 <p className="mt-2 text-xs text-stone-500">
-                  Compared to yesterday
+                  Active shipments
                 </p>
               </div>
-              <span
-                className={[
-                  "inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-semibold",
-                  kpis.delta >= 0
-                    ? "bg-accent/10 text-accent border-accent/20"
-                    : "bg-stone-100 text-stone-700 border-stone-200",
-                ].join(" ")}
-              >
-                {kpis.delta >= 0 ? "+" : ""}
-                {kpis.delta}%
-              </span>
             </div>
             <div className="mt-3 h-20">
               <ResponsiveContainer width="100%" height="100%">
@@ -581,7 +501,7 @@ export default function CompanyDashboard() {
           <h2 className="text-sm font-semibold text-stone-900">
             Weekly shipments
           </h2>
-          <p className="text-xs text-stone-500 mt-1">Last 7 days (demo)</p>
+          <p className="text-xs text-stone-500 mt-1">Last 7 days</p>
           <div className="h-[220px] mt-4">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
@@ -658,7 +578,7 @@ export default function CompanyDashboard() {
         <div className="bg-white rounded-3xl border border-stone-200 p-5 shadow-sm">
           <h2 className="text-sm font-semibold text-stone-900">Latest loads</h2>
           <p className="text-xs text-stone-500 mt-1">
-            Marketplace snapshot (demo)
+            Marketplace snapshot
           </p>
           <div className="mt-4 space-y-3">
             {recentOpenLoads.map((l) => (
@@ -702,7 +622,7 @@ export default function CompanyDashboard() {
               <div className="flex items-center justify-between px-5 py-3 border-b border-stone-100">
                 <div>
                   <h3 className="text-sm font-semibold text-stone-900">
-                    Fleet movement (demo)
+                    Fleet map
                   </h3>
                   <p className="text-xs text-stone-500">
                     Simulated truck positions for your company across Rwanda.

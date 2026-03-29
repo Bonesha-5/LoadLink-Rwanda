@@ -13,7 +13,8 @@ const verifyToken = (req, res, next) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     req.user = {
       id: decoded.id,
-      role: decoded.role
+      role: decoded.role,
+     company_id: decoded.company_id
     };
     next();
   } catch (err) {

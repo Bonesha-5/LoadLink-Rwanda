@@ -1,0 +1,583 @@
+{
+  "info": {
+    "name": "LoadLink Rwanda — Unit Tests",
+    "description": "Unit tests for individual endpoints in isolation. Each test validates a single endpoint's input/output contract, error handling, and auth requirements.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000" },
+    { "key": "shipperToken", "value": "PASTE_SHIPPER_JWT_HERE" },
+    { "key": "companyToken", "value": "PASTE_COMPANY_JWT_HERE" },
+    { "key": "adminToken", "value": "PASTE_ADMIN_JWT_HERE" },
+    { "key": "shipmentId", "value": "PASTE_SHIPMENT_ID_HERE" },
+    { "key": "truckId", "value": "PASTE_TRUCK_ID_HERE" },
+    { "key": "referenceId", "value": "PASTE_REFERENCE_ID_HERE" }
+  ],
+  "item": [
+    {
+      "name": "Auth — Unit Tests",
+      "item": [
+        {
+          "name": "POST /api/shippers/register — valid payload",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 201', () => pm.response.to.have.status(201));",
+            "pm.test('Has token string', () => pm.expect(pm.response.json().token).to.be.a('string'));",
+            "pm.test('User has id', () => pm.expect(pm.response.json().user.id).to.exist);",
+            "pm.test('User has name', () => pm.expect(pm.response.json().user.name).to.be.a('string'));",
+            "pm.test('User has email', () => pm.expect(pm.response.json().user.email).to.be.a('string'));",
+            "pm.test('Role is SHIPPER', () => pm.expect(pm.response.json().user.role).to.eql('SHIPPER'));"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/shippers/register",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Unit Test Shipper\",\n  \"phone\": \"0781234500\",\n  \"email\": \"unit_shipper_{{$randomInt}}@test.rw\",\n  \"password\": \"unitpass123\"\n}" }
+          }
+        },
+        {
+          "name": "POST /api/shippers/register — missing password",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 400 or 500', () => pm.expect(pm.response.code).to.be.oneOf([400, 500]));"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/shippers/register",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Unit Test Shipper\",\n  \"email\": \"unit_shipper@test.rw\"\n}" }
+          }
+        },
+        {
+          "name": "POST /api/shippers/login — valid credentials",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "pm.test('Has token', () => pm.expect(pm.response.json().token).to.be.a('string'));",
+            "pm.test('success is true', () => pm.expect(pm.response.json().success).to.be.true);",
+            "pm.test('Has user object', () => pm.expect(pm.response.json().user).to.be.an('object'));"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/shippers/login",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"bwizaannie20@gmail.com\",\n  \"password\": \"test1234\"\n}" }
+          }
+        },
+        {
+          "name": "POST /api/shippers/login — wrong password",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 401', () => pm.response.to.have.status(401));",
+            "pm.test('Has error message', () => pm.expect(pm.response.json().message).to.be.a('string'));"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/shippers/login",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"bwizaannie20@gmail.com\",\n  \"password\": \"wrongpassword\"\n}" }
+          }
+        },
+        {
+          "name": "POST /api/shippers/login — user not found",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 404', () => pm.response.to.have.status(404));"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/shippers/login",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"doesnotexist@test.rw\",\n  \"password\": \"test1234\"\n}" }
+          }
+        },
+        {
+          "name": "POST /api/company/login — valid credentials",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "pm.test('Has token', () => pm.expect(pm.response.json().token).to.be.a('string'));",
+            "pm.test('Has company_name', () => pm.expect(pm.response.json().user.company_name).to.be.a('string'));",
+            "pm.test('Has company_id', () => pm.expect(pm.response.json().user.company_id).to.exist);"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/company/login",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"ingerimovers@gmail.com\",\n  \"password\": \"test1234\"\n}" }
+          }
+        },
+        {
+          "name": "POST /auth/admin/login — valid credentials",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "pm.test('Role is ADMIN', () => pm.expect(pm.response.json().user.role).to.eql('ADMIN'));",
+            "pm.test('Has token', () => pm.expect(pm.response.json().token).to.be.a('string'));"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/admin/login",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"admin@loadlink.rw\",\n  \"password\": \"test123\"\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Shipments — Unit Tests",
+      "item": [
+        {
+          "name": "POST /api/shipments — valid payload",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 201', () => pm.response.to.have.status(201));",
+            "pm.test('Has id', () => pm.expect(pm.response.json().id).to.exist);",
+            "pm.test('Status is POSTED', () => pm.expect(pm.response.json().status).to.eql('POSTED'));",
+            "pm.test('Has pickup_district', () => pm.expect(pm.response.json().pickup_district).to.be.a('string'));"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/shipments",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{shipperToken}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"pickup_district\": \"Kigali\",\n  \"dropoff_district\": \"Musanze\",\n  \"pickup_description\": \"Warehouse A\",\n  \"cargo_description\": \"Electronics\",\n  \"weight\": 300,\n  \"offered_price\": 50000,\n  \"pickup_date\": \"2026-05-01\"\n}" }
+          }
+        },
+        {
+          "name": "POST /api/shipments — no auth",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 401', () => pm.response.to.have.status(401));"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/shipments",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"pickup_district\": \"Kigali\",\n  \"dropoff_district\": \"Musanze\",\n  \"weight\": 300,\n  \"offered_price\": 50000,\n  \"pickup_date\": \"2026-05-01\"\n}" }
+          }
+        },
+        {
+          "name": "GET /api/shipments/my — returns array",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "pm.test('Returns array', () => pm.expect(pm.response.json()).to.be.an('array'));",
+            "pm.test('Each has status field', () => { const data = pm.response.json(); if(data.length > 0) pm.expect(data[0].status).to.be.a('string'); });"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/shipments/my",
+            "header": [{ "key": "Authorization", "value": "Bearer {{shipperToken}}" }]
+          }
+        },
+        {
+          "name": "GET /api/shipments — company auth required",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "pm.test('Has success true', () => pm.expect(pm.response.json().success).to.be.true);",
+            "pm.test('Has data array', () => pm.expect(pm.response.json().data).to.be.an('array'));"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/shipments",
+            "header": [{ "key": "Authorization", "value": "Bearer {{companyToken}}" }]
+          }
+        },
+        {
+          "name": "GET /api/shipments — shipper token blocked",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 403', () => pm.response.to.have.status(403));"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/shipments",
+            "header": [{ "key": "Authorization", "value": "Bearer {{shipperToken}}" }]
+          }
+        },
+        {
+          "name": "GET /api/shipments/active — returns data",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "pm.test('Has data array', () => pm.expect(pm.response.json().data).to.be.an('array'));"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/shipments/active",
+            "header": [{ "key": "Authorization", "value": "Bearer {{companyToken}}" }]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Trucks — Unit Tests",
+      "item": [
+        {
+          "name": "GET /api/trucks/my — returns data",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "pm.test('Has success true', () => pm.expect(pm.response.json().success).to.be.true);",
+            "pm.test('Has data array', () => pm.expect(pm.response.json().data).to.be.an('array'));",
+            "pm.test('Each truck has plate_number', () => { const d = pm.response.json().data; if(d.length > 0) pm.expect(d[0].plate_number).to.be.a('string'); });"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/trucks/my",
+            "header": [{ "key": "Authorization", "value": "Bearer {{companyToken}}" }]
+          }
+        },
+        {
+          "name": "GET /api/trucks/my — shipper blocked",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 403', () => pm.response.to.have.status(403));"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/trucks/my",
+            "header": [{ "key": "Authorization", "value": "Bearer {{shipperToken}}" }]
+          }
+        },
+        {
+          "name": "PATCH /api/trucks/:id/status — valid AVAILABLE",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "pm.test('Success true', () => pm.expect(pm.response.json().success).to.be.true);"
+          ]}}],
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/api/trucks/{{truckId}}/status",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{companyToken}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{ \"availability_status\": \"AVAILABLE\" }" }
+          }
+        },
+        {
+          "name": "PATCH /api/trucks/:id/status — invalid status value",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 400 or 500', () => pm.expect(pm.response.code).to.be.oneOf([400, 500]));",
+            "pm.test('Has error message', () => pm.expect(pm.response.json().message).to.be.a('string'));"
+          ]}}],
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/api/trucks/{{truckId}}/status",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{companyToken}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{ \"availability_status\": \"FLYING\" }" }
+          }
+        },
+        {
+          "name": "GET /api/trucks/:id/ratings — public",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "pm.test('Has data array', () => pm.expect(pm.response.json().data).to.be.an('array'));"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/trucks/{{truckId}}/ratings"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Interests — Unit Tests",
+      "item": [
+        {
+          "name": "GET /api/interests/my — returns data",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "pm.test('Has success true', () => pm.expect(pm.response.json().success).to.be.true);",
+            "pm.test('Has data array', () => pm.expect(pm.response.json().data).to.be.an('array'));"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/interests/my",
+            "header": [{ "key": "Authorization", "value": "Bearer {{companyToken}}" }]
+          }
+        },
+        {
+          "name": "GET /api/interests/my — no auth",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 401', () => pm.response.to.have.status(401));"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/interests/my"
+          }
+        },
+        {
+          "name": "GET /api/interests/shipment/:id — shipper can view",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "pm.test('Returns array', () => pm.expect(pm.response.json()).to.be.an('array'));"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/interests/shipment/{{shipmentId}}",
+            "header": [{ "key": "Authorization", "value": "Bearer {{shipperToken}}" }]
+          }
+        },
+        {
+          "name": "POST /api/interests — missing truck_id",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 400', () => pm.response.to.have.status(400));",
+            "pm.test('Has message', () => pm.expect(pm.response.json().message).to.be.a('string'));"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/interests",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{companyToken}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{ \"shipment_id\": \"{{shipmentId}}\" }" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Payments — Unit Tests",
+      "item": [
+        {
+          "name": "POST /api/payments/initiate — invalid provider",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 400', () => pm.response.to.have.status(400));",
+            "pm.test('Has message', () => pm.expect(pm.response.json().message).to.be.a('string'));"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/payments/initiate",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{shipperToken}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"shipment_id\": \"{{shipmentId}}\",\n  \"provider\": \"VISA\",\n  \"phone_number\": \"0781234567\"\n}" }
+          }
+        },
+        {
+          "name": "POST /api/payments/initiate — wrong phone for MTN",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 400', () => pm.response.to.have.status(400));",
+            "pm.test('Message mentions MTN', () => pm.expect(pm.response.json().message.toLowerCase()).to.include('mtn'));"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/payments/initiate",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{shipperToken}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"shipment_id\": \"{{shipmentId}}\",\n  \"provider\": \"MTN\",\n  \"phone_number\": \"0721234567\"\n}" }
+          }
+        },
+        {
+          "name": "GET /api/payments/status/:ref — valid reference",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "pm.test('Has payment_status', () => pm.expect(pm.response.json().payment_status).to.be.a('string'));",
+            "pm.test('Has shipment_status', () => pm.expect(pm.response.json().shipment_status).to.be.a('string'));",
+            "pm.test('Has amount', () => pm.expect(pm.response.json().amount).to.exist);"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/payments/status/{{referenceId}}",
+            "header": [{ "key": "Authorization", "value": "Bearer {{shipperToken}}" }]
+          }
+        },
+        {
+          "name": "GET /api/payments/status/:ref — not found",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 404', () => pm.response.to.have.status(404));"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/payments/status/nonexistent-reference-id",
+            "header": [{ "key": "Authorization", "value": "Bearer {{shipperToken}}" }]
+          }
+        },
+        {
+          "name": "GET /api/shippers/payments — payment history",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "pm.test('Returns array', () => pm.expect(pm.response.json()).to.be.an('array'));",
+            "pm.test('Each has amount', () => { const d = pm.response.json(); if(d.length > 0) pm.expect(d[0].amount).to.exist; });"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/shippers/payments",
+            "header": [{ "key": "Authorization", "value": "Bearer {{shipperToken}}" }]
+          }
+        },
+        {
+          "name": "POST /api/payments/disputes/resolve — shipper blocked",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 403', () => pm.response.to.have.status(403));"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/payments/disputes/resolve",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{shipperToken}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{ \"shipment_id\": \"{{shipmentId}}\", \"resolution_type\": \"FULL_REFUND\" }" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Ratings — Unit Tests",
+      "item": [
+        {
+          "name": "POST /api/ratings — invalid stars > 5",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 400 or 500', () => pm.expect(pm.response.code).to.be.oneOf([400, 500]));"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/ratings",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{shipperToken}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"shipment_id\": \"{{shipmentId}}\",\n  \"stars\": 10,\n  \"comment\": \"Too many stars\"\n}" }
+          }
+        },
+        {
+          "name": "POST /api/ratings — no auth",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 401', () => pm.response.to.have.status(401));"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/ratings",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"shipment_id\": \"{{shipmentId}}\",\n  \"stars\": 5\n}" }
+          }
+        },
+        {
+          "name": "GET /api/trucks/:id/ratings — public no auth needed",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "pm.test('Has data', () => pm.expect(pm.response.json().data).to.be.an('array'));"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/trucks/{{truckId}}/ratings"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin — Unit Tests",
+      "item": [
+        {
+          "name": "GET /api/admin/companies/pending — admin only",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "pm.test('Returns array', () => pm.expect(pm.response.json()).to.be.an('array'));"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/admin/companies/pending",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }]
+          }
+        },
+        {
+          "name": "GET /api/admin/companies/pending — company blocked",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 403', () => pm.response.to.have.status(403));"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/admin/companies/pending",
+            "header": [{ "key": "Authorization", "value": "Bearer {{companyToken}}" }]
+          }
+        },
+        {
+          "name": "GET /api/admin/companies/pending — no auth",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 401', () => pm.response.to.have.status(401));"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/admin/companies/pending"
+          }
+        },
+        {
+          "name": "GET /api/admin/shipments — filter by COMPLETED",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "pm.test('All COMPLETED', () => { const d = pm.response.json(); d.forEach(s => pm.expect(s.status).to.eql('COMPLETED')); });"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/admin/shipments?status=COMPLETED",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }]
+          }
+        },
+        {
+          "name": "GET /api/admin/shipments — invalid status",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 400', () => pm.response.to.have.status(400));"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/admin/shipments?status=INVALID_STATUS",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }]
+          }
+        },
+        {
+          "name": "PATCH /api/admin/companies/:id/reject — missing reason",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 400', () => pm.response.to.have.status(400));",
+            "pm.test('Has message', () => pm.expect(pm.response.json().message).to.be.a('string'));"
+          ]}}],
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/api/admin/companies/999999/reject",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{}" }
+          }
+        },
+        {
+          "name": "GET /api/admin/audit — returns entries",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "pm.test('Returns array', () => pm.expect(pm.response.json()).to.be.an('array'));"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/admin/audit",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }]
+          }
+        },
+        {
+          "name": "GET /api/admin/users — returns all users",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "pm.test('Returns array', () => pm.expect(pm.response.json()).to.be.an('array'));",
+            "pm.test('Has role field', () => pm.expect(pm.response.json()[0].role).to.be.a('string'));",
+            "pm.test('Has is_suspended field', () => pm.expect(pm.response.json()[0].is_suspended).to.be.a('boolean'));"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/admin/users",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }]
+          }
+        },
+        {
+          "name": "GET /api/company/analytics — company only",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "pm.test('Has shipments_today', () => pm.expect(pm.response.json().shipments_today).to.be.a('number'));",
+            "pm.test('Has weekly array', () => pm.expect(pm.response.json().weekly).to.be.an('array'));"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/company/analytics",
+            "header": [{ "key": "Authorization", "value": "Bearer {{companyToken}}" }]
+          }
+        }
+      ]
+    }
+  ]
+}

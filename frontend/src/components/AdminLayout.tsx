@@ -11,6 +11,7 @@ const navItems = [
   { path: "/admin/shipments", label: "All shipments", icon: ShipmentIcon },
   { path: "/admin/disputes", label: "Disputes", icon: DisputeIcon },
   { path: "/admin/audit-log", label: "Activity log", icon: ListIcon },
+  { path: "/admin/users", label: "Users", icon: ListIcon },
 ];
 
 function BuildingIcon() {
@@ -130,7 +131,10 @@ export default function AdminLayout() {
   const navigate = useNavigate();
   const { logout, user } = useAuth();
 
-  const handleLogout = () => { navigate('/', { replace: true }); logout() };
+  const handleLogout = () => {
+    navigate("/", { replace: true });
+    logout();
+  };
 
   return (
     <div className="flex min-h-screen">

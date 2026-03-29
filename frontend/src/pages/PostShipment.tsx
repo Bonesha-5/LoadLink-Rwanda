@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { addLoad, setStageForLoad } from '../data/storage'
+import { apiRequest } from '../api/http'
 
 const RWANDA_DISTRICTS = [
   'Bugesera','Burera','Gakenke','Gasabo','Gatsibo','Gicumbi','Gisagara',
@@ -49,44 +49,25 @@ export default function PostShipment() {
     if (!validate()) return
     setSubmitting(true)
 
-    const localSave = () => {
-      const newLoad = addLoad({
-        origin:        form.origin,
-        destination:   form.destination,
-        date:          form.date,
-        weight:        `${form.weight} tons`,
-        description:   form.description,
-        pickupAddress: form.pickupDescription,
-        price:         `${Number(form.price).toLocaleString()} RWF`,
-        createdBy:     user?.name || 'Shipper',
-      })
-      setStageForLoad(newLoad.id, 'POSTED')
-    }
-
     try {
-      const res = await fetch('/api/shipments', {
+      await apiRequest('/api/shipments', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${getToken()}`,
-        },
-        body: JSON.stringify({
+        token: getToken(),
+        body: {
           pickup_district:    form.origin,
           dropoff_district:   form.destination,
           pickup_description: form.pickupDescription,
           cargo_description:  form.description,
-          weight_tons:        Number(form.weight),
-          offered_price_rwf:  Number(form.price),
+          weight:             Number(form.weight),
+          offered_price:      Number(form.price),
           pickup_date:        form.date,
-        }),
+        },
       })
-      if (!res.ok) throw new Error()
-    } catch {
-      // API unavailable — save locally
-    } finally {
-      localSave()
-      setSubmitting(false)
       navigate('/loads')
+    } catch (err: any) {
+      setErrors({ sameDistrict: err?.message || 'Could not post shipment. Please try again.' })
+    } finally {
+      setSubmitting(false)
     }
   }
 

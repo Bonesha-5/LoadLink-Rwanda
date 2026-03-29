@@ -1,0 +1,425 @@
+{
+  "info": {
+    "name": "LoadLink Rwanda — Integration Tests",
+    "description": "End-to-end integration tests covering complete user flows. Run the entire collection in order — each request builds on the previous. Variables are auto-set by test scripts.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000" },
+    { "key": "shipperToken", "value": "" },
+    { "key": "companyToken", "value": "" },
+    { "key": "adminToken", "value": "" },
+    { "key": "shipmentId", "value": "" },
+    { "key": "truckId", "value": "" },
+    { "key": "referenceId", "value": "" },
+    { "key": "companyId", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Step 1 — Login All Users",
+      "item": [
+        {
+          "name": "1.1 Login Shipper",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Shipper login succeeds', () => pm.response.to.have.status(200));",
+            "const b = pm.response.json();",
+            "pm.collectionVariables.set('shipperToken', b.token);",
+            "pm.test('shipperToken saved', () => pm.expect(pm.collectionVariables.get('shipperToken')).to.be.a('string').and.not.empty);"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/shippers/login",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"bwizaannie20@gmail.com\",\n  \"password\": \"test1234\"\n}" }
+          }
+        },
+        {
+          "name": "1.2 Login Company",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Company login succeeds', () => pm.response.to.have.status(200));",
+            "const b = pm.response.json();",
+            "pm.collectionVariables.set('companyToken', b.token);",
+            "pm.collectionVariables.set('companyId', String(b.user.company_id));",
+            "pm.test('companyToken saved', () => pm.expect(pm.collectionVariables.get('companyToken')).to.be.a('string').and.not.empty);",
+            "pm.test('company is VERIFIED', () => pm.expect(b.user.status).to.eql('VERIFIED'));"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/company/login",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"ingerimovers@gmail.com\",\n  \"password\": \"test1234\"\n}" }
+          }
+        },
+        {
+          "name": "1.3 Login Admin",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Admin login succeeds', () => pm.response.to.have.status(200));",
+            "const b = pm.response.json();",
+            "pm.collectionVariables.set('adminToken', b.token);",
+            "pm.test('adminToken saved', () => pm.expect(pm.collectionVariables.get('adminToken')).to.be.a('string').and.not.empty);"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/admin/login",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"admin@loadlink.rw\",\n  \"password\": \"test123\"\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Step 2 — Shipper Posts Shipment",
+      "item": [
+        {
+          "name": "2.1 Create Shipment",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Shipment created', () => pm.response.to.have.status(201));",
+            "const b = pm.response.json();",
+            "pm.collectionVariables.set('shipmentId', String(b.id));",
+            "pm.test('shipmentId saved', () => pm.expect(pm.collectionVariables.get('shipmentId')).to.not.be.empty);",
+            "pm.test('Status is POSTED', () => pm.expect(b.status).to.eql('POSTED'));",
+            "pm.test('Has pickup_district', () => pm.expect(b.pickup_district).to.be.a('string'));"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/shipments",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{shipperToken}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"pickup_district\": \"Kigali\",\n  \"dropoff_district\": \"Rubavu\",\n  \"pickup_description\": \"Kigali Warehouse B\",\n  \"cargo_description\": \"Agricultural produce\",\n  \"weight\": 500,\n  \"offered_price\": 60000,\n  \"pickup_date\": \"2026-05-10\"\n}" }
+          }
+        },
+        {
+          "name": "2.2 Verify Shipment in My Shipments",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "const data = pm.response.json();",
+            "const created = data.find(s => String(s.id) === pm.collectionVariables.get('shipmentId'));",
+            "pm.test('Created shipment appears in list', () => pm.expect(created).to.exist);",
+            "pm.test('Status is POSTED', () => pm.expect(created.status).to.eql('POSTED'));"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/shipments/my",
+            "header": [{ "key": "Authorization", "value": "Bearer {{shipperToken}}" }]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Step 3 — Company Views & Gets Trucks",
+      "item": [
+        {
+          "name": "3.1 Company Gets Available Shipments",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "const b = pm.response.json();",
+            "pm.test('Has data array', () => pm.expect(b.data).to.be.an('array'));",
+            "pm.test('At least one shipment visible', () => pm.expect(b.data.length).to.be.greaterThan(0));"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/shipments",
+            "header": [{ "key": "Authorization", "value": "Bearer {{companyToken}}" }]
+          }
+        },
+        {
+          "name": "3.2 Company Gets My Trucks",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "const b = pm.response.json();",
+            "pm.test('Has trucks', () => pm.expect(b.data.length).to.be.greaterThan(0));",
+            "const availTruck = b.data.find(t => t.availability_status === 'AVAILABLE' && t.verification_status === 'VERIFIED');",
+            "pm.test('Has at least one available verified truck', () => pm.expect(availTruck).to.exist);",
+            "pm.collectionVariables.set('truckId', String(availTruck.id));"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/trucks/my",
+            "header": [{ "key": "Authorization", "value": "Bearer {{companyToken}}" }]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Step 4 — Company Expresses Interest",
+      "item": [
+        {
+          "name": "4.1 Express Interest in Shipment",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Interest created', () => pm.response.to.have.status(201));",
+            "pm.test('Success true', () => pm.expect(pm.response.json().success).to.be.true);"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/interests",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{companyToken}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"shipment_id\": \"{{shipmentId}}\",\n  \"truck_id\": \"{{truckId}}\"\n}" }
+          }
+        },
+        {
+          "name": "4.2 Shipper Sees Interest",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "const data = pm.response.json();",
+            "pm.test('Returns array of interests', () => pm.expect(data).to.be.an('array'));",
+            "pm.test('At least one interest returned', () => pm.expect(data.length).to.be.greaterThan(0));",
+            "pm.test('Has plate_number', () => pm.expect(data[0].plate_number).to.be.a('string'));",
+            "pm.test('Has company_name', () => pm.expect(data[0].company_name).to.be.a('string'));"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/interests/shipment/{{shipmentId}}",
+            "header": [{ "key": "Authorization", "value": "Bearer {{shipperToken}}" }]
+          }
+        },
+        {
+          "name": "4.3 Verify Interest in Company My Interests",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "const b = pm.response.json();",
+            "pm.test('Has data', () => pm.expect(b.data).to.be.an('array'));",
+            "pm.test('Interest appears in company list', () => {",
+            "  const found = b.data.find(i => String(i.shipment_id) === pm.collectionVariables.get('shipmentId'));",
+            "  pm.expect(found).to.exist;",
+            "});"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/interests/my",
+            "header": [{ "key": "Authorization", "value": "Bearer {{companyToken}}" }]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Step 5 — Shipper Selects Truck",
+      "item": [
+        {
+          "name": "5.1 Select Truck",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));"
+          ]}}],
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/api/shipments/{{shipmentId}}/select",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{shipperToken}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{ \"truck_id\": \"{{truckId}}\" }" }
+          }
+        },
+        {
+          "name": "5.2 Verify Shipment is AWAITING_ESCROW",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "const data = pm.response.json();",
+            "const shipment = data.find(s => String(s.id) === pm.collectionVariables.get('shipmentId'));",
+            "pm.test('Shipment status is AWAITING_ESCROW', () => pm.expect(shipment.status).to.eql('AWAITING_ESCROW'));"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/shipments/my",
+            "header": [{ "key": "Authorization", "value": "Bearer {{shipperToken}}" }]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Step 6 — Escrow Payment",
+      "item": [
+        {
+          "name": "6.1 Initiate Payment",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "const b = pm.response.json();",
+            "pm.collectionVariables.set('referenceId', b.reference_id);",
+            "pm.test('Has reference_id', () => pm.expect(b.reference_id).to.be.a('string').and.not.empty);",
+            "pm.test('Status is PENDING', () => pm.expect(b.status).to.eql('PENDING'));",
+            "pm.test('Has amount', () => pm.expect(b.amount).to.exist);"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/payments/initiate",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{shipperToken}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"shipment_id\": \"{{shipmentId}}\",\n  \"provider\": \"MTN\",\n  \"phone_number\": \"0781234567\"\n}" }
+          }
+        },
+        {
+          "name": "6.2 Wait 5s Then Check Payment Status",
+          "event": [
+            { "listen": "prerequest", "script": { "exec": [
+              "setTimeout(() => {}, 5000);"
+            ]}},
+            { "listen": "test", "script": { "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "const b = pm.response.json();",
+              "pm.test('Payment status is CONFIRMED or PENDING', () => pm.expect(b.payment_status).to.be.oneOf(['CONFIRMED', 'PENDING']));"
+            ]}}
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/payments/status/{{referenceId}}",
+            "header": [{ "key": "Authorization", "value": "Bearer {{shipperToken}}" }]
+          }
+        },
+        {
+          "name": "6.3 Duplicate Payment Blocked",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Duplicate blocked 400 or 409', () => pm.expect(pm.response.code).to.be.oneOf([400, 409]));"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/payments/initiate",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{shipperToken}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"shipment_id\": \"{{shipmentId}}\",\n  \"provider\": \"MTN\",\n  \"phone_number\": \"0781234567\"\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Step 7 — Admin Monitors Platform",
+      "item": [
+        {
+          "name": "7.1 Admin Sees All Shipments",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "const data = pm.response.json();",
+            "pm.test('Returns array', () => pm.expect(data).to.be.an('array'));",
+            "pm.test('Our shipment is visible to admin', () => {",
+            "  const found = data.find(s => String(s.id) === pm.collectionVariables.get('shipmentId'));",
+            "  pm.expect(found).to.exist;",
+            "});"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/admin/shipments",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }]
+          }
+        },
+        {
+          "name": "7.2 Admin Sees Audit Log Has Entries",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "pm.test('Audit log has entries', () => pm.expect(pm.response.json().length).to.be.greaterThan(0));",
+            "pm.test('Each entry has action', () => pm.expect(pm.response.json()[0].action).to.be.a('string'));"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/admin/audit",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }]
+          }
+        },
+        {
+          "name": "7.3 Admin Sees All Users",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "const users = pm.response.json();",
+            "pm.test('Has users', () => pm.expect(users.length).to.be.greaterThan(0));",
+            "pm.test('Has SHIPPER role', () => pm.expect(users.some(u => u.role === 'SHIPPER')).to.be.true);",
+            "pm.test('Has COMPANY role', () => pm.expect(users.some(u => u.role === 'COMPANY')).to.be.true);",
+            "pm.test('Has ADMIN role', () => pm.expect(users.some(u => u.role === 'ADMIN')).to.be.true);"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/admin/users",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }]
+          }
+        },
+        {
+          "name": "7.4 Company Analytics Reflects Activity",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "const b = pm.response.json();",
+            "pm.test('Has numeric shipments_today', () => pm.expect(b.shipments_today).to.be.a('number'));",
+            "pm.test('Has weekly array', () => pm.expect(b.weekly).to.be.an('array'));"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/company/analytics",
+            "header": [{ "key": "Authorization", "value": "Bearer {{companyToken}}" }]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Step 8 — Cross-Role Security Checks",
+      "item": [
+        {
+          "name": "8.1 Shipper Cannot Access Company Endpoint",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 403', () => pm.response.to.have.status(403));"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/shipments",
+            "header": [{ "key": "Authorization", "value": "Bearer {{shipperToken}}" }]
+          }
+        },
+        {
+          "name": "8.2 Company Cannot Access Admin Endpoint",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 403', () => pm.response.to.have.status(403));"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/admin/companies/pending",
+            "header": [{ "key": "Authorization", "value": "Bearer {{companyToken}}" }]
+          }
+        },
+        {
+          "name": "8.3 Expired/Invalid Token Rejected",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 401', () => pm.response.to.have.status(401));"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/shipments/my",
+            "header": [{ "key": "Authorization", "value": "Bearer invalidtoken123" }]
+          }
+        },
+        {
+          "name": "8.4 Company Cannot Resolve Dispute",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 403', () => pm.response.to.have.status(403));"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/payments/disputes/resolve",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{companyToken}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{ \"shipment_id\": \"{{shipmentId}}\", \"resolution_type\": \"FULL_REFUND\" }" }
+          }
+        },
+        {
+          "name": "8.5 Shipper Cannot Pickup Shipment",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 403', () => pm.response.to.have.status(403));"
+          ]}}],
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/api/shipments/{{shipmentId}}/pickup",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{shipperToken}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{ \"truckId\": \"{{truckId}}\" }" }
+          }
+        }
+      ]
+    }
+  ]
+}

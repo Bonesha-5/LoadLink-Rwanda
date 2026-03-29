@@ -11,48 +11,37 @@ export type ShipmentStatus =
   | 'CANCELLED'
 
 export type CompanyShipment = {
-  id: string
-  pickup_district?: string
-  dropoff_district?: string
-  pickupDistrict?: string
-  dropoffDistrict?: string
-  weight_tons?: number
-  weightTons?: number
-  offered_price_rwf?: number
-  offeredPriceRwf?: number
-  status: ShipmentStatus
-  created_at?: string
-  createdAt?: string
-  shipper_name?: string
-  shipperName?: string
-  shipper_phone?: string
-  shipperPhone?: string
-  shipper_email?: string
-  shipperEmail?: string
-  truck_plate?: string
-  truckPlate?: string
-  company_name?: string
-  companyName?: string
+  id?: number
+  pickup_district: string
+  dropoff_district: string
+  cargo_description?: string
+  weight: number
+  offered_price: number
+  pickup_date: string
+  status?: ShipmentStatus
 }
 
 export type CompanyTruck = {
-  id: string
-  plate_number?: string
-  plateNumber?: string
-  truck_type?: string
-  truckType?: string
-  declared_capacity?: number
-  declaredCapacity?: number
-  availability_status?: 'AVAILABLE' | 'RESERVED' | 'IN_TRANSIT' | 'UNAVAILABLE'
-  availabilityStatus?: 'AVAILABLE' | 'RESERVED' | 'IN_TRANSIT' | 'UNAVAILABLE'
+  id: number
+  plate_number: string
+  truck_type: string
+  declared_capacity: number
+  availability_status: 'AVAILABLE' | 'RESERVED' | 'IN_TRANSIT' | 'UNAVAILABLE'
+  verification_status: 'PENDING' | 'VERIFIED' | 'REJECTED'
+  rating_average?: number | null
+  reg_card_path?: string
+  insurance_cert_path?: string
+  created_at?: string
 }
 
 export async function getAvailableShipments(token: string): Promise<CompanyShipment[]> {
-  return apiRequest<CompanyShipment[]>('/api/shipments/', { token })
+  const res = await apiRequest<{ success: boolean; data: CompanyShipment[] }>('/api/shipments', { token })
+  return Array.isArray(res) ? res : (res?.data ?? [])
 }
 
 export async function getActiveShipments(token: string): Promise<CompanyShipment[]> {
-  return apiRequest<CompanyShipment[]>('/api/shipments/active', { token })
+  const res = await apiRequest<{ success: boolean; data: CompanyShipment[] }>('/api/shipments/active', { token })
+  return Array.isArray(res) ? res : (res?.data ?? [])
 }
 
 export async function pickupShipment(token: string, shipmentId: string, truckId: string): Promise<{ message?: string }> {
@@ -79,7 +68,8 @@ export async function registerTruck(
 }
 
 export async function getMyTrucks(token: string): Promise<CompanyTruck[]> {
-  return apiRequest<CompanyTruck[]>('/api/trucks/my', { token })
+  const res = await apiRequest<{ success: boolean; data: CompanyTruck[] }>('/api/trucks/my', { token })
+  return Array.isArray(res) ? res : (res?.data ?? [])
 }
 
 export async function updateTruckStatus(
@@ -123,4 +113,3 @@ export async function getMyInterestsList(token: string): Promise<CompanyInterest
   }
   return []
 }
-

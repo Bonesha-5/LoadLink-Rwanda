@@ -1,255 +1,173 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { useAuth } from '../context/AuthContext'
+import { apiRequest } from '../api/http'
+import type { ApiError } from '../api/http'
 import {
-  Area, AreaChart, CartesianGrid, Cell, Pie, PieChart,
-  ResponsiveContainer, Tooltip, XAxis, YAxis,
+  ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip,
+  CartesianGrid, PieChart, Pie, Cell, Legend,
 } from 'recharts'
-import { ensureSeedAdminData, getAdminDisputes, getAdminShipments, getAllRealShipmentsForAdmin, getAuditLogs, getPendingCompanies, getAllCompanies as getAllStoredCompanies } from '../data/storage'
 
-type FetchState = 'idle' | 'loading' | 'error' | 'success'
-
-// Fixed pie colors with matching legend dots
-const PIE_COLORS = ['#F5C518', '#0B0B0F', '#6B7280', '#C9A227', '#9CA3AF', '#D1D5DB', '#EF4444', '#10B981']
-
-function formatStatusLabel(status: string): string {
-  const map: Record<string, string> = {
-    POSTED: 'Posted',
-    AWAITING_ESCROW: 'Waiting for payment',
-    ESCROW_FUNDED: 'Payment received',
-    IN_TRANSIT: 'On the way',
-    AWAITING_CONFIRMATION: 'Waiting for confirmation',
-    COMPLETED: 'Completed',
-    CANCELLED: 'Cancelled',
-    DISPUTED: 'Disputed',
-  }
-  return map[status] ?? status
+type Stats = {
+  total_shipments: number
+  completed: number
+  disputed: number
+  active: number
+  total_revenue: number
+  pending_companies: number
 }
 
-function dayKey(iso: string): string {
-  const d = new Date(iso)
-  if (Number.isNaN(d.getTime())) return 'Unknown'
-  return d.toISOString().slice(0, 10)
-}
+type StatusBreakdown = { status: string; count: number }
 
-function formatShortDay(yyyyMmDd: string): string {
-  const d = new Date(`${yyyyMmDd}T00:00:00`)
-  if (Number.isNaN(d.getTime())) return yyyyMmDd
-  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+const STATUS_COLORS: Record<string, string> = {
+  POSTED: '#3B82F6',
+  AWAITING_ESCROW: '#F59E0B',
+  ESCROW_FUNDED: '#F59E0B',
+  IN_TRANSIT: '#8B5CF6',
+  AWAITING_CONFIRMATION: '#6B7280',
+  COMPLETED: '#10B981',
+  DISPUTED: '#EF4444',
+  CANCELLED: '#374151',
 }
 
 export default function AdminAnalytics() {
-  const [state, setState] = useState<FetchState>('idle')
+  const { user } = useAuth()
+  const token = user?.token ?? ''
+
+  const [shipments, setShipments] = useState<StatusBreakdown[]>([])
+  const [stats, setStats] = useState<Stats>({
+    total_shipments: 0, completed: 0, disputed: 0,
+    active: 0, total_revenue: 0, pending_companies: 0,
+  })
+  const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [pendingCompaniesCount, setPendingCompaniesCount] = useState(0)
-  const [shipmentsCount, setShipmentsCount] = useState(0)
-  const [disputesCount, setDisputesCount] = useState(0)
-  const [recentEventsCount, setRecentEventsCount] = useState(0)
-  const [shipmentStageSummary, setShipmentStageSummary] = useState<{ label: string; count: number }[]>([])
-  const [shipmentsTrend, setShipmentsTrend] = useState<{ day: string; label: string; shipments: number }[]>([])
 
-  const refresh = useCallback(() => {
-    setState('loading')
-    setError(null)
-    try {
-      ensureSeedAdminData()
-      const pendingCompanies = getPendingCompanies()
-      // Merge real shipper loads with seeded admin shipments for accurate counts
-      const realLoads = getAllRealShipmentsForAdmin()
-      const seededShipments = getAdminShipments()
-      const shipments = realLoads.length > 0 ? [...realLoads, ...seededShipments] : seededShipments
-      const disputes = shipments.filter(s => s.status === 'DISPUTED')
-      const audit = getAuditLogs()
+  useEffect(() => {
+    async function load() {
+      setLoading(true)
+      try {
+        const [allShipments, pending] = await Promise.all([
+          apiRequest<any[]>('/api/admin/shipments', { token }),
+          apiRequest<any[]>('/api/admin/companies/pending', { token }),
+        ])
 
-      setPendingCompaniesCount(pendingCompanies.length)
-      setShipmentsCount(shipments.length)
-      setDisputesCount(disputes.length)
+        // Calculate stats from shipments
+        const breakdown: Record<string, number> = {}
+        let completed = 0, disputed = 0, active = 0
 
-      const weekAgo = Date.now() - 7 * 86_400_000
-      setRecentEventsCount(audit.filter((e) => new Date(e.createdAt).getTime() >= weekAgo).length)
+        for (const s of allShipments) {
+          breakdown[s.status] = (breakdown[s.status] ?? 0) + 1
+          if (s.status === 'COMPLETED') completed++
+          if (s.status === 'DISPUTED') disputed++
+          if (['ESCROW_FUNDED', 'IN_TRANSIT', 'AWAITING_CONFIRMATION'].includes(s.status)) active++
+        }
 
-      const stageCounts = new Map<string, number>()
-      for (const s of shipments) stageCounts.set(s.status, (stageCounts.get(s.status) ?? 0) + 1)
-      const summary = Array.from(stageCounts.entries())
-        .map(([status, count]) => ({ label: formatStatusLabel(status), count }))
-        .sort((a, b) => b.count - a.count)
-      setShipmentStageSummary(summary)
-
-      const days = 14
-      const today = new Date()
-      today.setHours(0, 0, 0, 0)
-      const dayCounts = new Map<string, number>()
-      for (const s of shipments) {
-        const k = dayKey(s.createdAt)
-        dayCounts.set(k, (dayCounts.get(k) ?? 0) + 1)
+        setShipments(Object.entries(breakdown).map(([status, count]) => ({ status, count })))
+        setStats({
+          total_shipments: allShipments.length,
+          completed,
+          disputed,
+          active,
+          total_revenue: 0,
+          pending_companies: pending.length,
+        })
+      } catch (e) {
+        setError((e as ApiError).message || 'Could not load analytics.')
+      } finally {
+        setLoading(false)
       }
-      const trend = Array.from({ length: days }).map((_, idx) => {
-        const d = new Date(today)
-        d.setDate(today.getDate() - (days - 1 - idx))
-        const key = d.toISOString().slice(0, 10)
-        return { day: key, label: formatShortDay(key), shipments: dayCounts.get(key) ?? 0 }
-      })
-      setShipmentsTrend(trend)
-      setState('success')
-    } catch (e) {
-      console.error(e)
-      setError('Could not load admin dashboard data.')
-      setState('error')
     }
+    void load()
   }, [])
 
-  useEffect(() => { refresh() }, [refresh])
-
-  const primaryCards = useMemo(() => [
-    { title: 'Company Verification', value: pendingCompaniesCount, helper: 'Companies waiting for approval', to: '/admin/companies', tone: 'border-stone-200' },
-    { title: 'All shipments', value: shipmentsCount, helper: 'Every shipment on the platform', to: '/admin/shipments', tone: 'border-stone-200' },
-    { title: 'Disputes', value: disputesCount, helper: 'Shipments reported as a problem', to: '/admin/disputes', tone: disputesCount > 0 ? 'border-red-200 ring-1 ring-red-100' : 'border-stone-200' },
-    { title: 'Activity log', value: recentEventsCount, helper: 'Actions in the last 7 days', to: '/admin/audit-log', tone: 'border-stone-200' },
-  ], [pendingCompaniesCount, shipmentsCount, disputesCount, recentEventsCount])
+  if (loading) return (
+    <div className="flex items-center justify-center py-24">
+      <div className="w-7 h-7 rounded-full border-2 border-sidebar border-t-transparent animate-spin" />
+    </div>
+  )
 
   return (
-    <div className="max-w-6xl space-y-8 ll-animate-in">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-wider text-stone-500">Admin</p>
-          <h1 className="text-2xl font-bold text-stone-900 mt-1">Dashboard</h1>
-          <p className="text-sm text-stone-600 mt-1 max-w-2xl">
-            Companies waiting for approval, shipment progress, disputes, and recent admin actions.
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={refresh}
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-sidebar text-white text-sm font-semibold hover:bg-stone-800 transition-colors shadow-sm border border-stone-800"
-        >
-          <svg className="w-4 h-4 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-          </svg>
-          Refresh
-        </button>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold text-stone-900">Analytics</h1>
+        <p className="text-sm text-stone-600 mt-1">Platform-wide overview.</p>
       </div>
 
-      {state === 'error' && error && (
-        <p className="text-red-600 text-sm rounded-2xl border border-red-100 bg-red-50 px-4 py-3">{error}</p>
+      {error && (
+        <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3">
+          <p className="text-sm text-red-700">{error}</p>
+        </div>
       )}
 
-      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {primaryCards.map((c) => (
-          <Link
-            key={c.title}
-            to={c.to}
-            className={`group bg-white rounded-3xl border ${c.tone} p-5 shadow-sm transition-shadow hover:shadow-md`}
-          >
-            <p className="text-xs font-semibold text-stone-500">{c.title}</p>
-            <p className="mt-2 text-3xl font-extrabold text-stone-900 tabular-nums">{c.value}</p>
-            <p className="mt-1 text-xs text-stone-500">{c.helper}</p>
-            <span className="mt-4 inline-flex items-center gap-1 text-xs font-semibold text-accent">
-              Open
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-              </svg>
-            </span>
-          </Link>
+      {/* Stat cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {[
+          { label: 'Total Shipments', value: stats.total_shipments, color: 'text-stone-900' },
+          { label: 'Active',          value: stats.active,          color: 'text-blue-600' },
+          { label: 'Completed',       value: stats.completed,       color: 'text-emerald-600' },
+          { label: 'Disputed',        value: stats.disputed,        color: 'text-red-600' },
+        ].map(s => (
+          <div key={s.label} className="bg-white rounded-3xl border border-stone-200 p-5 shadow-sm">
+            <p className="text-xs font-semibold text-stone-500 uppercase tracking-wide">{s.label}</p>
+            <p className={`text-3xl font-bold mt-2 ${s.color}`}>{s.value}</p>
+          </div>
         ))}
-      </section>
+      </div>
 
-      <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Pie chart — fixed height + matching legend colors */}
-        <div className="bg-white rounded-3xl border border-stone-200 p-5 shadow-sm">
-          <h2 className="text-sm font-semibold text-stone-800 mb-1">Shipments by stage</h2>
-          <p className="text-xs text-stone-500 mb-4">A quick visual of where shipments are right now.</p>
-
-          {state === 'loading' && <p className="text-sm text-stone-500">Loading…</p>}
-          {state === 'success' && shipmentStageSummary.length === 0 && (
-            <p className="text-sm text-stone-500">No shipments yet.</p>
-          )}
-
-          {shipmentStageSummary.length > 0 && (
-            <div className="flex flex-col sm:flex-row gap-4 items-center">
-              {/* Fixed height prevents distortion */}
-              <div className="w-full sm:w-48 h-48 shrink-0">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={shipmentStageSummary.map((s, i) => ({
-                        name: s.label,
-                        value: s.count,
-                      }))}
-                      dataKey="value"
-                      nameKey="name"
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={46}
-                      outerRadius={72}
-                      paddingAngle={2}
-                    >
-                      {shipmentStageSummary.map((_, i) => (
-                        <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip formatter={(value: unknown, name: unknown) => [String(value ?? ''), String(name ?? '')]} />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-              {/* Legend with matching dot colors */}
-              <ul className="flex-1 space-y-2 w-full">
-                {shipmentStageSummary.slice(0, 8).map((row, i) => (
-                  <li key={row.label} className="flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <span
-                        className="w-2.5 h-2.5 rounded-full shrink-0"
-                        style={{ backgroundColor: PIE_COLORS[i % PIE_COLORS.length] }}
-                      />
-                      <span className="text-xs text-stone-600 truncate">{row.label}</span>
-                    </div>
-                    <span className="text-xs font-bold text-stone-900 tabular-nums shrink-0">{row.count}</span>
-                  </li>
-                ))}
-              </ul>
+      {/* Charts */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="bg-white rounded-3xl border border-stone-200 p-6 shadow-sm">
+          <p className="text-sm font-semibold text-stone-700 mb-4">Shipments by Status</p>
+          {shipments.length > 0 ? (
+            <ResponsiveContainer width="100%" height={220}>
+              <BarChart data={shipments} barCategoryGap="35%">
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
+                <XAxis dataKey="status" tick={{ fontSize: 9, fill: '#78716c' }} axisLine={false} tickLine={false} />
+                <YAxis allowDecimals={false} tick={{ fontSize: 10, fill: '#78716c' }} axisLine={false} tickLine={false} width={24} />
+                <Tooltip contentStyle={{ borderRadius: 12, border: '1px solid #e7e5e4', fontSize: 12 }} />
+                <Bar dataKey="count" name="Shipments" radius={[6, 6, 0, 0]}>
+                  {shipments.map((s, i) => (
+                    <Cell key={i} fill={STATUS_COLORS[s.status] ?? '#9CA3AF'} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-48 flex items-center justify-center">
+              <p className="text-stone-400 text-sm">No shipment data yet</p>
             </div>
           )}
         </div>
 
-        <div className="bg-white rounded-3xl border border-stone-200 p-5 shadow-sm space-y-6">
-          <div>
-            <h2 className="text-sm font-semibold text-stone-800 mb-1">Shipments over time</h2>
-            <p className="text-xs text-stone-500 mb-4">New shipments created per day (last 14 days).</p>
-            {shipmentsTrend.length === 0 ? (
-              <p className="text-sm text-stone-500">Not enough data yet.</p>
-            ) : (
-              <div className="h-44">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={shipmentsTrend} margin={{ left: -20, right: 10, top: 10 }}>
-                    <defs>
-                      <linearGradient id="colorShipments" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#F5C518" stopOpacity={0.35} />
-                        <stop offset="100%" stopColor="#F5C518" stopOpacity={0} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
-                    <XAxis dataKey="label" tickLine={false} axisLine={false} interval={3} tick={{ fontSize: 11 }} />
-                    <YAxis tickLine={false} axisLine={false} allowDecimals={false} tick={{ fontSize: 11 }} />
-                    <Tooltip
-                      formatter={(v: unknown) => [String(v ?? ''), 'New shipments']}
-                      labelFormatter={(label: unknown) => String(label ?? '')}
-                    />
-                    <Area type="monotone" dataKey="shipments" stroke="#F5C518" strokeWidth={2} fill="url(#colorShipments)" />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
-            )}
-          </div>
-
-          <div>
-            <h2 className="text-sm font-semibold text-stone-800 mb-1">What admins can do</h2>
-            <ul className="space-y-3 text-sm text-stone-700">
-              <li className="flex items-start gap-3"><span className="mt-1 h-2 w-2 rounded-full bg-accent shrink-0" />Approve or reject companies after checking their documents.</li>
-              <li className="flex items-start gap-3"><span className="mt-1 h-2 w-2 rounded-full bg-accent shrink-0" />Monitor all shipments and see their current stage.</li>
-              <li className="flex items-start gap-3"><span className="mt-1 h-2 w-2 rounded-full bg-accent shrink-0" />Handle disputes and decide how the held payment is released.</li>
-              <li className="flex items-start gap-3"><span className="mt-1 h-2 w-2 rounded-full bg-accent shrink-0" />Review the activity log to keep a clear record of actions.</li>
-            </ul>
-          </div>
+        <div className="bg-white rounded-3xl border border-stone-200 p-6 shadow-sm">
+          <p className="text-sm font-semibold text-stone-700 mb-4">Status Distribution</p>
+          {shipments.length > 0 ? (
+            <ResponsiveContainer width="100%" height={220}>
+              <PieChart>
+                <Pie data={shipments} dataKey="count" nameKey="status" cx="50%" cy="50%" outerRadius={80}>
+                  {shipments.map((s, i) => (
+                    <Cell key={i} fill={STATUS_COLORS[s.status] ?? '#9CA3AF'} />
+                  ))}
+                </Pie>
+                <Tooltip contentStyle={{ borderRadius: 12, border: '1px solid #e7e5e4', fontSize: 12 }} />
+                <Legend wrapperStyle={{ fontSize: 11 }} />
+              </PieChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-48 flex items-center justify-center">
+              <p className="text-stone-400 text-sm">No data yet</p>
+            </div>
+          )}
         </div>
-      </section>
+      </div>
+
+      {/* Pending companies */}
+      {stats.pending_companies > 0 && (
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl px-5 py-4">
+          <p className="text-sm font-semibold text-amber-900">
+            {stats.pending_companies} company{stats.pending_companies > 1 ? 'ies' : ''} waiting for verification
+          </p>
+        </div>
+      )}
     </div>
   )
 }

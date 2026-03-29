@@ -1,6 +1,6 @@
 import * as shippersService from "../service/shippers.js";
 import { catchAsync } from "../utils/catchAsync.js";
-
+import pool from '../config/db.js';
 // Handle shipper registration
 export const register = catchAsync(async (req, res) => {
   const { name, phone, email, password } = req.body;
@@ -39,4 +39,18 @@ export const login = catchAsync(async (req, res) => {
     }
     throw error;
   }
+});
+
+export const getMyPayments = catchAsync(async (req, res) => {
+  const shipper_id = req.user.id;
+  const result = await pool.query(`
+    SELECT p.id, p.amount, p.status, p.created_at,
+           p.provider_reference,
+           s.pickup_district, s.dropoff_district
+    FROM payments p
+    JOIN shipments s ON s.id = p.shipment_id
+    WHERE p.shipper_id = $1
+    ORDER BY p.created_at DESC
+  `, [shipper_id]);
+  res.json(result.rows);
 });

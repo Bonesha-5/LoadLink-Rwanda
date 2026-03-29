@@ -1,182 +1,89 @@
-import { useMemo, useState, useEffect } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
-import {
-  ensureSeedLoads,
-  getAllLoads,
-  getTruckRatingAverage,
-  getTrucksByCompany,
-  getPendingTrucksDemo,
-  type Load,
-  type Truck,
-} from "../data/storage";
+import { useState, useEffect } from 'react'
+import { Link, useNavigate, useParams } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
+import { apiRequest } from '../api/http'
+import type { ApiError } from '../api/http'
 
-const STAGES_KEY = "ll_shipper_stages";
-const SELECTED_TRUCK_KEY = "ll_selected_truck_by_load";
-
-type ShipStage =
-  | "POSTED"
-  | "AWAITING_ESCROW"
-  | "IN_TRANSIT"
-  | "AWAITING_CONFIRMATION"
-  | "COMPLETED"
-  | "DISPUTED";
-
-function getStageMap(): Record<string, ShipStage> {
-  try {
-    return JSON.parse(localStorage.getItem(STAGES_KEY) ?? "{}") as Record<
-      string,
-      ShipStage
-    >;
-  } catch {
-    return {};
-  }
+type Interest = {
+  id: number
+  plate_number: string
+  truck_type: string
+  declared_capacity: number
+  rating_average: number | null
+  company_name: string
+  contact_person: string
 }
 
-function setStageForLoad(loadId: string, stage: ShipStage) {
-  const map = getStageMap();
-  map[loadId] = stage;
-  localStorage.setItem(STAGES_KEY, JSON.stringify(map));
-}
-
-type Candidate = {
-  loadId: string;
-  origin: string;
-  destination: string;
-  weight: string;
-  price: string;
-  companyName: string;
-  truckId: string;
-  plate: string;
-  type: string;
-  capacity: string;
-  rating: number;
-  phone: string;
-  email: string;
-};
-
-function parseTons(value: string | undefined): number | null {
-  if (!value) return null;
-  const match = value.match(/(\d+(\.\d+)?)/);
-  if (!match) return null;
-  return Number(match[1]);
-}
+const SELECTED_TRUCK_KEY = 'll_selected_truck_by_load'
 
 export default function ShipperInterestedTrucks() {
-  const navigate = useNavigate();
-  const { id } = useParams<{ id: string }>();
-  const { getToken, user } = useAuth();
-  const [pending, setPending] = useState<Candidate | null>(null);
-  const [refresh, setRefresh] = useState(0);
+  const navigate = useNavigate()
+  const { id } = useParams<{ id: string }>()
+  const { getToken } = useAuth()
+
+  const [interests, setInterests] = useState<Interest[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [pending, setPending] = useState<Interest | null>(null)
+  const [selecting, setSelecting] = useState(false)
 
   useEffect(() => {
-    const onFocus = () => setRefresh((v) => v + 1);
-    window.addEventListener("focus", onFocus);
-    const interval = setInterval(() => setRefresh((v) => v + 1), 3000);
-    return () => {
-      window.removeEventListener("focus", onFocus);
-      clearInterval(interval);
-    };
-  }, []);
-
-  const load = useMemo<Load | undefined>(() => {
-    ensureSeedLoads(user?.name || "Shipper");
-    if (!id) return undefined;
-    return getAllLoads().find((l) => l.id === id);
-  }, [id, user?.name, refresh]);
-
-  const candidates = useMemo<Candidate[]>(() => {
-    void refresh;
-    ensureSeedLoads(user?.name || "Shipper");
-    const loads = getAllLoads();
-    const result: Candidate[] = [];
-    const filteredLoads: Load[] = id ? loads.filter((l) => l.id === id) : loads;
-
-    for (const l of filteredLoads) {
-      for (const offer of l.offers ?? []) {
-        const companyTrucks: Truck[] = getTrucksByCompany(offer.companyName);
-        const loadWeightTons = parseTons(l.weight);
-
-        if (companyTrucks.length > 0) {
-          // Company has registered trucks — show each eligible one
-          for (const truck of companyTrucks) {
-            const cap = parseTons(truck.capacity);
-            if (loadWeightTons != null && cap != null && cap < loadWeightTons)
-              continue;
-
-            result.push({
-              loadId: l.id,
-              origin: l.origin,
-              destination: l.destination,
-              weight: l.weight,
-              price: l.price ?? "—",
-              companyName: offer.companyName,
-              truckId: truck.id,
-              plate: truck.plateNumber ?? "TBD",
-              type: truck.type ?? "Truck",
-              capacity: truck.capacity,
-              rating: getTruckRatingAverage(truck.id) ?? 4.9,
-              phone: truck.phone ?? "+250 788 000 000",
-              email:
-                truck.email ??
-                `${offer.companyName.toLowerCase().replace(/\s+/g, ".")}@loadlink.rw`,
-            });
-          }
-        } else {
-          // No approved trucks — check pending queue for truck details
-          const pendingTruck = getPendingTrucksDemo().find(
-            (pt) => pt.companyName === offer.companyName,
-          );
-
-          result.push({
-            loadId: l.id,
-            origin: l.origin,
-            destination: l.destination,
-            weight: l.weight,
-            price: l.price ?? "—",
-            companyName: offer.companyName,
-            // Use a real-looking truckId so selection works; plate from pending or placeholder
-            truckId: pendingTruck?.id ?? `offer-${offer.companyName}-${l.id}`,
-            plate: pendingTruck?.plateNumber ?? "TBD",
-            type: pendingTruck?.truckType ?? "Truck",
-            capacity: pendingTruck?.capacity ?? "TBD",
-            rating: 0,
-            phone: "+250 788 000 000",
-            email: `${offer.companyName.toLowerCase().replace(/\s+/g, ".")}@loadlink.rw`,
-          });
-        }
+    if (!id) return
+    async function load() {
+      try {
+        const data = await apiRequest<Interest[]>(`/api/interests/shipment/${id}`, {
+          token: getToken(),
+        })
+        setInterests(data)
+      } catch (e) {
+        setError((e as ApiError).message || 'Could not load interests.')
+      } finally {
+        setLoading(false)
       }
     }
+    void load()
+  }, [id])
 
-    return result.sort((a, b) => b.rating - a.rating);
-  }, [id, user?.name, refresh]);
-
-  const confirmSelect = async (item: Candidate) => {
+  async function confirmSelect(truck: Interest) {
+    setSelecting(true)
     try {
-      await fetch(`/api/shipments/${item.loadId}/select`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${getToken()}`,
-        },
-        body: JSON.stringify({
-          truck_id: item.truckId,
-          company_name: item.companyName,
-        }),
-      });
-    } catch {
-      // API unavailable — continue with local state
+      await apiRequest(`/api/shipments/${id}/select`, {
+        method: 'PATCH',
+        token: getToken(),
+        body: { truck_id: truck.id },
+      })
+      // Store selected truck info for payment page
+      localStorage.setItem(SELECTED_TRUCK_KEY, JSON.stringify({
+        loadId: id,
+        truckId: truck.id,
+        companyName: truck.company_name,
+        plate: truck.plate_number,
+        type: truck.truck_type,
+        capacity: truck.declared_capacity,
+        rating: truck.rating_average ?? 0,
+        phone: '',
+        email: '',
+      }))
+      setPending(null)
+      navigate(`/shipment/${id}/pay`)
+    } catch (e) {
+      setError((e as ApiError).message || 'Could not select truck.')
+      setPending(null)
     } finally {
-      localStorage.setItem(SELECTED_TRUCK_KEY, JSON.stringify(item));
-      setStageForLoad(item.loadId, "AWAITING_ESCROW");
-      setPending(null);
-      navigate(`/shipment/${item.loadId}/pay`);
+      setSelecting(false)
     }
-  };
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-24">
+        <div className="w-7 h-7 rounded-full border-2 border-sidebar border-t-transparent animate-spin" />
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6 ll-animate-in">
-      {/* Back button */}
       <div>
         <Link
           to="/loads"
@@ -186,38 +93,73 @@ export default function ShipperInterestedTrucks() {
         </Link>
       </div>
 
-      {/* Header */}
       <div>
         <h1 className="text-3xl font-bold text-stone-900">Interested Trucks</h1>
-        {load && (
-          <p className="text-sm text-stone-600 mt-1">
-            Shipment: {load.origin} → {load.destination} ({load.weight})
-          </p>
-        )}
-        {!load && id && (
-          <p className="text-sm text-stone-600 mt-1">
-            All trucks across your shipments.
-          </p>
-        )}
         <p className="text-sm text-stone-500 mt-0.5">Sorted by truck rating</p>
       </div>
 
-      {candidates.length === 0 && (
+      {error && (
+        <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3">
+          <p className="text-sm text-red-700">{error}</p>
+        </div>
+      )}
+
+      {interests.length === 0 && !error && (
         <div className="bg-white border border-stone-200 rounded-2xl p-10 text-center shadow-sm">
           <p className="text-stone-500 mb-2">No interested trucks yet.</p>
-          <p className="text-sm text-stone-400">
-            Companies need to express interest in your shipment first.
-          </p>
+          <p className="text-sm text-stone-400">Companies need to express interest in your shipment first.</p>
         </div>
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-        {candidates.map((t) => (
-          <TruckCard
-            key={`${t.loadId}-${t.truckId}`}
-            candidate={t}
-            onSelect={() => setPending(t)}
-          />
+        {interests.map((t) => (
+          <div key={t.id} className="bg-white rounded-2xl border border-stone-200 p-5 shadow-sm flex flex-col">
+            <h3 className="text-base font-bold text-stone-900 mb-3">{t.company_name}</h3>
+
+            <p className="text-xs font-semibold text-amber-600 mb-1.5">Truck Rating</p>
+            <div className="flex items-center gap-0.5 mb-4">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <svg
+                  key={i}
+                  className={`w-5 h-5 ${i <= Math.floor(t.rating_average ?? 0) ? 'text-amber-400' : 'text-stone-200'}`}
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                </svg>
+              ))}
+              <span className="ml-1.5 text-sm font-semibold text-stone-700">
+                {t.rating_average ? Number(t.rating_average).toFixed(1) : 'N/A'}
+              </span>
+            </div>
+
+            <div className="space-y-2 text-sm border-t border-stone-100 pt-4">
+              <div className="flex justify-between">
+                <span className="text-stone-500">Plate:</span>
+                <span className="font-semibold text-stone-900">{t.plate_number}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-stone-500">Type:</span>
+                <span className="font-bold text-stone-900">{t.truck_type}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-stone-500">Capacity:</span>
+                <span className="font-semibold text-stone-900">{t.declared_capacity} kg</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-stone-500">Contact:</span>
+                <span className="font-semibold text-stone-900">{t.contact_person}</span>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setPending(t)}
+              className="mt-4 w-full rounded-xl bg-amber-600 text-white py-3 font-semibold hover:bg-amber-700 transition-colors text-sm"
+            >
+              Select This Truck
+            </button>
+          </div>
         ))}
       </div>
 
@@ -225,28 +167,20 @@ export default function ShipperInterestedTrucks() {
       {pending && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-sm w-full">
-            <h2 className="text-lg font-bold text-stone-900">
-              Confirm truck selection
-            </h2>
+            <h2 className="text-lg font-bold text-stone-900">Confirm truck selection</h2>
             <p className="mt-2 text-sm text-stone-600">
-              Select <span className="font-semibold">{pending.plate}</span> from{" "}
-              <span className="font-semibold">{pending.companyName}</span> for
-              the shipment{" "}
-              <span className="font-semibold">
-                {pending.origin} → {pending.destination}
-              </span>
-              ?
+              Select <span className="font-semibold">{pending.plate_number}</span> from{' '}
+              <span className="font-semibold">{pending.company_name}</span>?
             </p>
-            <p className="mt-2 text-xs text-stone-400">
-              You will be taken to the escrow payment page.
-            </p>
+            <p className="mt-2 text-xs text-stone-400">You will be taken to the escrow payment page.</p>
             <div className="mt-6 flex gap-3">
               <button
                 type="button"
                 onClick={() => confirmSelect(pending)}
-                className="flex-1 rounded-xl bg-sidebar text-white px-4 py-2.5 font-semibold hover:bg-sidebar-hover transition-colors"
+                disabled={selecting}
+                className="flex-1 rounded-xl bg-sidebar text-white px-4 py-2.5 font-semibold hover:bg-stone-800 transition-colors disabled:opacity-60"
               >
-                Confirm
+                {selecting ? 'Selecting…' : 'Confirm'}
               </button>
               <button
                 type="button"
@@ -260,110 +194,5 @@ export default function ShipperInterestedTrucks() {
         </div>
       )}
     </div>
-  );
-}
-
-function StarRating({ rating }: { rating: number }) {
-  const filled = Math.floor(rating);
-  return (
-    <div className="flex items-center gap-0.5">
-      {[1, 2, 3, 4, 5].map((i) => (
-        <svg
-          key={i}
-          className={`w-5 h-5 ${i <= filled ? "text-amber-400" : "text-stone-200"}`}
-          fill="currentColor"
-          viewBox="0 0 20 20"
-        >
-          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-        </svg>
-      ))}
-      <span className="ml-1.5 text-sm font-semibold text-stone-700">
-        {rating.toFixed(1)}
-      </span>
-    </div>
-  );
-}
-
-function TruckCard({
-  candidate: t,
-  onSelect,
-}: {
-  candidate: Candidate;
-  onSelect: () => void;
-}) {
-  return (
-    <div className="bg-white rounded-2xl border border-stone-200 p-5 shadow-sm flex flex-col">
-      {/* Company name */}
-      <h3 className="text-base font-bold text-stone-900 mb-3">
-        {t.companyName}
-      </h3>
-
-      {/* Truck Rating */}
-      <p className="text-xs font-semibold text-amber-600 mb-1.5">
-        Truck Rating
-      </p>
-      <StarRating rating={t.rating} />
-
-      {/* Details */}
-      <div className="mt-4 space-y-2 text-sm border-t border-stone-100 pt-4">
-        <div className="flex justify-between">
-          <span className="text-stone-500">Truck Plate:</span>
-          <span className="font-semibold text-stone-900">{t.plate}</span>
-        </div>
-        <div className="flex justify-between">
-          <span className="text-stone-500">Truck Type:</span>
-          <span className="font-bold text-stone-900">{t.type}</span>
-        </div>
-        <div className="flex justify-between">
-          <span className="text-stone-500">Capacity:</span>
-          <span className="font-semibold text-stone-900">{t.capacity}</span>
-        </div>
-      </div>
-
-      {/* Contact */}
-      <div className="mt-3 space-y-1.5 text-sm text-stone-600">
-        <div className="flex items-center gap-2">
-          <svg
-            className="w-4 h-4 text-stone-400 flex-shrink-0"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
-            />
-          </svg>
-          <span>{t.phone}</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <svg
-            className="w-4 h-4 text-stone-400 flex-shrink-0"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-            />
-          </svg>
-          <span className="truncate">{t.email}</span>
-        </div>
-      </div>
-
-      {/* Select button */}
-      <button
-        type="button"
-        onClick={onSelect}
-        className="mt-4 w-full rounded-xl bg-amber-600 text-white py-3 font-semibold hover:bg-amber-700 transition-colors text-sm"
-      >
-        Select This Truck
-      </button>
-    </div>
-  );
+  )
 }

@@ -50,16 +50,15 @@ export async function getAdminDisputesApi(token: string): Promise<AdminShipmentD
 
 export async function resolveDisputeApi(
   token: string,
-  disputeId: string,
-  payload:
-    | { type: 'COMPANY_FULL' }
-    | { type: 'SHIPPER_FULL' }
-    | { type: 'SPLIT'; companyAmount: number; shipperAmount: number },
+  shipmentId: string,
+  resolution_type: 'FULL_RELEASE' | 'FULL_REFUND' | 'SPLIT',
+  shipper_amount?: number,
+  company_amount?: number,
 ): Promise<{ message?: string }> {
-  return apiRequest(`/api/admin/disputes/${encodeURIComponent(disputeId)}/resolve`, {
+  return apiRequest('/api/payments/disputes/resolve', {
     method: 'POST',
     token,
-    body: payload,
+    body: { shipment_id: shipmentId, resolution_type, shipper_amount, company_amount },
   })
 }
 
@@ -81,4 +80,3 @@ export type AuditEntryDto = {
 export async function getAdminAuditApi(token: string): Promise<AuditEntryDto[]> {
   return apiRequest<AuditEntryDto[]>('/api/admin/audit', { token })
 }
-
