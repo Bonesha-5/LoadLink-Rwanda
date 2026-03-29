@@ -4,6 +4,10 @@ A digital freight marketplace and escrow payment platform that connects shippers
 
 ---
 
+**DEMO VIDEO:** 1st snippet(shiiper+company): https://www.loom.com/share/2629663396394a0982b07303eba326dd
+                2nd snippet(admin): https://www.loom.com/share/dcc18895ff8848bf8687383e841581e2
+
+
 ## Table of Contents
 
 - [Overview](#overview)
