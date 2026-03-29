@@ -1,20 +1,51 @@
 @import "tailwindcss";
 
 @theme {
-  --color-sidebar: #3D2923;
-  --color-sidebar-hover: #4A342C;
-  --color-accent: #E85D04;
-  --color-accent-hover: #F48C36;
-  --color-cream: #F5F0E8;
-  --color-sand: #FAFAF9;
+  /* LoadLink palette (black / dark / passion yellow / white) */
+  --color-sidebar: #0B0B0F;        /* primary black */
+  --color-sidebar-hover: #14141A;  /* elevated black */
+  --color-accent: #F5C518;         /* passion yellow */
+  --color-accent-hover: #FFD24A;   /* hover yellow */
+  --color-cream: #FFFFFF;          /* white */
+  --color-sand: #F7F7FB;           /* light app background */
 }
 
 @layer base {
   * { @apply box-border; }
   body {
     font-family: 'DM Sans', system-ui, sans-serif;
-    @apply antialiased text-stone-800 bg-sand min-h-screen;
+    @apply antialiased text-stone-800 min-h-screen;
+    background: #F7F7FB;
   }
+  html { scroll-behavior: smooth; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@keyframes ll-fade-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.ll-animate-in {
+  animation: ll-fade-up 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Partners marquee (landing) */
+@keyframes ll-marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+.ll-partners-track {
+  animation: ll-marquee 50s linear infinite;
+  will-change: transform;
 }
 
 /* auth form image stack */
@@ -58,3 +89,12 @@
 .trucks-image-stack img:nth-child(1) { transform: translateY(-12px) rotate(-4deg); }
 .trucks-image-stack img:nth-child(2) { transform: translateY(8px) rotate(2deg); z-index: 1; }
 .trucks-image-stack img:nth-child(3) { transform: translateY(-12px) rotate(4deg); }
+
+/* Page enter animation */
+@keyframes ll-fade-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.ll-animate-in {
+  animation: ll-fade-in 0.3s ease-out both;
+}
