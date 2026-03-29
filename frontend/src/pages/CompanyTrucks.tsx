@@ -1,24 +1,28 @@
-import { useMemo, useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
 import {
   getTrucksByCompany,
   addTruck as addTruckStorage,
   deleteTruck as deleteTruckStorage,
+  type Truck,
 } from '../data/storage'
 
 export default function CompanyTrucks() {
   const { user } = useAuth()
   const companyName = user?.name ?? ''
-  const [refresh, setRefresh] = useState(0)
+  const [trucks, setTrucks] = useState<Truck[]>([])
   const [showForm, setShowForm] = useState(false)
   const [capacity, setCapacity] = useState('')
   const [location, setLocation] = useState('')
   const [plateNumber, setPlateNumber] = useState('')
 
-  const trucks = useMemo(() => {
-    void refresh
-    return getTrucksByCompany(companyName)
-  }, [companyName, refresh])
+  function loadTrucks() {
+    setTrucks(getTrucksByCompany(companyName))
+  }
+
+  useEffect(() => {
+    loadTrucks()
+  }, [companyName])
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -28,13 +32,13 @@ export default function CompanyTrucks() {
     setLocation('')
     setPlateNumber('')
     setShowForm(false)
-    setRefresh((v) => v + 1)
+    loadTrucks()
   }
 
   function handleDelete(id: string) {
     if (window.confirm('Remove this truck from your fleet?')) {
       deleteTruckStorage(id)
-      setRefresh((v) => v + 1)
+      loadTrucks()
     }
   }
 

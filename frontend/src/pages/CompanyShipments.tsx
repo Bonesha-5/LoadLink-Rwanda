@@ -1,24 +1,26 @@
-import { useMemo, useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
 import {
   getAllLoads,
   addOfferToLoad,
-  ensureSeedLoads,
+  type Load,
 } from '../data/storage'
 
 export default function CompanyShipments() {
   const { user } = useAuth()
   const companyName = user?.name ?? ''
-  const [refresh, setRefresh] = useState(0)
+  const [loads, setLoads] = useState<Load[]>([])
   const [offerLoadId, setOfferLoadId] = useState<string | null>(null)
   const [offerAmount, setOfferAmount] = useState('')
   const [offerMessage, setOfferMessage] = useState('')
 
-  const loads = useMemo(() => {
-    void refresh
-    ensureSeedLoads()
-    return getAllLoads().filter((l) => l.status === 'open')
-  }, [refresh])
+  function loadLoads() {
+    setLoads(getAllLoads().filter((l) => l.status === 'open'))
+  }
+
+  useEffect(() => {
+    loadLoads()
+  }, [])
 
   function openOfferModal(loadId: string) {
     setOfferLoadId(loadId)
@@ -37,7 +39,7 @@ export default function CompanyShipments() {
     if (!offerLoadId || !offerAmount.trim()) return
     addOfferToLoad(offerLoadId, companyName, offerAmount.trim(), offerMessage.trim() || undefined)
     closeOfferModal()
-    setRefresh((v) => v + 1)
+    loadLoads()
   }
 
   const offerLoad = offerLoadId ? loads.find((l) => l.id === offerLoadId) : null

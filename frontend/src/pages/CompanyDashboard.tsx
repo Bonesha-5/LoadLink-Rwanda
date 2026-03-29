@@ -1,21 +1,18 @@
-import { useMemo, useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { getTrucksByCompany, getAllLoads, ensureSeedLoads } from '../data/storage'
+import { getTrucksByCompany, getAllLoads } from '../data/storage'
 
 export default function CompanyDashboard() {
   const { user } = useAuth()
   const companyName = user?.name ?? ''
-  const [refresh, setRefresh] = useState(0)
+  const [truckCount, setTruckCount] = useState(0)
+  const [openLoadsCount, setOpenLoadsCount] = useState(0)
 
-  const { truckCount, openLoadsCount } = useMemo(() => {
-    void refresh
-    ensureSeedLoads()
-    return {
-      truckCount: getTrucksByCompany(companyName).length,
-      openLoadsCount: getAllLoads().filter((l) => l.status === 'open').length,
-    }
-  }, [companyName, refresh])
+  useEffect(() => {
+    setTruckCount(getTrucksByCompany(companyName).length)
+    setOpenLoadsCount(getAllLoads().filter((l) => l.status === 'open').length)
+  }, [companyName])
 
   return (
     <div className="max-w-3xl">
@@ -61,13 +58,6 @@ export default function CompanyDashboard() {
           </span>
           Manage Trucks
         </Link>
-        <button
-          type="button"
-          onClick={() => setRefresh((v) => v + 1)}
-          className="text-stone-500 text-sm hover:text-stone-700 hover:underline"
-        >
-          Refresh stats
-        </button>
       </div>
     </div>
   )

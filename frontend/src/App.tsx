@@ -4,13 +4,11 @@ import ShipperLayout from './components/ShipperLayout'
 import CompanyLayout from './components/CompanyLayout'
 import Layout from './components/Layout'
 import Loads from './pages/Loads'
-import Trucks from './pages/Trucks'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import Profile from './pages/Profile'
 import PostShipment from './pages/PostShipment'
 import Shipment from './pages/Shipment'
-import USSDHelp from './pages/USSDHelp'
 import CompanyDashboard from './pages/CompanyDashboard'
 import CompanyTrucks from './pages/CompanyTrucks'
 import CompanyShipments from './pages/CompanyShipments'
@@ -35,9 +33,7 @@ export default function App() {
         <Route path="company/shipments" element={<CompanyShipments />} />
       </Route>
       <Route element={<Layout />}>
-        <Route path="trucks" element={<Trucks />} />
         <Route path="shipment/:id" element={<Shipment />} />
-        <Route path="ussd-help" element={<USSDHelp />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
